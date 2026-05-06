@@ -1,33 +1,68 @@
-# Hermes Local Studio — Desktop Studio
+# Hermes Desktop Studio
 
-This is the main desktop application entry point for Hermes Local Studio.
+A local-first, themeable desktop studio for [Hermes Agent](https://github.com/NousResearch/hermes-agent).
 
 ## Stack
 
 - **Tauri v2** — Desktop app framework (Rust host)
-- **React** — UI framework
+- **React 19** — UI framework
 - **TypeScript** — Type-safe frontend
-- **Vite** — Build tool and dev server
+- **Vite 6** — Build tool and dev server
+- **Zustand** — Client state management
+- **CSS variables** — Theme tokens
 
-> Note: SvelteKit is **not** used. The frontend is React-based.
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start frontend dev server only
+pnpm --filter @hermes-desktop-studio/desktop-studio dev
+
+# Start Tauri desktop app (opens native window)
+pnpm --filter @hermes-desktop-studio/desktop-studio tauri dev
+
+# Build frontend
+pnpm --filter @hermes-desktop-studio/desktop-studio build
+
+# Build Tauri desktop app
+pnpm --filter @hermes-desktop-studio/desktop-studio tauri build
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│ Desktop Studio (Tauri v2 + React + TS)      │
+│  App Frame / Sidebar / Workbench / Panels   │
+└──────────────────────┬──────────────────────┘
+                       │ HTTP/SSE (local only)
+┌──────────────────────▼──────────────────────┐
+│ Local Shell Adapter (Python)                │
+│  FastAPI on 127.0.0.1:39191                 │
+└──────────────────────┬──────────────────────┘
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+   Hermes API     Hermes CLI    Local State
+   /v1/runs       config/set    ~/.hermes/state.db
+   SSE stream     sessions      ~/.hermes/logs
+```
+
+## Theme System
+
+Hermes Desktop Studio uses a generic, semantic-slot-based theme system.
+No concept (Minecraft, Minions, LOTR, etc.) is hardcoded.
+
+Theme packs can override: colors, icons, labels, panel names, typography,
+empty states, onboarding copy, kanban styling, density, and decorative assets.
+
+The core app uses stable semantic keys: `profiles`, `sessions`, `chat`,
+`kanban`, `artifacts`, `tools`, `memory`, `logs`, `activity`, `inspector`,
+`command_palette`, `settings`, `theme_gallery`.
 
 ## Status
 
-Placeholder. The Tauri + React skeleton will be initialized in Phase 2.
-
-## Planned Layout
-
-- Left sidebar: Profiles, Sessions, Search
-- Center area: Tabs for Chat, Kanban, Artifacts
-- Right sidebar: Model, Tools, Memory, Inspector
-- Bottom panel: Activity and Logs
-- Command palette (Ctrl+K)
-- Theme switcher
-
-## Key Libraries (Planned)
-
-- `dockview` — Dockable panel system (VS Code-like)
-- `@tanstack/react-query` — Server state management
-- `zustand` — Client state management
-- `dnd-kit` — Drag and drop
-- Monaco Editor (future) — Code/artifact viewing
+Faz 2 (Desktop Studio Skeleton) — UI shell with mock data.
+No real Hermes integration yet. Adapter connection comes in a later phase.

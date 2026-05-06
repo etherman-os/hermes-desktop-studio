@@ -88,6 +88,22 @@ Hermes Local Studio supports arbitrary **concept packs** — not just color them
 
 The core app uses **semantic slots** (`profiles`, `sessions`, `chat`, `kanban`, `tools`, `memory`, `logs`, `activity`, `inspector`, `command_palette`). Themes map those slots to their own language. No concept is hardcoded into the application.
 
+## Development
+
+```bash
+# Install all dependencies
+pnpm install
+
+# Start frontend dev server only (browser)
+pnpm --filter @hermes-desktop-studio/desktop-studio dev
+
+# Start Tauri desktop app (opens native window)
+pnpm --filter @hermes-desktop-studio/desktop-studio tauri dev
+
+# Build frontend
+pnpm --filter @hermes-desktop-studio/desktop-studio build
+```
+
 ## Development Status
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the current phase and milestone plan.

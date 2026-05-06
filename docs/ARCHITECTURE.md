@@ -36,7 +36,7 @@ Hermes Local Studio is a local-first, themeable desktop workbench for Hermes Age
 ## Design Principles
 
 1. **Adapter is the source of truth.** Frontends must not import Hermes internals.
-2. **Stabilize the contract early.** The `/shell/*` API and event schema should change slowly.
+2. **Stabilize the contract early.** The `/studio/*` API and event schema should change slowly.
 3. **Read-only state access.** For sessions, logs, and config observation, prefer read-only access.
 4. **Write via CLI wrappers.** For mutations, call official `hermes` CLI commands.
 5. **Defensive event handling.** Normalize and sanitize Hermes SSE events; synthesize terminal events when upstream signaling is ambiguous.
@@ -44,10 +44,10 @@ Hermes Local Studio is a local-first, themeable desktop workbench for Hermes Age
 
 ## Package Layout
 
-- `packages/hermes_adapter/` — Python sidecar adapter. Owns the API contract.
 - `apps/desktop-studio/` — Tauri v2 + React + TypeScript desktop application.
-- `packages/protocol/` — OpenAPI, event schema, theme schema, layout schema (Phase 1).
-- `packages/shared-types/` — TypeScript type definitions (Phase 1).
+- `packages/hermes_adapter/` — Python sidecar adapter. Owns the API contract.
+- `packages/protocol/` — OpenAPI, event schema, theme schema, layout schema, plugin schema.
+- `packages/shared-types/` — TypeScript type definitions (events, theme, layout, plugin).
 - `themes/` — Data-driven concept packs (theme + layout TOML).
 - `legacy/textual-prototype/` — Original Textual TUI (reference only, not maintained).
 

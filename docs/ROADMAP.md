@@ -18,15 +18,20 @@
 - [x] `packages/protocol/plugin.schema.json` — Plugin manifest schema
 - [x] `packages/shared-types/src/` — TypeScript type definitions (events, theme, layout, plugin)
 
-## Phase 2 — Desktop Studio Skeleton
+## Phase 2 — Desktop Studio Skeleton (Done)
 
-- [ ] Tauri v2 + React + TypeScript + Vite project initialization
-- [ ] Main layout: left sidebar / center tabs / right sidebar / bottom panel
-- [ ] CSS variable theming from concept pack data
-- [ ] Theme switcher placeholder (default-dark ↔ minecraft-overworld)
-- [ ] Keyboard shortcuts (Ctrl+K, Ctrl+Enter, Ctrl+1/2/3, Esc)
-- [ ] Zustand stores (theme, session, run, profile)
-- [ ] Command palette placeholder
+- [x] Tauri v2 + React + TypeScript + Vite project initialization
+- [x] Main layout: left activity rail / left sidebar / center tabs / right panel / bottom panel / status bar
+- [x] CSS variable theming from concept pack data
+- [x] Theme switcher (5 themes: default-dark, minecraft-overworld, example-minions, example-lotr, minimal-light)
+- [x] Keyboard shortcuts (Ctrl+K command palette)
+- [x] Zustand stores (theme, layout, session, run, ui)
+- [x] Command palette with sample commands and keyboard navigation
+- [x] Chat placeholder with mock messages and tool chips
+- [x] Kanban placeholder with 5 columns and 8 mock cards
+- [x] Right inspector panel (model, tools, memory)
+- [x] Bottom activity/log panel with mock data
+- [x] Status bar with profile, path, model, theme info
 
 ## Phase 3 — Fake Adapter + UI Integration
 
