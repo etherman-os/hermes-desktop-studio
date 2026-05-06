@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes.studio/schemas/layout.schema.json",
+  "title": "Hermes Studio Layout Pack",
+  "description": "Schema for a Hermes Desktop Studio layout pack (layout.toml). Layout packs define panel geometry, visibility, ordering, and density — independent of color/icon/label theming.",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+        },
+        "name": { "type": "string" },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "author": { "type": "string" },
+        "description": { "type": "string" },
+        "extends": { "type": "string" }
+      },
+      "required": ["id", "name", "version", "author"]
+    },
+    "compat": {
+      "type": "object",
+      "properties": {
+        "studio_api": { "type": "string" },
+        "adapter_api": { "type": "string" }
+      },
+      "required": ["studio_api"]
+    },
+    "layout": {
+      "type": "object",
+      "description": "Root layout configuration",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["desktop-studio", "compact", "focus", "kanban-centric"],
+          "description": "Layout variant"
+        },
+        "density": {
+          "type": "string",
+          "enum": ["compact", "comfortable", "spacious"]
+        },
+        "default_route": {
+          "type": "string",
+          "description": "Default panel/tab to show on startup (e.g., 'chat')"
+        }
+      }
+    },
+    "left": {
+      "type": "object",
+      "description": "Left sidebar configuration",
+      "properties": {
+        "width": { "type": "integer", "minimum": 200, "maximum": 500 },
+        "min_width": { "type": "integer" },
+        "max_width": { "type": "integer" },
+        "collapsible": { "type": "boolean" },
+        "default_collapsed": { "type": "boolean" },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "profiles",
+              "sessions",
+              "search",
+              "artifacts",
+              "theme_gallery",
+              "settings"
+            ]
+          },
+          "description": "Ordered list of sections to display in the left panel"
+        }
+      }
+    },
+    "center": {
+      "type": "object",
+      "description": "Center area configuration",
+      "properties": {
+        "tabs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["chat", "kanban", "artifacts", "inspector"]
+          },
+          "description": "Ordered list of center tabs"
+        },
+        "default_tab": {
+          "type": "string",
+          "description": "Which tab is active by default"
+        }
+      }
+    },
+    "right": {
+      "type": "object",
+      "description": "Right sidebar configuration",
+      "properties": {
+        "width": { "type": "integer", "minimum": 200, "maximum": 500 },
+        "min_width": { "type": "integer" },
+        "max_width": { "type": "integer" },
+        "collapsible": { "type": "boolean" },
+        "default_collapsed": { "type": "boolean" },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "model",
+              "tools",
+              "memory",
+              "inspector",
+              "artifacts",
+              "activity"
+            ]
+          },
+          "description": "Ordered list of sections to display in the right panel"
+        }
+      }
+    },
+    "bottom": {
+      "type": "object",
+      "description": "Bottom panel configuration",
+      "properties": {
+        "height": { "type": "integer", "minimum": 100, "maximum": 500 },
+        "min_height": { "type": "integer" },
+        "max_height": { "type": "integer" },
+        "collapsible": { "type": "boolean" },
+        "default_collapsed": { "type": "boolean" },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["activity", "logs", "terminal"]
+          },
+          "description": "Ordered list of sections in the bottom panel"
+        }
+      }
+    },
+    "modals": {
+      "type": "object",
+      "description": "Modal dialog configuration",
+      "properties": {
+        "approval": {
+          "type": "string",
+          "enum": ["centered", "bottom-sheet", "side-drawer"]
+        },
+        "session_picker": {
+          "type": "string",
+          "enum": ["centered", "side-drawer", "dropdown"]
+        },
+        "theme_editor": {
+          "type": "string",
+          "enum": ["centered", "side-drawer", "sheet"]
+        },
+        "command_palette": {
+          "type": "string",
+          "enum": ["spotlight", "centered", "top-bar"]
+        },
+        "settings": {
+          "type": "string",
+          "enum": ["side-drawer", "tab", "centered"]
+        }
+      }
+    },
+    "chat": {
+      "type": "object",
+      "description": "Chat panel specific configuration",
+      "properties": {
+        "message_width": {
+          "type": "integer",
+          "minimum": 40,
+          "maximum": 100,
+          "description": "Max message width as percentage"
+        },
+        "show_timestamp": { "type": "boolean" },
+        "show_tool_context": { "type": "boolean" },
+        "show_avatars": { "type": "boolean" },
+        "show_token_count": { "type": "boolean" },
+        "code_highlighting": { "type": "boolean" }
+      }
+    },
+    "kanban": {
+      "type": "object",
+      "description": "Kanban panel specific configuration",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered list of kanban column names"
+        },
+        "swimlanes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["assignee", "priority", "workspace", "none"]
+          }
+        },
+        "default_sort": {
+          "type": "string",
+          "enum": ["updated_desc", "updated_asc", "priority", "created_desc"]
+        },
+        "show_quick_actions": { "type": "boolean" },
+        "card_preview_lines": { "type": "integer", "minimum": 1, "maximum": 10 }
+      }
+    },
+    "shortcuts": {
+      "type": "object",
+      "description": "Keyboard shortcut hints for this layout",
+      "properties": {
+        "command_palette": { "type": "string", "description": "e.g. 'Cmd+K'" },
+        "send": { "type": "string", "description": "e.g. 'Cmd+Enter'" },
+        "chat_tab": { "type": "string", "description": "e.g. 'Cmd+1'" },
+        "kanban_tab": { "type": "string", "description": "e.g. 'Cmd+2'" },
+        "sessions_tab": { "type": "string", "description": "e.g. 'Cmd+3'" },
+        "logs_tab": { "type": "string", "description": "e.g. 'Cmd+4'" },
+        "stop_run": { "type": "string", "description": "e.g. 'Cmd+.'" },
+        "search": { "type": "string", "description": "e.g. 'Cmd+Shift+F'" },
+        "theme_switcher": { "type": "string", "description": "e.g. 'Cmd+Shift+T'" },
+        "profile_switcher": { "type": "string", "description": "e.g. 'Cmd+Shift+P'" }
+      }
+    },
+    "responsive": {
+      "type": "object",
+      "description": "Responsive behavior breakpoints",
+      "properties": {
+        "collapse_right_below": {
+          "type": "integer",
+          "description": "Collapse right sidebar below this width (px)"
+        },
+        "collapse_left_below": {
+          "type": "integer",
+          "description": "Collapse left sidebar below this width (px)"
+        },
+        "collapse_bottom_below": {
+          "type": "integer",
+          "description": "Collapse bottom panel below this height (px)"
+        },
+        "compact_mode_below": {
+          "type": "integer",
+          "description": "Switch to compact density below this width (px)"
+        }
+      }
+    }
+  },
+  "required": ["meta"]
+}

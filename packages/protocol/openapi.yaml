@@ -1,0 +1,623 @@
+openapi: "3.1.0"
+info:
+  title: Hermes Desktop Studio Adapter API
+  description: |
+    Local adapter contract for Hermes Desktop Studio.
+    The adapter sits between the desktop UI and Hermes Agent, providing
+    a stable, normalized API. The UI must never talk to Hermes directly.
+  version: "0.1.0"
+  license:
+    name: MIT
+
+servers:
+  - url: http://127.0.0.1:39191
+    description: Local adapter (development)
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Adapter health check
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Adapter is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /studio/bootstrap:
+    get:
+      summary: Initial bootstrap payload
+      description: |
+        Returns adapter info, active profile, capabilities, recent sessions,
+        active theme, and available models. Called once on app startup.
+      operationId: getBootstrap
+      responses:
+        "200":
+          description: Bootstrap data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BootstrapResponse"
+        "401":
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/profiles:
+    get:
+      summary: List Hermes profiles
+      operationId: getProfiles
+      responses:
+        "200":
+          description: List of profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProfileInfo"
+
+  /studio/sessions:
+    get:
+      summary: List sessions
+      description: Session metadata from state.db (read-only).
+      operationId: getSessions
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: q
+          in: query
+          description: Search query for session titles
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SessionSummary"
+                  total:
+                    type: integer
+                required:
+                  - sessions
+                  - total
+
+  /studio/sessions/{session_id}:
+    get:
+      summary: Session details
+      description: Session detail with transcript preview.
+      operationId: getSession
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/runs:
+    post:
+      summary: Start a new run
+      operationId: startRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunRequest"
+      responses:
+        "200":
+          description: Run started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/runs/{run_id}/events:
+    get:
+      summary: SSE event stream for a run
+      description: |
+        Server-Sent Events stream of normalized events for an active run.
+        Events follow the studio event schema (see events.schema.json).
+        The adapter normalizes Hermes SSE into stable studio events.
+      operationId: streamRunEvents
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: SSE event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/runs/{run_id}/stop:
+    post:
+      summary: Stop an active run
+      operationId: stopRun
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run stopped
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - cancelled
+                      - completed
+                      - failed
+                required:
+                  - run_id
+                  - status
+
+  /studio/logs:
+    get:
+      summary: Log metadata and recent lines
+      operationId: getLogs
+      parameters:
+        - name: source
+          in: query
+          description: Log source filter
+          schema:
+            type: string
+            enum:
+              - agent
+              - errors
+              - gateway
+        - name: tail
+          in: query
+          description: Number of recent lines to return
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Log data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  source:
+                    type: string
+                  lines:
+                    type: array
+                    items:
+                      type: string
+                  total:
+                    type: integer
+                required:
+                  - source
+                  - lines
+
+  /studio/logs/stream:
+    get:
+      summary: Live log stream
+      description: SSE stream of live log lines.
+      operationId: streamLogs
+      parameters:
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum:
+              - agent
+              - errors
+              - gateway
+      responses:
+        "200":
+          description: SSE log stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /studio/themes:
+    get:
+      summary: List installed themes
+      operationId: getThemes
+      responses:
+        "200":
+          description: Theme list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  themes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ThemeInfo"
+                  active:
+                    type: string
+                    description: ID of the currently active theme
+                required:
+                  - themes
+
+  /studio/themes/activate:
+    post:
+      summary: Activate a theme
+      operationId: activateTheme
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                theme_id:
+                  type: string
+              required:
+                - theme_id
+      responses:
+        "200":
+          description: Theme activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThemeInfo"
+        "404":
+          description: Theme not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/config:
+    get:
+      summary: Normalized config view
+      operationId: getConfig
+      responses:
+        "200":
+          description: Current configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigView"
+
+  /studio/config:
+    patch:
+      summary: Safe config mutation
+      description: Wraps `hermes config set` CLI. Does not mutate files directly.
+      operationId: updateConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key:
+                  type: string
+                value:
+                  description: Any JSON-serializable value
+              required:
+                - key
+                - value
+      responses:
+        "200":
+          description: Config updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigView"
+        "400":
+          description: Invalid config key or value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Ephemeral token from ~/.hermes-local-shell/runtime/token
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+        adapter_version:
+          type: string
+        hermes_connected:
+          type: boolean
+        uptime_seconds:
+          type: number
+      required:
+        - status
+        - adapter_version
+        - hermes_connected
+
+    BootstrapResponse:
+      type: object
+      properties:
+        adapter_version:
+          type: string
+        hermes_version:
+          type: string
+        active_profile:
+          type: string
+          nullable: true
+        capabilities:
+          type: array
+          items:
+            type: string
+        recent_sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionSummary"
+        active_theme:
+          $ref: "#/components/schemas/ThemeInfo"
+        available_models:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              provider:
+                type: string
+            required:
+              - id
+              - name
+      required:
+        - adapter_version
+        - capabilities
+        - recent_sessions
+
+    ProfileInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        is_active:
+          type: boolean
+      required:
+        - name
+        - path
+
+    SessionSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+        profile:
+          type: string
+          nullable: true
+      required:
+        - id
+        - title
+        - created_at
+        - updated_at
+        - message_count
+
+    SessionDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+        profile:
+          type: string
+          nullable: true
+        transcript_preview:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptMessage"
+      required:
+        - id
+        - title
+        - created_at
+        - updated_at
+        - message_count
+
+    TranscriptMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+            - tool
+            - system
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - role
+        - content
+
+    RunRequest:
+      type: object
+      properties:
+        session_id:
+          type: string
+        prompt:
+          type: string
+        profile:
+          type: string
+          nullable: true
+        context:
+          type: object
+          description: Optional additional context (files, artifacts)
+          additionalProperties: true
+      required:
+        - session_id
+        - prompt
+
+    RunResponse:
+      type: object
+      properties:
+        run_id:
+          type: string
+        status:
+          type: string
+          enum:
+            - started
+            - queued
+            - failed
+      required:
+        - run_id
+        - status
+
+    ThemeInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        author:
+          type: string
+        description:
+          type: string
+        extends:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - version
+        - author
+
+    ConfigView:
+      type: object
+      properties:
+        config:
+          type: object
+          additionalProperties: true
+      required:
+        - config
+
+    ErrorDetail:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        retryable:
+          type: boolean
+          default: false
+        source:
+          type: string
+          enum:
+            - adapter
+            - hermes
+            - studio
+        hint:
+          type: string
+          nullable: true
+      required:
+        - code
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+      required:
+        - error

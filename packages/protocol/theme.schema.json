@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes.studio/schemas/theme.schema.json",
+  "title": "Hermes Studio Theme Pack",
+  "description": "Schema for a Hermes Desktop Studio concept pack (theme.toml). The theme system is generic — no concept (Minecraft, Minions, LOTR, etc.) is hardcoded into the core application. Themes map stable semantic slots to their own visual language.",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+          "description": "Unique theme identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable theme name"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semver version"
+        },
+        "author": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "extends": {
+          "type": "string",
+          "description": "ID of the parent theme to inherit from"
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "name", "version", "author"]
+    },
+    "compat": {
+      "type": "object",
+      "properties": {
+        "studio_api": {
+          "type": "string",
+          "description": "Semver range for studio API compatibility"
+        },
+        "adapter_api": {
+          "type": "string",
+          "description": "Semver range for adapter API compatibility"
+        },
+        "min_hermes": {
+          "type": "string",
+          "description": "Minimum Hermes Agent version required"
+        }
+      },
+      "required": ["studio_api", "adapter_api"]
+    },
+    "palette": {
+      "type": "object",
+      "description": "Color tokens. All values must be valid CSS colors (hex, rgb, hsl, named).",
+      "properties": {
+        "bg": { "type": "string" },
+        "bg_alt": { "type": "string" },
+        "surface": { "type": "string" },
+        "surface_alt": { "type": "string" },
+        "panel": { "type": "string" },
+        "panel_alt": { "type": "string" },
+        "border": { "type": "string" },
+        "border_subtle": { "type": "string" },
+        "text": { "type": "string" },
+        "text_secondary": { "type": "string" },
+        "text_muted": { "type": "string" },
+        "accent": { "type": "string" },
+        "accent_alt": { "type": "string" },
+        "accent_subtle": { "type": "string" },
+        "ok": { "type": "string" },
+        "warn": { "type": "string" },
+        "danger": { "type": "string" },
+        "info": { "type": "string" },
+        "kanban_todo": { "type": "string" },
+        "kanban_doing": { "type": "string" },
+        "kanban_done": { "type": "string" },
+        "kanban_blocked": { "type": "string" },
+        "status_bg": { "type": "string" }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "description": "Typography tokens",
+      "properties": {
+        "font_family": { "type": "string" },
+        "font_family_mono": { "type": "string" },
+        "font_size_base": { "type": "string" },
+        "font_size_sm": { "type": "string" },
+        "font_size_lg": { "type": "string" },
+        "font_size_xl": { "type": "string" },
+        "line_height": { "type": "string" },
+        "font_weight_normal": { "type": "string" },
+        "font_weight_medium": { "type": "string" },
+        "font_weight_bold": { "type": "string" }
+      }
+    },
+    "borders": {
+      "type": "object",
+      "description": "Border and separator tokens",
+      "properties": {
+        "style": {
+          "type": "string",
+          "enum": ["thin", "thick", "rounded", "blocky", "none"]
+        },
+        "radius_sm": { "type": "string" },
+        "radius_md": { "type": "string" },
+        "radius_lg": { "type": "string" },
+        "width": { "type": "string" },
+        "horizontal": { "type": "string" },
+        "vertical": { "type": "string" },
+        "corner_tl": { "type": "string" },
+        "corner_tr": { "type": "string" },
+        "corner_bl": { "type": "string" },
+        "corner_br": { "type": "string" },
+        "separator": { "type": "string" }
+      }
+    },
+    "icons": {
+      "type": "object",
+      "description": "Icon overrides for semantic slots. Values can be emoji, glyph, or icon name.",
+      "properties": {
+        "profile": { "type": "string" },
+        "session": { "type": "string" },
+        "memory": { "type": "string" },
+        "tools": { "type": "string" },
+        "kanban": { "type": "string" },
+        "logs": { "type": "string" },
+        "command": { "type": "string" },
+        "automation": { "type": "string" },
+        "agent": { "type": "string" },
+        "approval": { "type": "string" },
+        "search": { "type": "string" },
+        "settings": { "type": "string" },
+        "send": { "type": "string" },
+        "stop": { "type": "string" },
+        "success": { "type": "string" },
+        "warning": { "type": "string" },
+        "error": { "type": "string" },
+        "info": { "type": "string" },
+        "artifacts": { "type": "string" },
+        "activity": { "type": "string" },
+        "inspector": { "type": "string" },
+        "theme_gallery": { "type": "string" }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "description": "Display label overrides for semantic slots. The core app uses stable keys; themes provide the user-visible text.",
+      "properties": {
+        "profiles": { "type": "string" },
+        "sessions": { "type": "string" },
+        "chat": { "type": "string" },
+        "kanban": { "type": "string" },
+        "artifacts": { "type": "string" },
+        "tools": { "type": "string" },
+        "memory": { "type": "string" },
+        "logs": { "type": "string" },
+        "activity": { "type": "string" },
+        "inspector": { "type": "string" },
+        "command_palette": { "type": "string" },
+        "settings": { "type": "string" },
+        "theme_gallery": { "type": "string" },
+        "composer": { "type": "string" },
+        "automation": { "type": "string" },
+        "send": { "type": "string" },
+        "stop": { "type": "string" },
+        "resume": { "type": "string" },
+        "approve": { "type": "string" },
+        "deny": { "type": "string" },
+        "search": { "type": "string" }
+      }
+    },
+    "empty_states": {
+      "type": "object",
+      "description": "Empty state messages for panels when no data is available",
+      "properties": {
+        "sessions": { "type": "string" },
+        "chat": { "type": "string" },
+        "kanban": { "type": "string" },
+        "artifacts": { "type": "string" },
+        "tools": { "type": "string" },
+        "memory": { "type": "string" },
+        "logs": { "type": "string" },
+        "activity": { "type": "string" },
+        "inspector": { "type": "string" },
+        "search": { "type": "string" }
+      }
+    },
+    "onboarding": {
+      "type": "object",
+      "description": "Onboarding copy for first-time users",
+      "properties": {
+        "welcome_title": { "type": "string" },
+        "welcome_message": { "type": "string" },
+        "first_run_hint": { "type": "string" },
+        "theme_hint": { "type": "string" },
+        "shortcut_hint": { "type": "string" }
+      }
+    },
+    "message_styles": {
+      "type": "object",
+      "description": "Chat message rendering styles",
+      "properties": {
+        "assistant": {
+          "type": "string",
+          "enum": ["bubble", "block-bubble", "compact-card", "terminal-block"]
+        },
+        "user": {
+          "type": "string",
+          "enum": ["bubble", "block-bubble", "compact-card", "terminal-block"]
+        },
+        "tool": {
+          "type": "string",
+          "enum": ["chip-stream", "card", "inline", "collapsed"]
+        },
+        "diff": {
+          "type": "string",
+          "enum": ["file-card", "inline", "modal"]
+        },
+        "assistant_prefix": { "type": "string" },
+        "user_prefix": { "type": "string" },
+        "tool_prefix": { "type": "string" },
+        "approval_prefix": { "type": "string" }
+      }
+    },
+    "panels": {
+      "type": "object",
+      "description": "Panel visibility and behavior overrides",
+      "properties": {
+        "show_status_bar": { "type": "boolean" },
+        "show_right_inspector": { "type": "boolean" },
+        "show_bottom_activity": { "type": "boolean" },
+        "collapsible_left_sidebar": { "type": "boolean" },
+        "collapsible_right_sidebar": { "type": "boolean" },
+        "collapsible_bottom_panel": { "type": "boolean" }
+      }
+    },
+    "kanban": {
+      "type": "object",
+      "description": "Kanban-specific styling overrides",
+      "properties": {
+        "card_density": {
+          "type": "string",
+          "enum": ["compact", "comfortable", "spacious"]
+        },
+        "show_assignee_avatar": { "type": "boolean" },
+        "show_priority_badge": { "type": "boolean" },
+        "show_workspace_chip": { "type": "boolean" },
+        "card_border_radius": { "type": "string" },
+        "column_header_style": {
+          "type": "string",
+          "enum": ["default", "minimal", "accent", "filled"]
+        }
+      }
+    },
+    "card_styles": {
+      "type": "object",
+      "description": "General card styling tokens",
+      "properties": {
+        "border_radius": { "type": "string" },
+        "padding": { "type": "string" },
+        "shadow": { "type": "string" },
+        "hover_effect": {
+          "type": "string",
+          "enum": ["none", "lift", "highlight", "glow"]
+        }
+      }
+    },
+    "density": {
+      "type": "object",
+      "description": "Density and spacing tokens",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["compact", "comfortable", "spacious"]
+        },
+        "spacing_xs": { "type": "string" },
+        "spacing_sm": { "type": "string" },
+        "spacing_md": { "type": "string" },
+        "spacing_lg": { "type": "string" },
+        "spacing_xl": { "type": "string" }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "description": "Accessibility defaults for this theme",
+      "properties": {
+        "reduced_motion": { "type": "boolean" },
+        "high_contrast": { "type": "boolean" },
+        "font_scale": { "type": "number", "minimum": 0.5, "maximum": 3.0 },
+        "focus_ring_style": {
+          "type": "string",
+          "enum": ["solid", "dashed", "glow", "none"]
+        }
+      }
+    },
+    "assets": {
+      "type": "object",
+      "description": "Optional decorative asset paths",
+      "properties": {
+        "banner": { "type": "string", "description": "ASCII art or text banner" },
+        "preview": { "type": "string", "description": "Path to preview.txt" },
+        "hero_image": { "type": "string", "description": "Path to hero image" },
+        "favicon": { "type": "string", "description": "Path to favicon" },
+        "font_url": { "type": "string", "description": "URL to custom font" }
+      }
+    }
+  },
+  "required": ["meta"]
+}

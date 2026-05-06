@@ -1,11 +1,26 @@
 # shared-types
 
-TypeScript type definitions shared between desktop-studio and future packages.
+TypeScript type definitions for Hermes Desktop Studio.
 
-Contains hand-written or generated types for:
-- Adapter API request/response types
-- Event types
-- Theme and layout types
-- Profile, session, run models
+## Usage
 
-These will be defined in Phase 1.
+```typescript
+import type {
+  StudioEvent,
+  EventType,
+  ThemePack,
+  LayoutPack,
+  PluginManifest,
+  SemanticSlot,
+} from "@hermes-studio/shared-types";
+```
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `src/events.ts` | All 15 event types with typed payloads |
+| `src/theme.ts` | Theme pack types (palette, icons, labels, semantic slots) |
+| `src/layout.ts` | Layout pack types (panels, tabs, modals, shortcuts) |
+| `src/plugin.ts` | Plugin manifest types (active + future types) |
+| `src/index.ts` | Barrel export of all types |

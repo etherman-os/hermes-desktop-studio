@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes.studio/schemas/events.schema.json",
+  "title": "Hermes Studio Events",
+  "description": "Normalized event schema for Hermes Desktop Studio. Events are emitted by the adapter and consumed by the desktop UI. Hermes-specific details must not leak through.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique event identifier"
+    },
+    "type": {
+      "$ref": "#/$defs/EventType"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Associated run ID, if applicable"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Associated session ID, if applicable"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the event was emitted"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["adapter", "hermes", "studio"],
+      "description": "Where the event originated"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific data"
+    }
+  },
+  "required": ["id", "type", "timestamp", "source"],
+  "additionalProperties": false,
+  "$defs": {
+    "EventType": {
+      "type": "string",
+      "enum": [
+        "run.started",
+        "assistant.delta",
+        "assistant.completed",
+        "tool.started",
+        "tool.progress",
+        "tool.completed",
+        "approval.requested",
+        "approval.resolved",
+        "run.completed",
+        "run.failed",
+        "run.cancelled",
+        "log.line",
+        "adapter.warning",
+        "kanban.updated",
+        "memory.updated"
+      ],
+      "description": "All stable studio event types"
+    },
+    "RunStartedPayload": {
+      "type": "object",
+      "description": "Payload for run.started events",
+      "properties": {
+        "run_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "profile": { "type": "string" }
+      },
+      "required": ["run_id", "session_id"]
+    },
+    "AssistantDeltaPayload": {
+      "type": "object",
+      "description": "Payload for assistant.delta events",
+      "properties": {
+        "text": { "type": "string" },
+        "model": { "type": "string" },
+        "token_count": { "type": "integer" }
+      },
+      "required": ["text"]
+    },
+    "AssistantCompletedPayload": {
+      "type": "object",
+      "description": "Payload for assistant.completed events",
+      "properties": {
+        "model": { "type": "string" },
+        "total_tokens": { "type": "integer" },
+        "duration_ms": { "type": "integer" }
+      }
+    },
+    "ToolStartedPayload": {
+      "type": "object",
+      "description": "Payload for tool.started events",
+      "properties": {
+        "tool": { "type": "string" },
+        "tool_call_id": { "type": "string" },
+        "input": { "type": "object" }
+      },
+      "required": ["tool"]
+    },
+    "ToolProgressPayload": {
+      "type": "object",
+      "description": "Payload for tool.progress events",
+      "properties": {
+        "tool": { "type": "string" },
+        "tool_call_id": { "type": "string" },
+        "progress": { "type": "number", "minimum": 0, "maximum": 1 },
+        "message": { "type": "string" }
+      },
+      "required": ["tool"]
+    },
+    "ToolCompletedPayload": {
+      "type": "object",
+      "description": "Payload for tool.completed events",
+      "properties": {
+        "tool": { "type": "string" },
+        "tool_call_id": { "type": "string" },
+        "output": {},
+        "success": { "type": "boolean" },
+        "duration_ms": { "type": "integer" }
+      },
+      "required": ["tool", "success"]
+    },
+    "ApprovalRequestedPayload": {
+      "type": "object",
+      "description": "Payload for approval.requested events",
+      "properties": {
+        "approval_id": { "type": "string" },
+        "tool": { "type": "string" },
+        "action": { "type": "string" },
+        "description": { "type": "string" },
+        "risk_level": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["approval_id", "tool", "action"]
+    },
+    "ApprovalResolvedPayload": {
+      "type": "object",
+      "description": "Payload for approval.resolved events",
+      "properties": {
+        "approval_id": { "type": "string" },
+        "decision": { "type": "string", "enum": ["approved", "denied"] },
+        "auto": { "type": "boolean" }
+      },
+      "required": ["approval_id", "decision"]
+    },
+    "RunCompletedPayload": {
+      "type": "object",
+      "description": "Payload for run.completed events",
+      "properties": {
+        "run_id": { "type": "string" },
+        "total_tokens": { "type": "integer" },
+        "duration_ms": { "type": "integer" },
+        "tool_count": { "type": "integer" }
+      },
+      "required": ["run_id"]
+    },
+    "RunFailedPayload": {
+      "type": "object",
+      "description": "Payload for run.failed events. May be synthesized by the adapter when Hermes emits run.completed for a failed run.",
+      "properties": {
+        "run_id": { "type": "string" },
+        "error_code": { "type": "string" },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "hint": { "type": "string" }
+      },
+      "required": ["run_id", "message"]
+    },
+    "RunCancelledPayload": {
+      "type": "object",
+      "description": "Payload for run.cancelled events",
+      "properties": {
+        "run_id": { "type": "string" },
+        "reason": { "type": "string" }
+      },
+      "required": ["run_id"]
+    },
+    "LogLinePayload": {
+      "type": "object",
+      "description": "Payload for log.line events",
+      "properties": {
+        "source": { "type": "string", "enum": ["agent", "errors", "gateway"] },
+        "level": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
+        "message": { "type": "string" },
+        "session_context": { "type": "string" }
+      },
+      "required": ["source", "message"]
+    },
+    "AdapterWarningPayload": {
+      "type": "object",
+      "description": "Payload for adapter.warning events",
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" }
+      },
+      "required": ["code", "message"]
+    },
+    "KanbanUpdatedPayload": {
+      "type": "object",
+      "description": "Payload for kanban.updated events",
+      "properties": {
+        "board_id": { "type": "string" },
+        "action": { "type": "string" },
+        "task_id": { "type": "string" }
+      },
+      "required": ["board_id", "action"]
+    },
+    "MemoryUpdatedPayload": {
+      "type": "object",
+      "description": "Payload for memory.updated events",
+      "properties": {
+        "session_id": { "type": "string" },
+        "action": { "type": "string", "enum": ["created", "updated", "deleted"] },
+        "artifact_id": { "type": "string" }
+      },
+      "required": ["action"]
+    }
+  }
+}

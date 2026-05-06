@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes.studio/schemas/plugin.schema.json",
+  "title": "Hermes Studio Plugin Manifest",
+  "description": "Schema for a Hermes Desktop Studio plugin manifest. MVP supports only theme-pack and layout-pack. panel-pack, command-pack, and kanban-pack are reserved for future use and must not be executed.",
+  "type": "object",
+  "properties": {
+    "package": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+          "description": "Unique plugin identifier"
+        },
+        "name": { "type": "string", "description": "Human-readable name" },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semver version"
+        },
+        "author": { "type": "string" },
+        "license": { "type": "string" },
+        "repository": {
+          "type": "string",
+          "format": "uri",
+          "description": "Source repository URL"
+        },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "name", "version", "author"]
+    },
+    "type": {
+      "type": "string",
+      "enum": ["theme-pack", "layout-pack", "panel-pack", "command-pack", "kanban-pack"],
+      "description": "Plugin type. MVP supports theme-pack and layout-pack only."
+    },
+    "compat": {
+      "type": "object",
+      "properties": {
+        "studio_api": {
+          "type": "string",
+          "description": "Semver range for studio API compatibility"
+        },
+        "adapter_api": {
+          "type": "string",
+          "description": "Semver range for adapter API compatibility"
+        },
+        "min_hermes": {
+          "type": "string",
+          "description": "Minimum Hermes Agent version"
+        }
+      },
+      "required": ["studio_api"]
+    },
+    "features": {
+      "type": "object",
+      "description": "Capability flags for this plugin",
+      "properties": {
+        "custom_layout": { "type": "boolean" },
+        "custom_icons": { "type": "boolean" },
+        "custom_labels": { "type": "boolean" },
+        "custom_colors": { "type": "boolean" },
+        "custom_typography": { "type": "boolean" },
+        "kanban_overrides": { "type": "boolean" },
+        "accessibility_profile": { "type": "boolean" },
+        "custom_commands": { "type": "boolean" },
+        "custom_panels": { "type": "boolean" }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "description": "Distribution and integrity metadata",
+      "properties": {
+        "archive": {
+          "type": "string",
+          "description": "Filename of the distributable archive"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 checksum of the archive"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Path to signature file (minisig)"
+        },
+        "registry_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to the plugin registry entry"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "experimental", "deprecated", "future"],
+      "description": "Plugin lifecycle status. 'future' types are reserved and not executable in current version.",
+      "default": "active"
+    },
+    "entry_points": {
+      "type": "object",
+      "description": "File paths to plugin resources",
+      "properties": {
+        "theme_file": {
+          "type": "string",
+          "description": "Path to theme.toml (for theme-pack)"
+        },
+        "layout_file": {
+          "type": "string",
+          "description": "Path to layout.toml (for layout-pack)"
+        },
+        "preview_file": {
+          "type": "string",
+          "description": "Path to preview.txt"
+        },
+        "panel_module": {
+          "type": "string",
+          "description": "Path to panel module (future, panel-pack only)"
+        },
+        "command_module": {
+          "type": "string",
+          "description": "Path to command module (future, command-pack only)"
+        }
+      }
+    }
+  },
+  "required": ["package", "type", "compat"]
+}
