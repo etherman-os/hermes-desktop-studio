@@ -9,13 +9,14 @@
 - [x] Add `docs/PRODUCT_DIRECTION.md` and `docs/ADR-0001-desktop-first.md`
 - [x] Add placeholder theme packs (example-minions, example-lotr)
 
-## Phase 1 — Protocol and Schemas
+## Phase 1 — Protocol and Schemas (Done)
 
-- [ ] `packages/protocol/openapi.yaml` — Adapter API specification (all `/shell/*` endpoints)
-- [ ] `packages/protocol/events.schema.json` — Normalized event types (15 events)
-- [ ] `packages/protocol/theme.schema.json` — Theme pack TOML schema
-- [ ] `packages/protocol/layout.schema.json` — Layout pack TOML schema
-- [ ] `packages/shared-types/src/index.ts` — TypeScript type definitions
+- [x] `packages/protocol/openapi.yaml` — Adapter API specification (16 `/studio/*` endpoints)
+- [x] `packages/protocol/events.schema.json` — Normalized event types (15 events)
+- [x] `packages/protocol/theme.schema.json` — Theme pack TOML schema
+- [x] `packages/protocol/layout.schema.json` — Layout pack TOML schema
+- [x] `packages/protocol/plugin.schema.json` — Plugin manifest schema
+- [x] `packages/shared-types/src/` — TypeScript type definitions (events, theme, layout, plugin)
 
 ## Phase 2 — Desktop Studio Skeleton
 
@@ -59,3 +60,7 @@
 - [ ] Auto-update mechanism
 - [ ] GitHub Releases pipeline
 - [ ] Documentation for users
+
+## Reference Projects
+
+- **[hermes-desktop](https://github.com/fathah/hermes-desktop)** — Electron + React + TypeScript desktop GUI for Hermes Agent. Useful reference for Hermes desktop UX patterns (setup flow, chat streaming, session browsing, settings organization, packaging). Hermes Local Studio remains a local-first, themeable, moddable Tauri studio with a different product direction. See `docs/REFERENCE_HERMES_DESKTOP.md` for the full reference review.
