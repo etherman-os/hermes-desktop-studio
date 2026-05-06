@@ -113,6 +113,26 @@ The adapter exposes two health endpoints (both return the same shape):
 - `GET /health` — root-level, no auth required
 - `GET /studio/health` — under studio router, no auth required
 
+Both report: adapter status, backend mode, Hermes reachability, last error.
+
+### Backend Modes
+
+The adapter supports three backend modes:
+
+| Mode | Behavior |
+|------|----------|
+| `mock` | Fake in-memory data. No real Hermes needed. |
+| `hermes` | Real Hermes API. Fails if Hermes is unreachable. |
+| `auto` | Tries Hermes first, falls back to mock if unavailable. (default) |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HERMES_STUDIO_BACKEND` | `auto` | Backend mode: `mock`, `hermes`, or `auto` |
+| `HERMES_API_BASE_URL` | `http://127.0.0.1:8642` | Hermes Agent API URL |
+| `HERMES_API_KEY` | *(none)* | Optional API key for Hermes |
+
 ## Development Status
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the current phase and milestone plan.

@@ -61,12 +61,20 @@ app.include_router(studio_router)
 @app.get("/health")
 async def health_root() -> dict[str, Any]:
     """Root-level health check (no auth required)."""
-    return {
-        "status": "healthy",
-        "adapter_version": "0.1.0",
-        "hermes_connected": False,
-        "uptime_seconds": 0,
-    }
+    from hermes_adapter.studio_routes import _get_backend, _backend_status
+    try:
+        backend = await _get_backend()
+        h = await backend.health()
+        h["backend_status"] = _backend_status
+        return h
+    except Exception:
+        return {
+            "status": "healthy",
+            "adapter_version": "0.1.0",
+            "hermes_connected": False,
+            "uptime_seconds": 0,
+            "backend_mode": "unknown",
+        }
 
 
 def _get_client() -> HermesClient:

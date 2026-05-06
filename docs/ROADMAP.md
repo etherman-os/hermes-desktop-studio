@@ -58,7 +58,20 @@
 - [x] Adapter tests: 17 new tests for `/studio/*` endpoints (52 total passing)
 - [x] Dev commands documented: `dev:adapter`, `dev:desktop`, `build`
 
-## Phase 4 — Real Hermes Integration
+## Phase 4A — Real Hermes Chat Bridge (Done)
+
+- [x] Backend abstraction: `StudioBackend` base class, `MockBackend`, `HermesBackend`
+- [x] Backend config: env vars `HERMES_STUDIO_BACKEND` (mock/hermes/auto), `HERMES_API_BASE_URL`, `HERMES_API_KEY`
+- [x] Backend factory: auto mode tries Hermes, falls back to mock
+- [x] HermesBackend: health, bootstrap, start_run, stream_run_events (SSE proxy), stop_run
+- [x] Event normalization: Hermes SSE → Studio events (OpenAI delta, tool, approval, run lifecycle)
+- [x] studio_routes.py: delegates to backend abstraction layer
+- [x] Health endpoints: report backend mode, Hermes reachability, last error
+- [x] Frontend: StatusBar shows backend mode (Mock/Hermes/Auto)
+- [x] Tests: 16 new tests (event normalization, HermesBackend, auto fallback) — 68 total passing
+- [x] Frontend build: tsc + vite pass
+
+## Phase 4B — Session Browser + Logs (Future)
 
 - [ ] Hermes API client (`/v1/capabilities`, `/v1/runs`, SSE, `/stop`)
 - [ ] Event normalizer (defensive: synthesize `run.failed`, `tool.completed`)
@@ -66,6 +79,17 @@
 - [ ] Logs panel (live tail)
 - [ ] Config UI (`hermes config` CLI wrapper)
 - [ ] Kanban layer (CLI wrappers for board/task operations)
+
+## Phase 4B — Session Browser + Logs (Future)
+
+- [ ] Session browser: state.db read-only queries via adapter
+- [ ] Log inspector: live tail from Hermes log files
+- [ ] Config editor: hermes config set wrapper
+- [ ] Profile switcher: real profile switching
+- [ ] Memory viewer: agent memory entries
+- [ ] Kanban integration: hermes kanban CLI wrappers
+- [ ] Provider setup UI
+- [ ] Installer flow
 
 ## Phase 5 — Polish and Accessibility
 

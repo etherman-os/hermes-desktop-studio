@@ -36,7 +36,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export async function checkAdapterHealth(): Promise<boolean> {
   try {
-    // Try /studio/health first, fall back to /health
     let res = await fetch(`${config.baseUrl}/studio/health`, { signal: AbortSignal.timeout(2000) });
     if (res.ok) return true;
     res = await fetch(`${config.baseUrl}/health`, { signal: AbortSignal.timeout(2000) });
@@ -44,6 +43,29 @@ export async function checkAdapterHealth(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export interface HealthResponse {
+  status: string;
+  adapter_version: string;
+  hermes_connected: boolean;
+  backend_mode: string;
+  backend_status?: {
+    backend_mode?: string;
+    active_backend?: string;
+    hermes_connected?: boolean;
+    hermes_url?: string;
+    fallback_reason?: string;
+  };
+}
+
+export async function checkAdapterHealthDetailed(): Promise<HealthResponse> {
+  let res = await fetch(`${config.baseUrl}/studio/health`, { signal: AbortSignal.timeout(2000) });
+  if (!res.ok) {
+    res = await fetch(`${config.baseUrl}/health`, { signal: AbortSignal.timeout(2000) });
+  }
+  if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
+  return res.json();
 }
 
 export async function getBootstrap() {
