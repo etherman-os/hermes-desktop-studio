@@ -97,7 +97,9 @@
 - [x] Bootstrap response includes session_source info
 - [x] Frontend: sessionStore loads from adapter with source tracking
 - [x] Left sidebar: adapter-loaded sessions with message count
-- [x] Sessions tab: real data, empty state, session source indicator
+- [x] Sessions center tab: session list, detail view, transcript preview, search filter
+- [x] Session detail: metadata + transcript preview from adapter
+- [x] assistant.delta payload verified: text field present in all normalization paths
 - [x] docs/HERMES_STATE_READONLY.md: read-only guarantee, env vars, troubleshooting
 - [x] Tests: 18 new tests (fixture DB, FTS, read-only verification) — 92 total passing
 

@@ -2,6 +2,7 @@ import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { ChatSurface } from "../chat/ChatSurface";
 import { KanbanBoard } from "../kanban/KanbanBoard";
+import { SessionsPanel } from "../sessions/SessionsPanel";
 
 const TABS = ["chat", "kanban", "artifacts", "sessions"] as const;
 
@@ -27,7 +28,7 @@ export function CenterArea() {
         {activeTab === "chat" && <ChatSurface />}
         {activeTab === "kanban" && <KanbanBoard />}
         {activeTab === "artifacts" && <EmptySlot slot="artifacts" />}
-        {activeTab === "sessions" && <EmptySlot slot="sessions" />}
+        {activeTab === "sessions" && <SessionsPanel />}
       </div>
     </div>
   );
