@@ -319,9 +319,10 @@ class HermesBackend(StudioBackend):
                                 if "choices" in raw_event:
                                     delta = raw_event.get("choices", [{}])[0].get("delta", {})
                                     if delta.get("content"):
-                                        _debug_log_raw("openai_delta", delta.get("content", ""))
-                                        studio_event = _sse_event("assistant.delta", {"text": delta["content"]})
-                                        _debug_log_normalized("assistant.delta", "")
+                                        text = delta["content"]
+                                        _debug_log_raw("openai_delta", text)
+                                        studio_event = _sse_event("assistant.delta", {"text": text})
+                                        _debug_log_normalized("assistant.delta", json.dumps({"text": text})[:100])
                                         yield studio_event
                                         continue
                                 event_type = raw_event.get("type", "unknown")

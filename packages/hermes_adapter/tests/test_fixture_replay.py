@@ -55,3 +55,33 @@ class TestFixtureReplay:
         result = _normalize_hermes_event(raw)
         assert result["type"] == "adapter.warning"
         assert "unknown" in result["payload"]["message"].lower()
+
+    def test_assistant_delta_includes_text(self) -> None:
+        """Normalized assistant.delta must include payload.text for frontend rendering."""
+        # content_block_delta with nested delta.text
+        raw = {"type": "content_block_delta", "payload": {"delta": {"type": "text_delta", "text": "Hello! "}}}
+        result = _normalize_hermes_event(raw)
+        assert result["type"] == "assistant.delta"
+        assert "text" in result["payload"], f"Missing 'text' in payload: {result['payload']}"
+        assert result["payload"]["text"] == "Hello! "
+
+        # assistant.delta with flat text
+        raw = {"type": "assistant.delta", "payload": {"text": "World!"}}
+        result = _normalize_hermes_event(raw)
+        assert result["type"] == "assistant.delta"
+        assert result["payload"]["text"] == "World!"
+
+    def test_fixture_assistant_delta_events_have_text(self) -> None:
+        """All assistant.delta events in fixture must have non-empty text."""
+        with open(FIXTURE_PATH) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                entry = json.loads(line)
+                raw = entry.get("data", {})
+                raw["type"] = entry.get("event", raw.get("type", "unknown"))
+                normalized = _normalize_hermes_event(raw)
+                if normalized["type"] == "assistant.delta":
+                    assert "text" in normalized["payload"], f"assistant.delta missing text: {normalized}"
+                    assert len(normalized["payload"]["text"]) > 0, f"assistant.delta has empty text"
