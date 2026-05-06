@@ -178,6 +178,17 @@ async def stream_logs(
 
 
 # ---------------------------------------------------------------------------
+# Model / Provider Config
+# ---------------------------------------------------------------------------
+
+
+@router.get("/model-config")
+async def get_model_config(_token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    return await backend.get_model_config()
+
+
+# ---------------------------------------------------------------------------
 # Themes
 # ---------------------------------------------------------------------------
 

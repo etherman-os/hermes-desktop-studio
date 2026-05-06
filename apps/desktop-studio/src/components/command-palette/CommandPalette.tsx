@@ -24,6 +24,8 @@ export function CommandPalette() {
     { id: "open-chat", label: "Open Chat", icon: "💬", shortcut: "Ctrl+1", action: () => { setActiveTab("chat"); close(); } },
     { id: "show-logs", label: "Show Logs", icon: "📜", shortcut: "Ctrl+4", action: () => { useLayoutStore.getState().setBottomTab("logs"); close(); } },
     { id: "open-settings", label: "Open Settings", icon: "⚙️", action: () => { setSidebar("settings"); close(); } },
+    { id: "refresh-model", label: "Refresh Model Config", icon: "🔄", action: () => { close(); } },
+    { id: "show-provider", label: "Show Provider Status", icon: "🤖", action: () => { close(); } },
     { id: "toggle-right", label: "Toggle Right Panel", icon: "📐", action: () => { toggleRight(); close(); } },
     { id: "toggle-bottom", label: "Toggle Bottom Panel", icon: "📏", action: () => { toggleBottom(); close(); } },
     { id: "theme-default", label: "Theme: Default Dark", icon: "🌙", action: () => { setTheme("default-dark"); close(); } },

@@ -14,6 +14,7 @@ import httpx
 
 from hermes_adapter.backend_base import StudioBackend
 from hermes_adapter.backend_config import get_debug_events
+from hermes_adapter.config_repository import ConfigRepository
 from hermes_adapter.log_repository import LogRepository, get_hermes_logs_dir
 from hermes_adapter.profile_repository import ProfileRepository
 from hermes_adapter.session_repository import SessionRepository, find_state_db, get_hermes_home
@@ -177,11 +178,12 @@ class HermesBackend(StudioBackend):
         self._session_repo: SessionRepository | None = None
         self._log_repo: LogRepository | None = None
         self._profile_repo: ProfileRepository | None = None
+        self._config_repo: ConfigRepository | None = None
         self._hermes_home = get_hermes_home()
         self._init_repos()
 
     def _init_repos(self) -> None:
-        """Initialize session, log, and profile repositories."""
+        """Initialize session, log, profile, and config repositories."""
         try:
             # Session repository
             db_path = find_state_db(self._hermes_home)
@@ -198,6 +200,10 @@ class HermesBackend(StudioBackend):
             # Profile repository
             self._profile_repo = ProfileRepository(self._hermes_home)
             logger.info("Profile repository initialized: %d profiles", self._profile_repo.profile_count)
+
+            # Config repository
+            self._config_repo = ConfigRepository(self._hermes_home)
+            logger.info("Config repository initialized: available=%s", self._config_repo.available)
 
         except Exception as e:
             logger.warning("Failed to initialize repositories: %s", e)
@@ -273,6 +279,9 @@ class HermesBackend(StudioBackend):
         # Get logs status
         log_status = self._log_repo.get_status() if self._log_repo else {"available": False}
 
+        # Get model config
+        model_config = self._config_repo.get_model_config() if self._config_repo else {"provider": "unknown", "model": "unknown"}
+
         return {
             "adapter_version": "0.1.0",
             "hermes_version": "unknown" if not self._hermes_healthy else "connected",
@@ -286,6 +295,12 @@ class HermesBackend(StudioBackend):
             "profile_count": profile_status.get("profile_count", 0),
             "logs_available": log_status.get("available", False),
             "log_sources": log_status.get("log_files", []),
+            "model_config": {
+                "provider": model_config.get("provider", "unknown"),
+                "model": model_config.get("model", "unknown"),
+                "api_key_configured": model_config.get("api_key_configured", False),
+                "config_source": model_config.get("config_source", "unavailable"),
+            },
         }
 
     async def list_profiles(self) -> list[dict[str, Any]]:
@@ -476,6 +491,41 @@ class HermesBackend(StudioBackend):
 
     async def patch_config(self, key: str, value: Any) -> dict[str, Any]:
         raise ValueError("Config mutation not supported in Hermes backend mode")
+
+    async def get_model_config(self) -> dict[str, Any]:
+        """Return model/provider config from config.yaml + .env + Hermes API."""
+        base_config = self._config_repo.get_model_config() if self._config_repo else {
+            "provider": "unknown",
+            "model": "unknown",
+            "api_key_configured": False,
+            "config_source": "unavailable",
+            "warnings": ["No config repository"],
+        }
+
+        # Try to enrich with Hermes API data
+        capabilities: list[str] = []
+        available_models: list[dict[str, Any]] = []
+        if self._hermes_healthy:
+            try:
+                resp = await self._client.get(f"{self._base_url}/v1/capabilities", headers=self._headers(), timeout=5.0)
+                if resp.status_code == 200:
+                    capabilities = resp.json().get("capabilities", [])
+            except Exception:
+                pass
+            try:
+                resp = await self._client.get(f"{self._base_url}/v1/models", headers=self._headers(), timeout=5.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    models = data.get("data", data.get("models", []))
+                    if isinstance(models, list):
+                        available_models = [{"id": m.get("id", ""), "name": m.get("name", m.get("id", ""))} for m in models if isinstance(m, dict)]
+            except Exception:
+                pass
+
+        base_config["capabilities_available"] = len(capabilities) > 0
+        base_config["available_models"] = available_models
+        base_config["available_model_count"] = len(available_models)
+        return base_config
 
     async def close(self) -> None:
         await self._client.aclose()

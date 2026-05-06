@@ -228,6 +228,27 @@ class MockBackend(StudioBackend):
         cfg[key] = value
         return {"config": cfg}
 
+    async def get_model_config(self) -> dict[str, Any]:
+        return {
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-20250514",
+            "base_url": None,
+            "api_key_configured": True,
+            "api_key_source": ".env",
+            "config_source": "config.yaml",
+            "temperature": 0.7,
+            "max_tokens": 4096,
+            "context_window": 200000,
+            "capabilities_available": True,
+            "available_models": [
+                {"id": "claude-sonnet-4-20250514", "name": "Claude Sonnet 4"},
+                {"id": "gpt-4o", "name": "GPT-4o"},
+                {"id": "hermes-3-llama-3.1-70b", "name": "Hermes 3 70B"},
+            ],
+            "available_model_count": 3,
+            "warnings": [],
+        }
+
     def _sessions(self) -> list[dict[str, Any]]:
         return [
             {"id": "s-1", "title": "Map src directory structure", "created_at": "2026-05-06T10:00:00Z", "updated_at": "2026-05-06T10:05:00Z", "message_count": 12},

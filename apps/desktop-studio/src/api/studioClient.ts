@@ -116,6 +116,26 @@ export async function getLogs(source?: string, tail?: number) {
   return request<{ source: string; lines: string[]; total: number }>(`/studio/logs${qs ? `?${qs}` : ""}`);
 }
 
+export interface ModelConfig {
+  provider: string;
+  model: string;
+  base_url?: string;
+  api_key_configured: boolean;
+  api_key_source?: string;
+  config_source: string;
+  temperature?: number;
+  max_tokens?: number;
+  context_window?: number;
+  capabilities_available?: boolean;
+  available_models?: { id: string; name: string }[];
+  available_model_count?: number;
+  warnings?: string[];
+}
+
+export async function getModelConfig() {
+  return request<ModelConfig>("/studio/model-config");
+}
+
 export async function getThemes() {
   return request<{ themes: ThemeInfo[]; active: string }>("/studio/themes");
 }

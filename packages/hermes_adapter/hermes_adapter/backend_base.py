@@ -87,6 +87,16 @@ class StudioBackend(ABC):
         """Return current configuration."""
         ...
 
+    async def get_model_config(self) -> dict[str, Any]:
+        """Return normalized model/provider config. Override in subclasses."""
+        return {
+            "provider": "unknown",
+            "model": "unknown",
+            "api_key_configured": False,
+            "config_source": "unavailable",
+            "warnings": ["Model config not available in this backend"],
+        }
+
     @abstractmethod
     async def patch_config(self, key: str, value: Any) -> dict[str, Any]:
         """Update a config key. Returns updated config."""

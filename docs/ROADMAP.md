@@ -126,6 +126,18 @@
 - [x] studioClient: getActiveProfile, activateProfile, getLogs(source, tail)
 - [x] Build: tsc + vite pass, 111 adapter tests passing
 
+## Phase 4D — Model/Provider Config Viewer (Done)
+
+- [x] config_repository.py: config.yaml + .env okuma, redaction, secret detection
+- [x] Backend: get_model_config(), get_provider_status()
+- [x] /studio/model-config endpoint
+- [x] Bootstrap: model_config metadata
+- [x] Frontend: RightPanel Model section wired to adapter
+- [x] Model panel: provider, model, api key status, context, warnings
+- [x] Command palette: Refresh Model Config, Show Provider Status
+- [x] Tests: 14 new (config repository) — 125 total passing
+- [x] docs/HERMES_MODEL_PROVIDER_VIEWER.md
+
 ## Phase 5 — Polish and Accessibility
 
 - [ ] Keyboard navigation (full keyboard usability)
