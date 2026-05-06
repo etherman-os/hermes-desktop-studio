@@ -152,6 +152,14 @@
 - [x] Tests: 20 new (theme repository) — 145 total passing
 - [x] docs/THEME_PACKS.md: format, semantic slots, inheritance, search paths, creating custom themes
 
+## Phase 5.5 — Theme UI Integration and Route QA (Done)
+
+- [x] Route ordering QA: /themes/active, /themes/reload not captured by {theme_id}
+- [x] MockBackend: get_theme/get_active_theme return normalized format (meta wrapper)
+- [x] Route tests: active, reload, get by id, not found, route ordering
+- [x] Tests: 5 new route tests — 150 total passing
+- [x] Build: tsc + vite pass
+
 ## Phase 5 — Polish and Accessibility
 
 - [ ] Keyboard navigation (full keyboard usability)

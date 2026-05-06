@@ -173,6 +173,40 @@ class TestThemes:
         )
         assert resp.status_code == 404
 
+    def test_get_active_theme(self, client: TestClient) -> None:
+        resp = client.get("/studio/themes/active", headers=HEADERS)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "meta" in data
+        assert "palette" in data
+        assert "labels" in data
+
+    def test_get_theme_by_id(self, client: TestClient) -> None:
+        resp = client.get("/studio/themes/default-dark", headers=HEADERS)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["meta"]["id"] == "default-dark"
+
+    def test_get_theme_not_found(self, client: TestClient) -> None:
+        resp = client.get("/studio/themes/nonexistent", headers=HEADERS)
+        assert resp.status_code == 404
+
+    def test_reload_themes(self, client: TestClient) -> None:
+        resp = client.post("/studio/themes/reload", headers=HEADERS)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["reloaded"] is True
+        assert data["count"] >= 1
+
+    def test_active_not_captured_by_dynamic_route(self, client: TestClient) -> None:
+        """Verify /themes/active is not treated as theme_id='active'."""
+        resp = client.get("/studio/themes/active", headers=HEADERS)
+        assert resp.status_code == 200
+        data = resp.json()
+        # Should return normalized theme, not theme info for id "active"
+        assert "meta" in data
+        assert data["meta"]["id"] != "active"
+
 
 class TestConfig:
     def test_get_config(self, client: TestClient) -> None:

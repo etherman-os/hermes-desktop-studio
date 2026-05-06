@@ -207,14 +207,38 @@ class MockBackend(StudioBackend):
     async def get_theme(self, theme_id: str) -> dict[str, Any]:
         for t in self._themes():
             if t["id"] == theme_id:
-                return t
+                return self._normalize_theme(t)
         raise ValueError(f"Theme '{theme_id}' not found")
 
     async def get_active_theme(self) -> dict[str, Any]:
         for t in self._themes():
             if t["id"] == self._active_theme_id:
-                return t
+                return self._normalize_theme(t)
         return {}
+
+    def _normalize_theme(self, theme_info: dict[str, Any]) -> dict[str, Any]:
+        """Return theme in normalized format with meta wrapper."""
+        return {
+            "meta": {
+                "id": theme_info.get("id", "unknown"),
+                "name": theme_info.get("name", "Unknown"),
+                "version": theme_info.get("version", "0.0.0"),
+                "author": theme_info.get("author", "unknown"),
+                "description": theme_info.get("description", ""),
+                "extends": theme_info.get("extends"),
+            },
+            "palette": {"bg": "#0f1117", "surface": "#161b22", "accent": "#58a6ff", "text": "#e6edf3", "text_secondary": "#8b949e", "text_muted": "#6e7681", "ok": "#3fb950", "warn": "#d29922", "danger": "#f85149", "info": "#58a6ff"},
+            "icons": {"profiles": "👤", "sessions": "💬", "tools": "🔧", "memory": "🧠", "logs": "📜", "kanban": "📋", "search": "🔍", "settings": "⚙️", "send": "▶", "stop": "⏹"},
+            "labels": {"profiles": "Profiles", "sessions": "Sessions", "chat": "Chat", "kanban": "Kanban", "artifacts": "Artifacts", "tools": "Tools", "memory": "Memory", "logs": "Logs", "activity": "Activity", "inspector": "Inspector", "command_palette": "Command Palette", "settings": "Settings", "theme_gallery": "Themes", "send": "Send", "stop": "Stop"},
+            "borders": {},
+            "typography": {},
+            "message_styles": {},
+            "kanban": {},
+            "accessibility": {},
+            "empty_states": {},
+            "onboarding": {},
+            "assets": {},
+        }
 
     async def activate_theme(self, theme_id: str) -> dict[str, Any]:
         for t in self._themes():
