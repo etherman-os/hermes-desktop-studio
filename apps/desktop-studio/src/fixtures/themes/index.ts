@@ -1,3 +1,14 @@
+/**
+ * LOCAL FALLBACK THEME FIXTURES
+ *
+ * These are fallback themes used ONLY when the adapter is unavailable.
+ * The real source of truth is the adapter theme repository (TOML theme packs).
+ * When the adapter is connected, adapter-loaded themes override these.
+ *
+ * Do NOT add concept-specific logic here.
+ * All themes are generic concept packs using semantic slots.
+ */
+
 import type { ThemePack } from "@hermes-studio/shared-types";
 import type { SemanticSlot } from "@hermes-studio/shared-types";
 import { defaultDark } from "./default-dark";

@@ -130,8 +130,10 @@ function ThemeGallerySection() {
   const adapterThemes = useThemeStore((s) => s.adapterThemes);
   const activeThemeId = useThemeStore((s) => s.activeThemeId);
   const activateTheme = useThemeStore((s) => s.activateTheme);
-  const setTheme = useThemeStore((s) => s.setTheme);
   const reloadThemes = useThemeStore((s) => s.reloadThemes);
+  const loading = useThemeStore((s) => s.loading);
+  const error = useThemeStore((s) => s.error);
+  const adapterLoaded = useThemeStore((s) => s.adapterLoaded);
   const connected = useAdapterStore((s) => s.connected);
 
   // Use adapter themes if available, otherwise local
@@ -140,37 +142,57 @@ function ThemeGallerySection() {
         id: at.id,
         name: at.name,
         description: at.description || "",
+        author: at.author || "",
+        version: at.version || "",
         source: (at as { source?: string }).source ?? "built-in",
         valid: (at as { valid?: boolean }).valid ?? true,
+        warnings: (at as { warnings?: string[] }).warnings ?? [],
         accent: themes[at.id]?.palette?.accent ?? "#58a6ff",
       }))
     : Object.values(themes).map((t) => ({
         id: t.meta.id,
         name: t.meta.name,
         description: t.meta.description ?? "",
-        source: "local",
+        author: t.meta.author ?? "",
+        version: t.meta.version ?? "",
+        source: "local-fallback",
         valid: true,
+        warnings: [] as string[],
         accent: t.palette?.accent ?? "#58a6ff",
       }));
 
   return (
     <div className="theme-switcher-panel">
-      {connected && (
-        <div style={{ padding: "var(--app-spacing-xs)", display: "flex", justifyContent: "flex-end" }}>
-          <button
-            onClick={() => reloadThemes()}
-            style={{ background: "transparent", border: "none", color: "var(--app-text-muted)", cursor: "pointer", fontSize: "11px" }}
-            title="Reload themes from disk"
-          >
-            ↻ Reload
-          </button>
+      {/* Header with reload */}
+      <div style={{ padding: "var(--app-spacing-xs) var(--app-spacing-sm)", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--app-border-subtle)" }}>
+        <span style={{ fontSize: "10px", color: "var(--app-text-muted)" }}>
+          {themeList.length} theme{themeList.length !== 1 ? "s" : ""}
+          {adapterLoaded && adapterThemes.length > 0 ? " (adapter)" : " (local)"}
+        </span>
+        <button
+          onClick={() => reloadThemes()}
+          disabled={loading}
+          style={{ background: "transparent", border: "none", color: loading ? "var(--app-text-muted)" : "var(--app-accent)", cursor: loading ? "default" : "pointer", fontSize: "11px", padding: "2px 6px" }}
+          title="Reload themes from disk"
+        >
+          {loading ? "..." : "↻ Reload"}
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{ padding: "var(--app-spacing-xs) var(--app-spacing-sm)", fontSize: "11px", color: "var(--app-danger)", background: "rgba(248,81,73,0.1)" }}>
+          {error}
         </div>
       )}
+
+      {/* Theme list */}
       {themeList.map((t) => (
         <button
           key={t.id}
           className={`theme-card ${activeThemeId === t.id ? "active" : ""}`}
           onClick={() => activateTheme(t.id)}
+          style={{ opacity: t.valid ? 1 : 0.7 }}
         >
           <div
             className="theme-swatch"
@@ -180,14 +202,29 @@ function ThemeGallerySection() {
             <div className="theme-card-name">
               {t.name}
               {!t.valid && <span style={{ color: "var(--app-warn)", marginLeft: 4, fontSize: "10px" }}>⚠</span>}
+              {activeThemeId === t.id && <span style={{ color: "var(--app-ok)", marginLeft: 4, fontSize: "10px" }}>●</span>}
             </div>
             <div className="theme-card-desc">{t.description}</div>
-            <div style={{ fontSize: "10px", color: "var(--app-text-muted)", marginTop: 2 }}>
-              {t.source}
+            <div style={{ display: "flex", gap: "var(--app-spacing-sm)", fontSize: "10px", color: "var(--app-text-muted)", marginTop: 2 }}>
+              {t.author && <span>{t.author}</span>}
+              {t.version && <span>v{t.version}</span>}
+              <span>{t.source}</span>
             </div>
+            {t.warnings.length > 0 && (
+              <div style={{ fontSize: "10px", color: "var(--app-warn)", marginTop: 2 }}>
+                {t.warnings[0]}
+              </div>
+            )}
           </div>
         </button>
       ))}
+
+      {/* Empty state */}
+      {themeList.length === 0 && !loading && (
+        <div style={{ padding: "var(--app-spacing-md)", color: "var(--app-text-muted)", textAlign: "center", fontSize: "var(--app-font-size-sm)" }}>
+          No themes found
+        </div>
+      )}
     </div>
   );
 }

@@ -160,6 +160,19 @@
 - [x] Tests: 5 new route tests — 150 total passing
 - [x] Build: tsc + vite pass
 
+## Phase 5.6 — Theme Frontend Integration (Done)
+
+- [x] themeStore: adapter themes as primary, local fixtures as fallback
+- [x] loadThemes(): loads all adapter themes + active theme, merges with fallback
+- [x] activateTheme(): POST /themes/activate + get normalized + apply CSS
+- [x] reloadThemes(): POST /themes/reload + reload all
+- [x] AppFrame: calls loadThemes on startup (always, not just when connected)
+- [x] Theme Gallery: author, version, source, validity, warnings, active indicator
+- [x] Theme Gallery: loading state, error state, empty state, reload button
+- [x] TS fixtures: marked as fallback-only with clear comments
+- [x] Semantic labels/icons: all components use label()/icon() from theme store
+- [x] Build: tsc + vite pass, 150 adapter tests passing
+
 ## Phase 5 — Polish and Accessibility
 
 - [ ] Keyboard navigation (full keyboard usability)

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ThemePack } from "@hermes-studio/shared-types";
-import { ALL_THEMES } from "../fixtures/themes";
+import { ALL_THEMES as LOCAL_FALLBACK_THEMES } from "../fixtures/themes";
 import { applyThemeToDOM } from "../styles/applyTheme";
 import * as api from "../api/studioClient";
 
@@ -9,26 +9,36 @@ interface ThemeState {
   themes: Record<string, ThemePack>;
   adapterThemes: api.ThemeInfo[];
   adapterLoaded: boolean;
+  loading: boolean;
+  error: string | null;
   activeTheme: () => ThemePack;
+  installedThemes: () => api.ThemeInfo[];
+  invalidThemes: () => api.ThemeInfo[];
   label: (slot: string) => string;
   icon: (slot: string) => string;
   setTheme: (id: string) => void;
   activateTheme: (id: string) => Promise<void>;
   initTheme: () => void;
-  loadFromAdapter: () => Promise<void>;
+  loadThemes: () => Promise<void>;
   reloadThemes: () => Promise<void>;
 }
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
   activeThemeId: "default-dark",
-  themes: ALL_THEMES,
+  themes: { ...LOCAL_FALLBACK_THEMES },
   adapterThemes: [],
   adapterLoaded: false,
+  loading: false,
+  error: null,
 
   activeTheme: () => {
     const { activeThemeId, themes } = get();
-    return themes[activeThemeId] ?? themes["default-dark"];
+    return themes[activeThemeId] ?? themes["default-dark"] ?? Object.values(themes)[0];
   },
+
+  installedThemes: () => get().adapterThemes,
+
+  invalidThemes: () => get().adapterThemes.filter((t) => !(t as { valid?: boolean }).valid),
 
   label: (slot: string) => {
     const theme = get().activeTheme();
@@ -48,19 +58,26 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   activateTheme: async (id: string) => {
+    set({ error: null });
     try {
       await api.activateTheme(id);
-      // Load the full theme data from adapter
       const normalized = await api.getTheme(id);
       const themePack = adapterThemeToPack(normalized);
       set((s) => ({
         activeThemeId: id,
         themes: { ...s.themes, [id]: themePack },
+        error: null,
       }));
       applyThemeToDOM(themePack);
-    } catch {
-      // Fallback to local theme
-      get().setTheme(id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to activate theme";
+      set({ error: msg });
+      // Fallback to local theme if available
+      const local = get().themes[id];
+      if (local) {
+        set({ activeThemeId: id });
+        applyThemeToDOM(local);
+      }
     }
   },
 
@@ -69,37 +86,71 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     applyThemeToDOM(theme);
   },
 
-  loadFromAdapter: async () => {
+  loadThemes: async () => {
+    set({ loading: true, error: null });
     try {
       const data = await api.getThemes();
       const adapterThemes = data.themes;
-      set({ adapterThemes, adapterLoaded: true });
 
-      // Load active theme from adapter
-      try {
-        const active = await api.getActiveTheme();
-        const themePack = adapterThemeToPack(active);
-        const activeId = data.active ?? "default-dark";
-        set((s) => ({
-          activeThemeId: activeId,
-          themes: { ...s.themes, [activeId]: themePack },
-        }));
-        applyThemeToDOM(themePack);
-      } catch {
-        // Keep local fallback
+      // Load all adapter themes as normalized ThemePacks
+      const themesFromAdapter: Record<string, ThemePack> = {};
+      for (const info of adapterThemes) {
+        try {
+          const normalized = await api.getTheme(info.id);
+          themesFromAdapter[info.id] = adapterThemeToPack(normalized);
+        } catch {
+          // Skip themes that fail to load
+        }
       }
-    } catch {
-      set({ adapterLoaded: true });
-      // Keep local fallback themes
+
+      // Load active theme
+      let activeId = data.active ?? "default-dark";
+      let activePack: ThemePack | null = null;
+      try {
+        const activeData = await api.getActiveTheme();
+        activePack = adapterThemeToPack(activeData);
+        if (!themesFromAdapter[activeId]) {
+          themesFromAdapter[activeId] = activePack;
+        }
+      } catch {
+        // Keep fallback
+      }
+
+      // Merge: adapter themes take priority, local fallback fills gaps
+      const merged = { ...LOCAL_FALLBACK_THEMES, ...themesFromAdapter };
+
+      set({
+        themes: merged,
+        adapterThemes,
+        adapterLoaded: true,
+        loading: false,
+        activeThemeId: activeId,
+        error: null,
+      });
+
+      // Apply active theme
+      const toApply = activePack ?? merged[activeId] ?? merged["default-dark"];
+      if (toApply) applyThemeToDOM(toApply);
+
+    } catch (err) {
+      set({
+        adapterLoaded: true,
+        loading: false,
+        error: err instanceof Error ? err.message : "Failed to load themes",
+      });
+      // Keep local fallback
+      const fallback = get().activeTheme();
+      applyThemeToDOM(fallback);
     }
   },
 
   reloadThemes: async () => {
+    set({ loading: true, error: null });
     try {
       await api.reloadThemes();
-      await get().loadFromAdapter();
-    } catch {
-      // ignore
+      await get().loadThemes();
+    } catch (err) {
+      set({ loading: false, error: err instanceof Error ? err.message : "Failed to reload themes" });
     }
   },
 }));

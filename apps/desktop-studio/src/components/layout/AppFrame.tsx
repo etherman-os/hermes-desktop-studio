@@ -23,7 +23,7 @@ export function AppFrame() {
   const loadProfiles = useProfileStore((s) => s.loadProfiles);
   const loadLogs = useLogStore((s) => s.loadRecent);
   const initTheme = useThemeStore((s) => s.initTheme);
-  const loadThemes = useThemeStore((s) => s.loadFromAdapter);
+  const loadThemes = useThemeStore((s) => s.loadThemes);
 
   React.useEffect(() => {
     initTheme();
@@ -32,8 +32,9 @@ export function AppFrame() {
         loadSessions();
         loadProfiles();
         loadLogs();
-        loadThemes();
       }
+      // Always try to load themes (uses fallback if adapter unavailable)
+      loadThemes();
     });
   }, [initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes]);
 
