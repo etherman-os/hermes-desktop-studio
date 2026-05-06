@@ -56,3 +56,6 @@ htmlcov/
 
 # TUI/Textual
 .textualize/
+
+# Reference / Planning docs (not for repo)
+*.pdf
