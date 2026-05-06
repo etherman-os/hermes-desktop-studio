@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import sqlite3
 from pathlib import Path
 
 import pytest
 
-from hermes_adapter.session_repository import SessionRepository, find_state_db, get_hermes_home
+from hermes_adapter.session_repository import SessionRepository, find_state_db
 
 
 @pytest.fixture()

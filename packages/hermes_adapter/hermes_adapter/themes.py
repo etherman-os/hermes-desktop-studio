@@ -19,6 +19,11 @@ class ThemeManager:
         self._base = _BaseThemeManager(themes_dir or _DEFAULT_THEMES_DIR)
         self._active_theme_id: str | None = None
 
+    @property
+    def themes_dir(self) -> Path:
+        """Return the configured theme directory."""
+        return self._base.themes_dir
+
     def list_themes(self) -> list[ThemeInfo]:
         """List all available themes in the themes directory."""
         raw_themes = self._base.list_themes()

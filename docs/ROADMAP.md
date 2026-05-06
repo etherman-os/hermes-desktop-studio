@@ -50,7 +50,7 @@
 
 ## Phase 3.5 — Stabilization and Contract Alignment (Done)
 
-- [x] Health endpoint alignment: both `/health` and `/studio/health` exist
+- [x] Health endpoint alignment: `/studio/health` exists for Studio, root `/health` exists for adapter/dev tooling
 - [x] OpenAPI audit: duplicate `/studio/config` fixed, paths aligned with implementation
 - [x] SSE robustness: clean cancellation, unknown event tolerance, disconnect handling
 - [x] Frontend fallback: adapter unavailable shows warning, composer has visual indicator
@@ -166,14 +166,29 @@
 - [x] loadThemes(): loads all adapter themes + active theme, merges with fallback
 - [x] activateTheme(): POST /themes/activate + get normalized + apply CSS
 - [x] reloadThemes(): POST /themes/reload + reload all
-- [x] AppFrame: calls loadThemes on startup (always, not just when connected)
+- [x] AppFrame: calls loadThemes after authenticated adapter connection; local fallback remains available offline
 - [x] Theme Gallery: author, version, source, validity, warnings, active indicator
 - [x] Theme Gallery: loading state, error state, empty state, reload button
 - [x] TS fixtures: marked as fallback-only with clear comments
 - [x] Semantic labels/icons: all components use label()/icon() from theme store
 - [x] Build: tsc + vite pass, 150 adapter tests passing
 
-## Phase 5 — Polish and Accessibility
+## Phase 5.7 — Studio Protocol Hardening Before Kanban (Done)
+
+- [x] Tauri auth bootstrap: desktop reads adapter token through Rust command bridge, browser dev uses explicit Vite env token
+- [x] Protected `/studio/*` calls fail clearly when token is unavailable; token is not stored in `localStorage`
+- [x] Canonical frontend health endpoint is `/studio/health`; root `/health` remains adapter/dev tooling health only
+- [x] Legacy `/shell/*` routes disabled by default; opt-in with `HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES=1`
+- [x] Standard error envelope across backend and frontend parser
+- [x] Studio event envelope guaranteed: `id`, `type`, `timestamp`, `source`, `payload`, optional `run_id`/`session_id`
+- [x] MockBackend and HermesBackend SSE events validate against `events.schema.json`
+- [x] OpenAPI route parity test covers implemented `/studio/*` paths
+- [x] Tauri CSP set to a restrictive local-app policy
+- [x] Python lint/type baseline clean: ruff and mypy pass
+- [x] Shared types package has a local TypeScript dev dependency and typechecks
+- [x] Tests/build: adapter tests, frontend API tests, frontend build, and Tauri cargo check pass
+
+## Later — Polish and Accessibility
 
 - [ ] Keyboard navigation (full keyboard usability)
 - [ ] High-contrast mode
@@ -182,7 +197,16 @@
 - [ ] Error states and retry flows
 - [ ] Approval UX refinement
 
-## Phase 6 — Packaging and Release
+## Phase 6 — Persistent Studio-owned Kanban Workflow
+
+- [ ] Define Studio-owned Kanban persistence schema outside Hermes core/state.db
+- [ ] Add `/studio/kanban/*` protocol paths and OpenAPI coverage before frontend wiring
+- [ ] Implement adapter persistence with local Studio storage and migration/version metadata
+- [ ] Keep theme/concept pack Kanban presentation generic and semantic-slot driven
+- [ ] Add tests for CRUD, ordering, migration, malformed files, and read-only Hermes guarantees
+- [ ] Wire frontend Kanban store/components to `/studio/*` only
+
+## Phase 7 — Packaging and Release
 
 - [ ] Tauri native installers (Linux, macOS)
 - [ ] Auto-update mechanism

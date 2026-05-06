@@ -14,8 +14,8 @@ Terminal TUIs have inherent ceilings in visual ergonomics, panel docking, drag-a
 |-------|-----------|
 | Desktop app | **Tauri v2** (Rust host) |
 | Frontend | **React + TypeScript + Vite** |
-| State management | **Zustand** (client), **TanStack Query** (server) |
-| Dockable panels | **dockview** |
+| State management | **Zustand** |
+| Layout | React/CSS panel shell |
 | Hermes integration | **Python adapter** (sidecar) |
 | Theme/config | **TOML** concept packs + CSS variables |
 
@@ -30,7 +30,7 @@ Terminal TUIs have inherent ceilings in visual ergonomics, panel docking, drag-a
 └──────────────────┬───────────────────────┘
                     │ HTTP/SSE (local only)
 ┌──────────────────▼───────────────────────┐
-│ Local Shell Adapter (Python)             │
+│ Studio Adapter (Python)                  │
 │ FastAPI + SSE + Pydantic                 │
 │ 127.0.0.1:39191                          │
 └──────────────────┬───────────────────────┘
@@ -40,16 +40,18 @@ Terminal TUIs have inherent ceilings in visual ergonomics, panel docking, drag-a
  Hermes API    Hermes CLI   Local State
  /v1/runs      config/set   ~/.hermes/state.db
  SSE stream    sessions     ~/.hermes/logs
- capabilities  kanban       ~/.hermes/config.yaml
+ capabilities  profiles     ~/.hermes/config.yaml
 ```
 
 ## Core Principles
 
 - **Do not modify Hermes core.** Wrap it through public integration surfaces only.
 - **Adapter-first:** UI never talks to Hermes directly; it talks to the local adapter.
+- **Studio protocol only:** Desktop frontend calls `/studio/*`; root `/health` is adapter/dev tooling health only.
 - **Desktop workbench, not terminal TUI.** The main product is a dockable desktop app.
 - **Generic theme system:** Colors, icons, labels, layout, and terminology are driven by concept packs. No concept is hardcoded.
 - **Local-only by default:** Bind 127.0.0.1, rotate tokens per launch, never expose without key.
+- **Read-only Hermes observation:** Hermes `state.db`, logs, profiles, and model/provider config are read without mutation unless an official safe write path exists.
 - **Future-proof:** Same adapter contract supports desktop shell today, terminal mode later.
 
 ## Project Structure
@@ -100,20 +102,50 @@ pnpm run dev:adapter
 # Start frontend dev server (browser)
 pnpm run dev:desktop
 
+# Browser dev with protected /studio/* calls
+VITE_HERMES_STUDIO_ADAPTER_TOKEN="$(cat ~/.hermes-local-shell/runtime/token)" pnpm run dev:desktop
+
+# Or run both adapter and browser dev with an explicit dev token
+HERMES_STUDIO_ADAPTER_TOKEN=dev-token pnpm run dev:adapter
+VITE_HERMES_STUDIO_ADAPTER_TOKEN=dev-token pnpm run dev:desktop
+
 # Build frontend (tsc + vite)
 pnpm --filter @hermes-desktop-studio/desktop-studio build
 
-# Run adapter tests
-source .venv/bin/activate && pytest packages/hermes_adapter/tests/
+# Run checks
+pnpm run check:types
+source .venv/bin/activate && pnpm run check:python
 ```
+
+### Adapter Auth
+
+Protected `/studio/*` endpoints require `Authorization: Bearer <token>`. The adapter writes an ephemeral token to `~/.hermes-local-shell/runtime/token` with `0600` permissions at startup.
+
+The Tauri desktop app reads the token through a Rust command and keeps it in memory only. The frontend does not store the token in `localStorage`. Browser dev must either set `VITE_HERMES_STUDIO_ADAPTER_TOKEN` explicitly or use the adapter-generated token file as shown above.
 
 ### Health Endpoints
 
-The adapter exposes two health endpoints (both return the same shape):
-- `GET /health` — root-level, no auth required
-- `GET /studio/health` — under studio router, no auth required
+The adapter exposes two unauthenticated health endpoints:
+- `GET /studio/health` — canonical desktop frontend health endpoint
+- `GET /health` — adapter-level health for CLI/dev tooling only
 
 Both report: adapter status, backend mode, Hermes reachability, last error.
+
+### Legacy `/shell/*` Routes
+
+Legacy prototype `/shell/*` routes are disabled by default. They can be mounted for reference only with:
+
+```bash
+HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES=1 pnpm run dev:adapter
+```
+
+Desktop frontend code must not call `/shell/*`.
+
+### Protocol Guarantees
+
+- OpenAPI lives in `packages/protocol/openapi.yaml`; tests fail if implemented `/studio/*` routes are missing from it.
+- Studio SSE events match `packages/protocol/events.schema.json` and always include `id`, `type`, `timestamp`, `source`, and `payload`.
+- Errors use `{ "error": { "code", "message", "retryable", "source", "hint" } }`.
 
 ### Backend Modes
 
@@ -132,6 +164,8 @@ The adapter supports three backend modes:
 | `HERMES_STUDIO_BACKEND` | `auto` | Backend mode: `mock`, `hermes`, or `auto` |
 | `HERMES_API_BASE_URL` | `http://127.0.0.1:8642` | Hermes Agent API URL |
 | `HERMES_API_KEY` | *(none)* | Optional API key for Hermes |
+| `HERMES_STUDIO_ADAPTER_TOKEN` | *(generated)* | Explicit local adapter auth token for dev |
+| `HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES` | `0` | Set `1` only to mount legacy prototype `/shell/*` routes |
 
 ## Development Status
 

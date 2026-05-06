@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from typing import Any
 
 from hermes_adapter.backend_base import StudioBackend
+from hermes_adapter.studio_events import make_studio_event
+from hermes_adapter.theme_repository import ThemeRepository
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
-def _sse_event(event_type: str, data: Any) -> dict[str, Any]:
-    """Format as a studio event dict (same shape as SSE data)."""
-    return {"type": event_type, "payload": data}
+def _sse_event(event_type: str, data: dict[str, Any]) -> dict[str, Any]:
+    """Format as a complete Studio event dict."""
+    return make_studio_event(event_type, data, source="adapter")
 
 
 class MockBackend(StudioBackend):
@@ -25,7 +28,7 @@ class MockBackend(StudioBackend):
     def __init__(self) -> None:
         self._active_runs: dict[str, dict[str, Any]] = {}
         self._run_cancelled: set[str] = set()
-        self._active_theme_id = "default-dark"
+        self._theme_repo = ThemeRepository()
 
     async def health(self) -> dict[str, Any]:
         return {
@@ -43,7 +46,7 @@ class MockBackend(StudioBackend):
             "active_profile": "coder",
             "capabilities": ["chat", "tools", "files", "approval", "streaming"],
             "recent_sessions": self._sessions(),
-            "active_theme": self._themes()[0],
+            "active_theme": self._theme_repo.get_theme_info(self._theme_repo.get_active_theme_id()),
             "available_models": [
                 {"id": "claude-sonnet-4-20250514", "name": "Claude Sonnet 4", "provider": "Anthropic"},
                 {"id": "gpt-4o", "name": "GPT-4o", "provider": "OpenAI"},
@@ -56,6 +59,9 @@ class MockBackend(StudioBackend):
             {"name": "research", "path": "~/.hermes-profiles/research"},
             {"name": "writer", "path": "~/.hermes-profiles/writer"},
         ]
+
+    async def get_active_profile(self) -> dict[str, Any] | None:
+        return {"name": "coder", "path": "~/.hermes-profiles/coder", "active": True}
 
     async def list_sessions(self) -> dict[str, Any]:
         sessions = self._sessions()
@@ -151,21 +157,6 @@ class MockBackend(StudioBackend):
             return {"run_id": run_id, "status": "cancelled"}
         return {"run_id": run_id, "status": "not_found"}
 
-    async def get_logs(self) -> dict[str, Any]:
-        lines = [
-            "[10:05:32] [INFO] Adapter started on 127.0.0.1:39191",
-            "[10:05:33] [INFO] Studio endpoints registered",
-            "[10:05:33] [INFO] Theme loader initialized: 5 themes found",
-            "[10:05:34] [INFO] Hermes health check: OK (mock v0.12.0)",
-            "[10:06:01] [INFO] Run started: run_abc123",
-            "[10:06:02] [INFO] Tool started: file_tree",
-            "[10:06:03] [INFO] Tool completed: file_tree (1.2s)",
-            "[10:06:15] [INFO] Run completed: run_abc123",
-            "[10:08:00] [WARN] Theme minecraft-overworld: missing accessibility.font_scale",
-            "[10:10:45] [INFO] Session s-2 resumed",
-        ]
-        return {"source": "agent", "lines": lines, "total": len(lines)}
-
     async def get_logs(self, source: str | None = None, tail: int = 100) -> dict[str, Any]:
         lines = [
             "[10:05:32] [INFO] Adapter started on 127.0.0.1:39191",
@@ -202,53 +193,23 @@ class MockBackend(StudioBackend):
             await asyncio.sleep(1.5)
 
     async def list_themes(self) -> dict[str, Any]:
-        return {"themes": self._themes(), "active": self._active_theme_id}
-
-    async def get_theme(self, theme_id: str) -> dict[str, Any]:
-        for t in self._themes():
-            if t["id"] == theme_id:
-                return self._normalize_theme(t)
-        raise ValueError(f"Theme '{theme_id}' not found")
-
-    async def get_active_theme(self) -> dict[str, Any]:
-        for t in self._themes():
-            if t["id"] == self._active_theme_id:
-                return self._normalize_theme(t)
-        return {}
-
-    def _normalize_theme(self, theme_info: dict[str, Any]) -> dict[str, Any]:
-        """Return theme in normalized format with meta wrapper."""
         return {
-            "meta": {
-                "id": theme_info.get("id", "unknown"),
-                "name": theme_info.get("name", "Unknown"),
-                "version": theme_info.get("version", "0.0.0"),
-                "author": theme_info.get("author", "unknown"),
-                "description": theme_info.get("description", ""),
-                "extends": theme_info.get("extends"),
-            },
-            "palette": {"bg": "#0f1117", "surface": "#161b22", "accent": "#58a6ff", "text": "#e6edf3", "text_secondary": "#8b949e", "text_muted": "#6e7681", "ok": "#3fb950", "warn": "#d29922", "danger": "#f85149", "info": "#58a6ff"},
-            "icons": {"profiles": "👤", "sessions": "💬", "tools": "🔧", "memory": "🧠", "logs": "📜", "kanban": "📋", "search": "🔍", "settings": "⚙️", "send": "▶", "stop": "⏹"},
-            "labels": {"profiles": "Profiles", "sessions": "Sessions", "chat": "Chat", "kanban": "Kanban", "artifacts": "Artifacts", "tools": "Tools", "memory": "Memory", "logs": "Logs", "activity": "Activity", "inspector": "Inspector", "command_palette": "Command Palette", "settings": "Settings", "theme_gallery": "Themes", "send": "Send", "stop": "Stop"},
-            "borders": {},
-            "typography": {},
-            "message_styles": {},
-            "kanban": {},
-            "accessibility": {},
-            "empty_states": {},
-            "onboarding": {},
-            "assets": {},
+            "themes": self._theme_repo.list_themes(),
+            "active": self._theme_repo.get_active_theme_id(),
         }
 
+    async def get_theme(self, theme_id: str) -> dict[str, Any]:
+        return self._theme_repo.get_normalized_theme(theme_id)
+
+    async def get_active_theme(self) -> dict[str, Any]:
+        return self._theme_repo.get_normalized_theme(self._theme_repo.get_active_theme_id())
+
     async def activate_theme(self, theme_id: str) -> dict[str, Any]:
-        for t in self._themes():
-            if t["id"] == theme_id:
-                self._active_theme_id = theme_id
-                return t
-        raise ValueError(f"Theme '{theme_id}' not found")
+        return self._theme_repo.activate_theme(theme_id)
 
     async def reload_themes(self) -> dict[str, Any]:
-        return {"reloaded": True, "count": len(self._themes())}
+        self._theme_repo.reload()
+        return {"reloaded": True, "count": len(self._theme_repo.list_themes())}
 
     async def get_config(self) -> dict[str, Any]:
         return {
@@ -295,13 +256,4 @@ class MockBackend(StudioBackend):
             {"id": "s-3", "title": "Theme loader bug investigation", "created_at": "2026-05-05T14:00:00Z", "updated_at": "2026-05-05T15:20:00Z", "message_count": 18},
             {"id": "s-4", "title": "Write unit tests for adapter", "created_at": "2026-05-05T11:00:00Z", "updated_at": "2026-05-05T12:00:00Z", "message_count": 8},
             {"id": "s-5", "title": "Research paper on local-first architecture", "created_at": "2026-05-04T09:00:00Z", "updated_at": "2026-05-04T11:00:00Z", "message_count": 32},
-        ]
-
-    def _themes(self) -> list[dict[str, Any]]:
-        return [
-            {"id": "default-dark", "name": "Default Dark", "version": "0.1.0", "author": "etherman-os", "description": "Professional dark theme"},
-            {"id": "minecraft-overworld", "name": "Minecraft Overworld", "version": "0.1.0", "author": "etherman-os", "description": "Grass and stone tones"},
-            {"id": "example-minions", "name": "Minions", "version": "0.1.0", "author": "etherman-os", "description": "Yellow villain theme"},
-            {"id": "example-lotr", "name": "Lord of the Rings", "version": "0.1.0", "author": "etherman-os", "description": "Middle-earth theme"},
-            {"id": "minimal-light", "name": "Minimal Light", "version": "0.1.0", "author": "etherman-os", "description": "Clean light theme"},
         ]

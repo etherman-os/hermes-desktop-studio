@@ -84,8 +84,9 @@ Minecraft Overworld is an **example concept pack** — it demonstrates the syste
 ### Use These Surfaces
 
 - **Hermes API Server:** `POST /v1/runs`, `GET /v1/runs/{id}/events` (SSE), `POST /v1/runs/{id}/stop`, `GET /v1/capabilities`, `GET /health`
-- **Hermes CLI wrappers:** `hermes config`, `hermes profile`, `hermes model`, `hermes auth`, `hermes kanban`, `hermes logs`
+- **Hermes CLI wrappers:** `hermes config`, `hermes profile`, `hermes model`, `hermes auth`, `hermes logs` when those commands provide a safe official path
 - **Read-only local state:** `state.db` (SQLite), `sessions/` (JSONL transcripts), `logs/`, `config.yaml`, `~/.hermes/skins/`
+- **Studio-owned workflow state:** Kanban persistence belongs to Hermes Desktop Studio unless Hermes exposes an explicit safe official workflow API later.
 
 ## Adapter Philosophy
 

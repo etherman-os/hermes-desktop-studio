@@ -22,7 +22,7 @@ async def create_backend() -> tuple[StudioBackend, dict[str, Any]]:
     hermes_key = get_hermes_api_key()
 
     if mode == "mock":
-        backend = MockBackend()
+        backend: StudioBackend = MockBackend()
         return backend, {
             "backend_mode": "mock",
             "hermes_url": hermes_url,

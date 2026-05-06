@@ -19,8 +19,18 @@ hermes serve
 cd hermes-desktop-studio
 HERMES_STUDIO_BACKEND=hermes HERMES_API_BASE_URL=http://127.0.0.1:8642 pnpm run dev:adapter
 
-# Terminal 3: Start desktop frontend
-pnpm run dev:desktop
+# Terminal 3: Start desktop frontend through Tauri
+pnpm --filter @hermes-desktop-studio/desktop-studio tauri dev
+
+# Browser dev alternative:
+VITE_HERMES_STUDIO_ADAPTER_TOKEN="$(cat ~/.hermes-local-shell/runtime/token)" pnpm run dev:desktop
+```
+
+For deterministic browser dev, start the adapter and frontend with the same explicit local token:
+
+```bash
+HERMES_STUDIO_ADAPTER_TOKEN=dev-token HERMES_STUDIO_BACKEND=hermes HERMES_API_BASE_URL=http://127.0.0.1:8642 pnpm run dev:adapter
+VITE_HERMES_STUDIO_ADAPTER_TOKEN=dev-token pnpm run dev:desktop
 ```
 
 ## Verification Checklist
@@ -47,6 +57,7 @@ Expected:
 
 - [ ] Status bar shows "Backend: Hermes" (not "Mock")
 - [ ] Status bar shows green "Adapter: Connected"
+- [ ] No token is stored in `localStorage`
 - [ ] Sending a chat prompt triggers a real Hermes run
 - [ ] `assistant.delta` text appears progressively in chat
 - [ ] Tool events (if any) render as chips without crashing
@@ -86,6 +97,8 @@ HERMES_STUDIO_DEBUG_EVENTS=1 HERMES_STUDIO_BACKEND=hermes pnpm run dev:adapter
 | `HERMES_API_BASE_URL` | `http://127.0.0.1:8642` | Hermes API server URL |
 | `HERMES_API_KEY` | *(none)* | Optional API key |
 | `HERMES_STUDIO_DEBUG_EVENTS` | `0` | Set to `1` to log raw/normalized events |
+| `HERMES_STUDIO_ADAPTER_TOKEN` | *(generated)* | Explicit local adapter token for dev |
+| `VITE_HERMES_STUDIO_ADAPTER_TOKEN` | *(none)* | Browser dev token passed to the frontend |
 
 ## Troubleshooting
 
@@ -106,6 +119,12 @@ HERMES_STUDIO_DEBUG_EVENTS=1 HERMES_STUDIO_BACKEND=hermes pnpm run dev:adapter
 - Check raw events are arriving from Hermes
 - Check normalization is producing valid Studio events
 - Check browser console for frontend errors
+
+### "Auth token missing"
+
+- If using Tauri, start the adapter before the app so `~/.hermes-local-shell/runtime/token` exists
+- If using browser dev, set `VITE_HERMES_STUDIO_ADAPTER_TOKEN`
+- Confirm protected calls return the standard `{ "error": ... }` envelope when auth is missing
 
 ### "Stop button does not work"
 

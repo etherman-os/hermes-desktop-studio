@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 
@@ -18,6 +18,7 @@ from hermes_adapter.config_repository import ConfigRepository
 from hermes_adapter.log_repository import LogRepository, get_hermes_logs_dir
 from hermes_adapter.profile_repository import ProfileRepository
 from hermes_adapter.session_repository import SessionRepository, find_state_db, get_hermes_home
+from hermes_adapter.studio_events import StudioEventSource, make_studio_event
 from hermes_adapter.theme_repository import ThemeRepository
 
 logger = logging.getLogger("hermes_adapter.hermes_backend")
@@ -44,11 +45,40 @@ def _debug_log_normalized(studio_type: str, payload_preview: str = "") -> None:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
-def _sse_event(event_type: str, data: Any) -> dict[str, Any]:
-    return {"type": event_type, "payload": data}
+def _sse_event(
+    event_type: str,
+    data: dict[str, Any],
+    *,
+    source: StudioEventSource = "hermes",
+    run_id: str | None = None,
+    session_id: str | None = None,
+) -> dict[str, Any]:
+    return make_studio_event(
+        event_type,
+        data,
+        source=source,
+        run_id=run_id,
+        session_id=session_id,
+    )
+
+
+def _source_from(raw: dict[str, Any]) -> StudioEventSource:
+    source = raw.get("source")
+    if source == "adapter":
+        return "adapter"
+    if source == "studio":
+        return "studio"
+    return "hermes"
+
+
+def _payload_from(raw: dict[str, Any]) -> dict[str, Any]:
+    payload = raw.get("payload", raw.get("data", {}))
+    if isinstance(payload, dict):
+        return payload
+    return {"value": payload}
 
 
 def _normalize_hermes_event(raw: dict[str, Any]) -> dict[str, Any]:
@@ -58,7 +88,10 @@ def _normalize_hermes_event(raw: dict[str, Any]) -> dict[str, Any]:
     into the Studio event schema without leaking Hermes-specific details.
     """
     event_type = raw.get("type", "")
-    payload = raw.get("payload", raw.get("data", {}))
+    payload = _payload_from(raw)
+    source = _source_from(raw)
+    run_id = payload.get("run_id", raw.get("run_id", ""))
+    session_id = payload.get("session_id", raw.get("session_id", ""))
 
     # Handle OpenAI-compatible delta format
     choices = raw.get("choices")
@@ -66,101 +99,178 @@ def _normalize_hermes_event(raw: dict[str, Any]) -> dict[str, Any]:
         delta = choices[0].get("delta", {})
         content = delta.get("content")
         if content:
-            return _sse_event("assistant.delta", {"text": content})
+            return _sse_event("assistant.delta", {"text": content}, source=source, run_id=raw.get("run_id"))
         # Check for tool calls
         tool_calls = delta.get("tool_calls")
         if tool_calls and isinstance(tool_calls, list):
             for tc in tool_calls:
                 func = tc.get("function", {})
-                return _sse_event("tool.started", {
-                    "tool": func.get("name", "unknown"),
-                    "tool_call_id": tc.get("id"),
-                })
+                return _sse_event(
+                    "tool.started",
+                    {
+                        "tool": func.get("name", "unknown"),
+                        "tool_call_id": tc.get("id"),
+                    },
+                    source=source,
+                    run_id=raw.get("run_id"),
+                )
 
     # Handle Hermes-specific event types
     if event_type in ("run.started", "run_start", "turn_start"):
-        return _sse_event("run.started", {
-            "run_id": payload.get("run_id", raw.get("run_id", "")),
-            "session_id": payload.get("session_id", raw.get("session_id", "")),
-        })
+        return _sse_event(
+            "run.started",
+            {
+                "run_id": run_id,
+                "session_id": session_id,
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("assistant.delta", "text_delta", "content_block_delta"):
         text = payload.get("text", payload.get("delta", {}).get("text", ""))
-        return _sse_event("assistant.delta", {"text": text})
+        return _sse_event("assistant.delta", {"text": text}, source=source, run_id=run_id, session_id=session_id)
 
     if event_type in ("assistant.completed", "text_done", "content_block_stop"):
-        return _sse_event("assistant.completed", {
-            "model": payload.get("model"),
-            "total_tokens": payload.get("total_tokens"),
-            "duration_ms": payload.get("duration_ms"),
-        })
+        return _sse_event(
+            "assistant.completed",
+            {
+                "model": payload.get("model"),
+                "total_tokens": payload.get("total_tokens"),
+                "duration_ms": payload.get("duration_ms"),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("tool.started", "tool_start"):
-        return _sse_event("tool.started", {
-            "tool": payload.get("tool", payload.get("name", "unknown")),
-            "tool_call_id": payload.get("tool_call_id"),
-        })
+        return _sse_event(
+            "tool.started",
+            {
+                "tool": payload.get("tool", payload.get("name", "unknown")),
+                "tool_call_id": payload.get("tool_call_id"),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("tool.progress", "tool_progress"):
-        return _sse_event("tool.progress", {
-            "tool": payload.get("tool", "unknown"),
-            "progress": payload.get("progress"),
-            "message": payload.get("message"),
-        })
+        return _sse_event(
+            "tool.progress",
+            {
+                "tool": payload.get("tool", "unknown"),
+                "progress": payload.get("progress"),
+                "message": payload.get("message"),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("tool.completed", "tool_end", "tool_result"):
-        return _sse_event("tool.completed", {
-            "tool": payload.get("tool", payload.get("name", "unknown")),
-            "success": payload.get("success", True),
-            "duration_ms": payload.get("duration_ms"),
-        })
+        return _sse_event(
+            "tool.completed",
+            {
+                "tool": payload.get("tool", payload.get("name", "unknown")),
+                "success": payload.get("success", True),
+                "duration_ms": payload.get("duration_ms"),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("approval.requested",):
-        return _sse_event("approval.requested", {
-            "approval_id": payload.get("approval_id", ""),
-            "tool": payload.get("tool", ""),
-            "action": payload.get("action", ""),
-        })
+        return _sse_event(
+            "approval.requested",
+            {
+                "approval_id": payload.get("approval_id", ""),
+                "tool": payload.get("tool", ""),
+                "action": payload.get("action", ""),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("approval.resolved",):
-        return _sse_event("approval.resolved", {
-            "approval_id": payload.get("approval_id", ""),
-            "decision": payload.get("decision", "approved"),
-        })
+        return _sse_event(
+            "approval.resolved",
+            {
+                "approval_id": payload.get("approval_id", ""),
+                "decision": payload.get("decision", "approved"),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("run.completed", "run_end", "turn_end"):
         # Check if this is actually a failure
         if payload.get("status") == "failed" or payload.get("error"):
-            return _sse_event("run.failed", {
-                "run_id": payload.get("run_id", raw.get("run_id", "")),
-                "message": payload.get("error", payload.get("message", "Run failed")),
-                "error_code": payload.get("error_code"),
-            })
-        return _sse_event("run.completed", {
-            "run_id": payload.get("run_id", raw.get("run_id", "")),
-            "total_tokens": payload.get("total_tokens"),
-            "duration_ms": payload.get("duration_ms"),
-        })
+            return _sse_event(
+                "run.failed",
+                {
+                    "run_id": run_id,
+                    "message": payload.get("error", payload.get("message", "Run failed")),
+                    "error_code": payload.get("error_code"),
+                },
+                source=source,
+                run_id=run_id,
+                session_id=session_id,
+            )
+        return _sse_event(
+            "run.completed",
+            {
+                "run_id": run_id,
+                "total_tokens": payload.get("total_tokens"),
+                "duration_ms": payload.get("duration_ms"),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("run.failed", "error"):
-        return _sse_event("run.failed", {
-            "run_id": payload.get("run_id", raw.get("run_id", "")),
-            "message": payload.get("message", payload.get("error", "Unknown error")),
-            "error_code": payload.get("error_code"),
-        })
+        return _sse_event(
+            "run.failed",
+            {
+                "run_id": run_id,
+                "message": payload.get("message", payload.get("error", "Unknown error")),
+                "error_code": payload.get("error_code"),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     if event_type in ("run.cancelled",):
-        return _sse_event("run.cancelled", {
-            "run_id": payload.get("run_id", raw.get("run_id", "")),
-            "reason": payload.get("reason", "user_cancelled"),
-        })
+        return _sse_event(
+            "run.cancelled",
+            {
+                "run_id": run_id,
+                "reason": payload.get("reason", "user_cancelled"),
+            },
+            source=source,
+            run_id=run_id,
+            session_id=session_id,
+        )
 
     # Unknown event — return as adapter.warning
-    return _sse_event("adapter.warning", {
-        "code": "unknown_event",
-        "message": f"Unknown Hermes event: {event_type}",
-        "original_type": event_type,
-    })
+    return _sse_event(
+        "adapter.warning",
+        {
+            "code": "unknown_event",
+            "message": f"Unknown Hermes event: {event_type}",
+            "original_type": event_type,
+        },
+        source="adapter",
+        run_id=run_id,
+        session_id=session_id,
+    )
 
 
 class HermesBackend(StudioBackend):
@@ -277,8 +387,6 @@ class HermesBackend(StudioBackend):
                 session_data = self._session_repo.list_sessions(limit=5)
                 recent_sessions = session_data.get("sessions", [])
 
-        # Get profiles
-        profiles = self._profile_repo.list_profiles() if self._profile_repo else []
         active_profile = self._profile_repo.active_profile if self._profile_repo else None
         profile_status = self._profile_repo.get_status() if self._profile_repo else {"available": False}
 
@@ -366,7 +474,12 @@ class HermesBackend(StudioBackend):
     async def stream_run_events(self, run_id: str) -> AsyncIterator[dict[str, Any]]:
         """Proxy Hermes SSE stream and normalize events into Studio format."""
         if not self._hermes_healthy:
-            yield _sse_event("run.failed", {"run_id": run_id, "message": "Hermes not reachable"})
+            yield _sse_event(
+                "run.failed",
+                {"run_id": run_id, "message": "Hermes not reachable"},
+                source="adapter",
+                run_id=run_id,
+            )
             return
 
         url = f"{self._base_url}/v1/runs/{run_id}/events"
@@ -378,10 +491,15 @@ class HermesBackend(StudioBackend):
                 timeout=None,
             ) as resp:
                 if resp.status_code != 200:
-                    yield _sse_event("run.failed", {
-                        "run_id": run_id,
-                        "message": f"Hermes SSE returned {resp.status_code}",
-                    })
+                    yield _sse_event(
+                        "run.failed",
+                        {
+                            "run_id": run_id,
+                            "message": f"Hermes SSE returned {resp.status_code}",
+                        },
+                        source="adapter",
+                        run_id=run_id,
+                    )
                     return
 
                 buffer = ""
@@ -402,7 +520,7 @@ class HermesBackend(StudioBackend):
 
                         # Handle [DONE] signal
                         if data_str.strip() == "[DONE]":
-                            yield _sse_event("run.completed", {"run_id": run_id})
+                            yield _sse_event("run.completed", {"run_id": run_id}, run_id=run_id)
                             return
 
                         try:
@@ -414,7 +532,11 @@ class HermesBackend(StudioBackend):
                                     if delta.get("content"):
                                         text = delta["content"]
                                         _debug_log_raw("openai_delta", text)
-                                        studio_event = _sse_event("assistant.delta", {"text": text})
+                                        studio_event = _sse_event(
+                                            "assistant.delta",
+                                            {"text": text},
+                                            run_id=run_id,
+                                        )
                                         _debug_log_normalized("assistant.delta", json.dumps({"text": text})[:100])
                                         yield studio_event
                                         continue
@@ -433,20 +555,35 @@ class HermesBackend(StudioBackend):
                             continue
 
         except httpx.ReadTimeout:
-            yield _sse_event("adapter.warning", {
-                "code": "hermes_timeout",
-                "message": "Hermes SSE stream timed out",
-            })
+            yield _sse_event(
+                "adapter.warning",
+                {
+                    "code": "hermes_timeout",
+                    "message": "Hermes SSE stream timed out",
+                },
+                source="adapter",
+                run_id=run_id,
+            )
         except httpx.RemoteProtocolError:
-            yield _sse_event("run.failed", {
-                "run_id": run_id,
-                "message": "Hermes SSE stream disconnected unexpectedly",
-            })
+            yield _sse_event(
+                "run.failed",
+                {
+                    "run_id": run_id,
+                    "message": "Hermes SSE stream disconnected unexpectedly",
+                },
+                source="adapter",
+                run_id=run_id,
+            )
         except Exception as e:
-            yield _sse_event("run.failed", {
-                "run_id": run_id,
-                "message": f"Hermes SSE error: {e}",
-            })
+            yield _sse_event(
+                "run.failed",
+                {
+                    "run_id": run_id,
+                    "message": f"Hermes SSE error: {e}",
+                },
+                source="adapter",
+                run_id=run_id,
+            )
 
     async def stop_run(self, run_id: str) -> dict[str, Any]:
         if not self._hermes_healthy:
@@ -471,20 +608,42 @@ class HermesBackend(StudioBackend):
 
     async def stream_logs(self, source: str | None = None) -> AsyncIterator[dict[str, Any]]:
         if not self._log_repo or not self._log_repo.available:
-            yield _sse_event("log.line", {"source": "adapter", "level": "info", "message": "Hermes logs not available", "timestamp": _now_iso()})
+            yield _sse_event(
+                "log.line",
+                {
+                    "source": "adapter",
+                    "level": "info",
+                    "message": "Hermes logs not available",
+                    "timestamp": _now_iso(),
+                },
+                source="adapter",
+            )
             return
 
         log_files = self._log_repo.log_files
         target = source if source and source in log_files else (log_files[0] if log_files else None)
         if not target:
-            yield _sse_event("log.line", {"source": "adapter", "level": "info", "message": "No log files found", "timestamp": _now_iso()})
+            yield _sse_event(
+                "log.line",
+                {
+                    "source": "adapter",
+                    "level": "info",
+                    "message": "No log files found",
+                    "timestamp": _now_iso(),
+                },
+                source="adapter",
+            )
             return
 
         log_path = self._log_repo._logs_dir / target
         from hermes_adapter.log_repository import LogStreamer
         streamer = LogStreamer(log_path)
         async for line in streamer.stream():
-            yield _sse_event("log.line", {"source": target, "level": "info", "message": line, "timestamp": _now_iso()})
+            yield _sse_event(
+                "log.line",
+                {"source": target, "level": "info", "message": line, "timestamp": _now_iso()},
+                source="adapter",
+            )
 
     async def list_themes(self) -> dict[str, Any]:
         if self._theme_repo:

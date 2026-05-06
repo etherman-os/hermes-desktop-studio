@@ -44,7 +44,7 @@ class TestNormalizeHermesEvent:
         normalized = normalize_hermes_event(sample_unknown_event)
         assert normalized["type"] == "adapter.warning"
         assert "Unknown event type" in normalized["payload"]["message"]
-        assert normalized["payload"]["original"] == sample_unknown_event
+        assert normalized["payload"]["original_type"] == sample_unknown_event["type"]
         assert normalized["source"] == "adapter"
 
     def test_missing_type_becomes_adapter_warning(self) -> None:

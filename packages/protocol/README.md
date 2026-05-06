@@ -14,11 +14,15 @@ API schemas and contracts for Hermes Desktop Studio.
 
 ## Endpoint Prefix
 
-All adapter endpoints use `/studio/` prefix (not `/shell/`). The `/shell/` prefix is legacy and will be migrated in a future phase.
+All desktop adapter endpoints use `/studio/` prefix. `/studio/health` is the canonical frontend health endpoint. Root `/health` remains public adapter/dev tooling health only.
+
+Legacy `/shell/` routes are disabled by default and can only be mounted with `HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES=1` for prototype/reference tooling. Desktop code must not call `/shell/`.
+
+OpenAPI parity is enforced by adapter tests: every implemented `/studio/*` route must appear in `openapi.yaml`.
 
 ## Event System
 
-Events are normalized by the adapter. The desktop UI must never consume raw Hermes SSE events directly. The adapter may synthesize events (e.g., `run.failed`) when Hermes signaling is ambiguous.
+Events are normalized by the adapter. The desktop UI must never consume raw Hermes SSE events directly. Every emitted Studio event includes `id`, `type`, `timestamp`, `source`, and `payload`; `run_id` and `session_id` are optional top-level fields. The adapter may synthesize events such as `run.failed` or `adapter.warning` when Hermes signaling is ambiguous.
 
 ## Theme System
 

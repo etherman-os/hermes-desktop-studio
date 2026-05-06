@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 
 class StudioBackend(ABC):
@@ -53,8 +54,8 @@ class StudioBackend(ABC):
         ...
 
     @abstractmethod
-    async def stream_run_events(self, run_id: str) -> AsyncIterator[dict[str, Any]]:
-        """Yield normalized SSE events for a run. Each event has {type, payload}."""
+    def stream_run_events(self, run_id: str) -> AsyncIterator[dict[str, Any]]:
+        """Yield normalized StudioEvent envelopes for a run."""
         ...
 
     @abstractmethod
@@ -63,13 +64,13 @@ class StudioBackend(ABC):
         ...
 
     @abstractmethod
-    async def get_logs(self) -> dict[str, Any]:
+    async def get_logs(self, source: str | None = None, tail: int = 100) -> dict[str, Any]:
         """Return recent log lines."""
         ...
 
     @abstractmethod
-    async def stream_logs(self) -> AsyncIterator[dict[str, Any]]:
-        """Yield live log.line events."""
+    def stream_logs(self, source: str | None = None) -> AsyncIterator[dict[str, Any]]:
+        """Yield normalized log.line StudioEvent envelopes."""
         ...
 
     @abstractmethod

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_adapter.log_repository import LogRepository, _redact_line, get_hermes_logs_dir
+from hermes_adapter.log_repository import LogRepository, _redact_line
 from hermes_adapter.profile_repository import ProfileRepository
 
 

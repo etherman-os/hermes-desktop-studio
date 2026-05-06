@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
 from fastapi.testclient import TestClient
 
 from hermes_adapter.security import set_auth_token
-from hermes_adapter.server import app
+from hermes_adapter.server import create_app
 
 
 @pytest.fixture(autouse=True)
@@ -19,7 +17,7 @@ def _set_token() -> None:
 
 @pytest.fixture()
 def client() -> TestClient:
-    return TestClient(app)
+    return TestClient(create_app())
 
 
 HEADERS = {"Authorization": "Bearer test-token"}
@@ -41,6 +39,10 @@ class TestHealthEndpoints:
         assert data["status"] == "healthy"
 
     def test_health_no_auth_required(self, client: TestClient) -> None:
+        resp = client.get("/studio/health")
+        assert resp.status_code == 200
+
+    def test_root_health_is_dev_adapter_health(self, client: TestClient) -> None:
         resp = client.get("/health")
         assert resp.status_code == 200
 
@@ -60,6 +62,14 @@ class TestBootstrap:
         assert "active_theme" in data
         assert "available_models" in data
 
+    def test_missing_auth_uses_error_envelope(self, client: TestClient) -> None:
+        resp = client.get("/studio/bootstrap")
+        assert resp.status_code == 401
+        data = resp.json()
+        assert data["error"]["code"] == "auth_missing"
+        assert data["error"]["source"] == "adapter"
+        assert data["error"]["retryable"] is False
+
 
 class TestProfiles:
     def test_list_profiles(self, client: TestClient) -> None:
@@ -70,6 +80,13 @@ class TestProfiles:
         assert len(data) >= 1
         assert "name" in data[0]
         assert "path" in data[0]
+
+    def test_get_active_profile(self, client: TestClient) -> None:
+        resp = client.get("/studio/profiles/active", headers=HEADERS)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"]
+        assert "path" in data
 
 
 class TestSessions:
@@ -92,6 +109,9 @@ class TestSessions:
     def test_get_session_not_found(self, client: TestClient) -> None:
         resp = client.get("/studio/sessions/nonexistent", headers=HEADERS)
         assert resp.status_code == 404
+        data = resp.json()
+        assert data["error"]["code"] == "not_found"
+        assert "not found" in data["error"]["message"]
 
 
 class TestRuns:

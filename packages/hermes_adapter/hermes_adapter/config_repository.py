@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 logger = logging.getLogger("hermes_adapter.config_repository")
 

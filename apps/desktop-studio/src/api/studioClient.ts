@@ -1,4 +1,8 @@
+import { invoke } from "@tauri-apps/api/core";
+
 const ADAPTER_URL = "http://127.0.0.1:39191";
+const TOKEN_UNAVAILABLE_MESSAGE =
+  "Adapter auth token is unavailable. Start the adapter and launch the Tauri app, or set VITE_HERMES_STUDIO_ADAPTER_TOKEN for browser dev.";
 
 interface AdapterConfig {
   baseUrl: string;
@@ -10,35 +14,141 @@ const config: AdapterConfig = {
   token: null,
 };
 
-export function setAdapterToken(token: string) {
-  config.token = token;
+let authBootstrapPromise: Promise<AuthBootstrapResult> | null = null;
+
+export interface AuthBootstrapResult {
+  authenticated: boolean;
+  source: "memory" | "env" | "tauri" | "unavailable";
+  error?: string;
+}
+
+export interface AdapterErrorEnvelope {
+  error?: {
+    code?: string;
+    message?: string;
+    retryable?: boolean;
+    source?: string;
+    hint?: string;
+  };
+  detail?: unknown;
+}
+
+export function setAdapterToken(token: string | null) {
+  const trimmed = token?.trim();
+  config.token = trimmed ? trimmed : null;
+}
+
+export function clearAdapterToken() {
+  config.token = null;
+  authBootstrapPromise = null;
+}
+
+export function hasAdapterToken() {
+  return Boolean(config.token);
 }
 
 export function getAdapterUrl() {
   return config.baseUrl;
 }
 
+function envToken(): string | null {
+  const env = import.meta.env as ImportMetaEnv & Record<string, string | undefined>;
+  const token = env.VITE_HERMES_STUDIO_ADAPTER_TOKEN ?? env.VITE_HERMES_STUDIO_TOKEN;
+  const trimmed = token?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function hasTauriBridge() {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+export async function initializeAdapterAuth(force = false): Promise<AuthBootstrapResult> {
+  if (!force && config.token) {
+    return { authenticated: true, source: "memory" };
+  }
+
+  if (!force && authBootstrapPromise) {
+    return authBootstrapPromise;
+  }
+
+  authBootstrapPromise = (async () => {
+    const tokenFromEnv = envToken();
+    if (tokenFromEnv) {
+      setAdapterToken(tokenFromEnv);
+      return { authenticated: true, source: "env" as const };
+    }
+
+    if (hasTauriBridge()) {
+      try {
+        const tokenFromTauri = await invoke<string>("get_adapter_auth_token");
+        setAdapterToken(tokenFromTauri);
+        return { authenticated: true, source: "tauri" as const };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          authenticated: false,
+          source: "unavailable" as const,
+          error: `${TOKEN_UNAVAILABLE_MESSAGE} ${message}`,
+        };
+      }
+    }
+
+    return {
+      authenticated: false,
+      source: "unavailable" as const,
+      error: TOKEN_UNAVAILABLE_MESSAGE,
+    };
+  })();
+
+  const result = await authBootstrapPromise;
+  if (!result.authenticated) {
+    authBootstrapPromise = null;
+  }
+  return result;
+}
+
+function requireAdapterToken() {
+  if (!config.token) {
+    throw new Error(TOKEN_UNAVAILABLE_MESSAGE);
+  }
+}
+
+export function adapterErrorMessage(body: AdapterErrorEnvelope | null, status: number, fallback?: string): string {
+  const direct = body?.error?.message;
+  if (direct) return direct;
+
+  const detail = body?.detail;
+  if (typeof detail === "object" && detail !== null && "error" in detail) {
+    const nested = (detail as AdapterErrorEnvelope).error?.message;
+    if (nested) return nested;
+  }
+  if (typeof detail === "string") return detail;
+
+  return fallback ?? `Adapter request failed: ${status}`;
+}
+
+async function responseError(res: Response, fallback?: string): Promise<Error> {
+  const body = (await res.json().catch(() => null)) as AdapterErrorEnvelope | null;
+  return new Error(adapterErrorMessage(body, res.status, fallback));
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  requireAdapterToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
-  if (config.token) {
-    headers["Authorization"] = `Bearer ${config.token}`;
-  }
+  headers["Authorization"] = `Bearer ${config.token}`;
   const res = await fetch(`${config.baseUrl}${path}`, { ...options, headers });
   if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new Error(body?.error?.message ?? `Adapter request failed: ${res.status}`);
+    throw await responseError(res);
   }
   return res.json();
 }
 
 export async function checkAdapterHealth(): Promise<boolean> {
   try {
-    let res = await fetch(`${config.baseUrl}/studio/health`, { signal: AbortSignal.timeout(2000) });
-    if (res.ok) return true;
-    res = await fetch(`${config.baseUrl}/health`, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${config.baseUrl}/studio/health`, { signal: AbortSignal.timeout(2000) });
     return res.ok;
   } catch {
     return false;
@@ -60,11 +170,8 @@ export interface HealthResponse {
 }
 
 export async function checkAdapterHealthDetailed(): Promise<HealthResponse> {
-  let res = await fetch(`${config.baseUrl}/studio/health`, { signal: AbortSignal.timeout(2000) });
-  if (!res.ok) {
-    res = await fetch(`${config.baseUrl}/health`, { signal: AbortSignal.timeout(2000) });
-  }
-  if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
+  const res = await fetch(`${config.baseUrl}/studio/health`, { signal: AbortSignal.timeout(2000) });
+  if (!res.ok) throw await responseError(res, `Health check failed: ${res.status}`);
   return res.json();
 }
 
@@ -240,12 +347,12 @@ export type StudioEventType =
   | "memory.updated";
 
 export interface StudioEvent<T = Record<string, unknown>> {
-  id?: string;
+  id: string;
   type: StudioEventType;
   run_id?: string;
   session_id?: string;
-  timestamp?: string;
-  source?: string;
+  timestamp: string;
+  source: "adapter" | "hermes" | "studio";
   payload: T;
 }
 
@@ -271,8 +378,9 @@ export function streamRunEvents(runId: string, handlers: RunEventHandlers): Abor
 
   (async () => {
     try {
+      requireAdapterToken();
       const headers: Record<string, string> = {};
-      if (config.token) headers["Authorization"] = `Bearer ${config.token}`;
+      headers["Authorization"] = `Bearer ${config.token}`;
 
       const res = await fetch(`${config.baseUrl}/studio/runs/${runId}/events`, {
         headers,
@@ -280,7 +388,7 @@ export function streamRunEvents(runId: string, handlers: RunEventHandlers): Abor
       });
 
       if (!res.ok || !res.body) {
-        handlers.onError?.(new Error(`SSE request failed: ${res.status}`));
+        handlers.onError?.(await responseError(res, `SSE request failed: ${res.status}`));
         return;
       }
 
@@ -374,21 +482,25 @@ export interface LogEventHandlers {
   onError?: (error: Error) => void;
 }
 
-export function streamLogs(handlers: LogEventHandlers): AbortController {
+export function streamLogs(handlers: LogEventHandlers, source?: string): AbortController {
   const ac = new AbortController();
 
   (async () => {
     try {
+      requireAdapterToken();
       const headers: Record<string, string> = {};
-      if (config.token) headers["Authorization"] = `Bearer ${config.token}`;
+      headers["Authorization"] = `Bearer ${config.token}`;
+      const params = new URLSearchParams();
+      if (source) params.set("source", source);
+      const qs = params.toString();
 
-      const res = await fetch(`${config.baseUrl}/studio/logs/stream`, {
+      const res = await fetch(`${config.baseUrl}/studio/logs/stream${qs ? `?${qs}` : ""}`, {
         headers,
         signal: ac.signal,
       });
 
       if (!res.ok || !res.body) {
-        handlers.onError?.(new Error(`Log stream failed: ${res.status}`));
+        handlers.onError?.(await responseError(res, `Log stream failed: ${res.status}`));
         return;
       }
 

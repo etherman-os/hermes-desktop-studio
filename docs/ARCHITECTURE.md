@@ -10,18 +10,17 @@ Hermes Local Studio is a local-first, themeable desktop workbench for Hermes Age
 ┌─────────────────────────────────────────────────┐
 │ Desktop UI (Tauri v2 + React + TypeScript)      │
 │  - Chat / Kanban / Sessions / Artifacts         │
-│  - Dockable panels (dockview)                   │
+│  - Desktop panel shell                          │
 │  - Theme/Layout switcher (concept packs)        │
 │  - Command Palette                              │
 └─────────────────────┬───────────────────────────┘
                       │ HTTP/SSE (local only)
 ┌─────────────────────▼───────────────────────────┐
-│ Local Shell Adapter (Python)                    │
+│ Studio Adapter (Python)                         │
 │  - FastAPI server on 127.0.0.1:39191            │
-│  - Token-based auth (rotated per launch)        │
+│  - Token-based auth for protected /studio/*     │
 │  - Event normalization                          │
 │  - Hermes API client                            │
-│  - Hermes CLI wrappers                          │
 │  - Read-only local state observer               │
 └─────────────────────┬───────────────────────────┘
                       │
@@ -29,17 +28,17 @@ Hermes Local Studio is a local-first, themeable desktop workbench for Hermes Age
         ▼             ▼             ▼
    Hermes API    Hermes CLI   Local State
    /v1/runs      config set   ~/.hermes/state.db
-   SSE stream    sessions     ~/.hermes/logs
-   capabilities  kanban       ~/.hermes/config.yaml
+   SSE stream    profiles     ~/.hermes/logs
+   capabilities  official     ~/.hermes/config.yaml
 ```
 
 ## Design Principles
 
 1. **Adapter is the source of truth.** Frontends must not import Hermes internals.
-2. **Stabilize the contract early.** The `/studio/*` API and event schema should change slowly.
+2. **Stabilize the contract early.** The `/studio/*` API and event schema should change slowly and stay covered by OpenAPI/schema parity tests.
 3. **Read-only state access.** For sessions, logs, and config observation, prefer read-only access.
 4. **Write via CLI wrappers.** For mutations, call official `hermes` CLI commands.
-5. **Defensive event handling.** Normalize and sanitize Hermes SSE events; synthesize terminal events when upstream signaling is ambiguous.
+5. **Defensive event handling.** Normalize and sanitize Hermes SSE events; every emitted Studio event includes `id`, `type`, `timestamp`, `source`, and `payload`.
 6. **Desktop workbench, not terminal.** The main product is a dockable desktop app, not a terminal TUI.
 
 ## Package Layout
@@ -54,7 +53,11 @@ Hermes Local Studio is a local-first, themeable desktop workbench for Hermes Age
 ## Security
 
 - Default bind: `127.0.0.1:39191`
+- Canonical desktop health: `GET /studio/health`
+- Root `GET /health` is adapter/dev tooling health only
 - Token file: `~/.hermes-local-shell/runtime/token` with `0600` permissions
-- Token rotated per adapter launch
+- Token rotated per adapter launch unless `HERMES_STUDIO_ADAPTER_TOKEN` is set for dev
+- Tauri reads the token through a Rust command bridge; frontend keeps it in memory and does not use `localStorage`
 - Adapter-to-Hermes token kept separate
-- Unix domain socket preferred when available
+- Legacy `/shell/*` routes are disabled unless `HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES=1`
+- Tauri CSP is restrictive for local app usage; dev allows localhost adapter/Vite connections

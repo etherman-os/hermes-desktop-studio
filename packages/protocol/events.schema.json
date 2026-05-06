@@ -35,7 +35,7 @@
       "description": "Event-specific data"
     }
   },
-  "required": ["id", "type", "timestamp", "source"],
+  "required": ["id", "type", "timestamp", "source", "payload"],
   "additionalProperties": false,
   "$defs": {
     "EventType": {
@@ -179,7 +179,7 @@
       "type": "object",
       "description": "Payload for log.line events",
       "properties": {
-        "source": { "type": "string", "enum": ["agent", "errors", "gateway"] },
+        "source": { "type": "string" },
         "level": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
         "message": { "type": "string" },
         "session_context": { "type": "string" }

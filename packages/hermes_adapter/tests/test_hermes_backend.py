@@ -9,10 +9,8 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-from fastapi.testclient import TestClient
 
 from hermes_adapter.hermes_backend import HermesBackend, _normalize_hermes_event
-
 
 # ---------------------------------------------------------------------------
 # Fake Hermes API server for testing
@@ -127,9 +125,10 @@ class TestHermesBackend:
     @pytest.fixture()
     def fake_hermes(self):
         """Start a fake Hermes server and return its URL."""
-        import threading
-        import uvicorn
         import socket
+        import threading
+
+        import uvicorn
 
         # Find a free port
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -219,9 +218,9 @@ class TestHermesBackend:
 
 class TestAutoModeFallback:
     async def test_auto_falls_back_to_mock_when_hermes_unavailable(self):
-        from hermes_adapter.backend_config import get_backend_mode
-        from hermes_adapter.backend_factory import create_backend
         import os
+
+        from hermes_adapter.backend_factory import create_backend
 
         # Force auto mode with unavailable Hermes
         os.environ["HERMES_STUDIO_BACKEND"] = "auto"

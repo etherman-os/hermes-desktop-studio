@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from hermes_adapter.hermes_backend import _normalize_hermes_event
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "hermes_sse_sample.jsonl"
@@ -84,4 +82,4 @@ class TestFixtureReplay:
                 normalized = _normalize_hermes_event(raw)
                 if normalized["type"] == "assistant.delta":
                     assert "text" in normalized["payload"], f"assistant.delta missing text: {normalized}"
-                    assert len(normalized["payload"]["text"]) > 0, f"assistant.delta has empty text"
+                    assert len(normalized["payload"]["text"]) > 0, "assistant.delta has empty text"

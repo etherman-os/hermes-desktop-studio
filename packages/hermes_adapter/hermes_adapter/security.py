@@ -10,6 +10,18 @@ from fastapi import HTTPException, Request, status
 _auth_token: str | None = None
 
 
+def _auth_error(code: str, message: str) -> dict[str, object]:
+    return {
+        "error": {
+            "code": code,
+            "message": message,
+            "retryable": False,
+            "source": "adapter",
+            "hint": "Start the adapter and initialize the desktop auth token before calling protected /studio/* endpoints.",
+        }
+    }
+
+
 def set_auth_token(token: str | None) -> None:
     """Set an in-memory auth token (used primarily by tests)."""
     global _auth_token
@@ -58,7 +70,7 @@ async def require_token(request: Request) -> None:
     if not auth.lower().startswith("bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid Authorization header",
+            detail=_auth_error("auth_missing", "Missing or invalid Authorization header"),
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -68,13 +80,13 @@ async def require_token(request: Request) -> None:
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token not initialized",
+            detail=_auth_error("auth_uninitialized", "Token not initialized"),
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
     if not secrets.compare_digest(provided, expected):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+            detail=_auth_error("auth_invalid", "Invalid token"),
             headers={"WWW-Authenticate": "Bearer"},
         )

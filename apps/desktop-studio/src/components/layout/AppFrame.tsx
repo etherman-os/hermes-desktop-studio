@@ -32,9 +32,8 @@ export function AppFrame() {
         loadSessions();
         loadProfiles();
         loadLogs();
+        loadThemes();
       }
-      // Always try to load themes (uses fallback if adapter unavailable)
-      loadThemes();
     });
   }, [initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes]);
 

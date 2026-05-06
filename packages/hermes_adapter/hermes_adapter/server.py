@@ -1,16 +1,19 @@
-"""FastAPI server for the Hermes Local Shell adapter."""
+"""FastAPI server for the Hermes Desktop Studio adapter."""
 
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from hermes_adapter.events import is_terminal_event, normalize_hermes_event
 from hermes_adapter.hermes_api import HermesClient
@@ -34,12 +37,21 @@ from hermes_adapter.themes import ThemeManager
 _theme_manager = ThemeManager()
 _client: HermesClient | None = None
 
+__all__ = ["app", "create_app", "set_auth_token"]
+
+legacy_router = APIRouter(prefix="/shell")
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: write token on startup, cleanup on shutdown."""
     global _client
-    token = generate_token()
+    token = (
+        os.environ.get("HERMES_STUDIO_ADAPTER_TOKEN")
+        or os.environ.get("HERMES_STUDIO_TOKEN")
+        or generate_token()
+    )
+    set_auth_token(token)
     write_token(token)
     _client = HermesClient()
     yield
@@ -48,20 +60,9 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     _client = None
 
 
-app = FastAPI(
-    title="Hermes Local Shell Adapter",
-    version="0.1.0",
-    lifespan=_lifespan,
-)
-
-# Mount studio routes (Phase 3: fake adapter for desktop studio)
-app.include_router(studio_router)
-
-
-@app.get("/health")
 async def health_root() -> dict[str, Any]:
     """Root-level health check (no auth required)."""
-    from hermes_adapter.studio_routes import _get_backend, _backend_status
+    from hermes_adapter.studio_routes import _backend_status, _get_backend
     try:
         backend = await _get_backend()
         h = await backend.health()
@@ -85,7 +86,7 @@ def _get_client() -> HermesClient:
     return _client
 
 
-@app.get("/shell/bootstrap", response_model=BootstrapResponse)
+@legacy_router.get("/bootstrap", response_model=BootstrapResponse)
 async def bootstrap(
     _token: None = Depends(require_token),
 ) -> BootstrapResponse:
@@ -105,7 +106,7 @@ async def bootstrap(
     )
 
 
-@app.get("/shell/profiles", response_model=list[ProfileInfo])
+@legacy_router.get("/profiles", response_model=list[ProfileInfo])
 async def list_profiles(
     _token: None = Depends(require_token),
 ) -> list[ProfileInfo]:
@@ -116,7 +117,7 @@ async def list_profiles(
     ]
 
 
-@app.get("/shell/sessions", response_model=list[SessionSummary])
+@legacy_router.get("/sessions", response_model=list[SessionSummary])
 async def list_sessions(
     _token: None = Depends(require_token),
 ) -> list[SessionSummary]:
@@ -124,7 +125,7 @@ async def list_sessions(
     return _mock_sessions()
 
 
-@app.get("/shell/sessions/{session_id}", response_model=SessionSummary)
+@legacy_router.get("/sessions/{session_id}", response_model=SessionSummary)
 async def get_session(
     session_id: str,
     _token: None = Depends(require_token),
@@ -136,7 +137,7 @@ async def get_session(
     raise _not_found("session", session_id)
 
 
-@app.post("/shell/runs", response_model=RunResponse)
+@legacy_router.post("/runs", response_model=RunResponse)
 async def create_run(
     request: RunRequest,
     _token: None = Depends(require_token),
@@ -146,7 +147,7 @@ async def create_run(
     return await client.start_run(request)
 
 
-@app.get("/shell/runs/{run_id}/events")
+@legacy_router.get("/runs/{run_id}/events")
 async def stream_run_events(
     run_id: str,
     _token: None = Depends(require_token),
@@ -167,7 +168,7 @@ async def stream_run_events(
     )
 
 
-@app.post("/shell/runs/{run_id}/stop")
+@legacy_router.post("/runs/{run_id}/stop")
 async def stop_run(
     run_id: str,
     _token: None = Depends(require_token),
@@ -177,7 +178,7 @@ async def stop_run(
     return await client.stop_run(run_id)
 
 
-@app.get("/shell/logs/stream")
+@legacy_router.get("/logs/stream")
 async def stream_logs(
     _token: None = Depends(require_token),
 ) -> StreamingResponse:
@@ -198,21 +199,21 @@ async def stream_logs(
     )
 
 
-@app.get("/shell/config", response_model=ConfigView)
+@legacy_router.get("/config", response_model=ConfigView)
 async def get_config(
     _token: None = Depends(require_token),
 ) -> ConfigView:
     """Return current adapter configuration."""
     return ConfigView(
         config={
-            "theme_dir": str(_theme_manager._themes_dir),
+            "theme_dir": str(_theme_manager.themes_dir),
             "hermes_base_url": "http://127.0.0.1:39190",
             "auto_save": True,
         }
     )
 
 
-@app.patch("/shell/config", response_model=ConfigView)
+@legacy_router.patch("/config", response_model=ConfigView)
 async def patch_config(
     updates: ConfigView,
     _token: None = Depends(require_token),
@@ -222,7 +223,7 @@ async def patch_config(
     return updates
 
 
-@app.get("/shell/themes", response_model=list[ThemeInfo])
+@legacy_router.get("/themes", response_model=list[ThemeInfo])
 async def list_themes(
     _token: None = Depends(require_token),
 ) -> list[ThemeInfo]:
@@ -230,7 +231,7 @@ async def list_themes(
     return _theme_manager.list_themes()
 
 
-@app.post("/shell/themes/activate")
+@legacy_router.post("/themes/activate")
 async def activate_theme(
     body: ThemeActivateRequest,
     _token: None = Depends(require_token),
@@ -239,14 +240,16 @@ async def activate_theme(
     return _theme_manager.set_active_theme(body.theme_id)
 
 
-def _format_sse(event: ShellEvent) -> str:
+def _format_sse(event: ShellEvent | dict[str, Any]) -> str:
     """Format a ShellEvent as an SSE message string."""
-    return f"event: {event.type}\ndata: {event.model_dump_json()}\n\n"
+    if isinstance(event, ShellEvent):
+        return f"event: {event.type}\ndata: {event.model_dump_json()}\n\n"
+    return f"event: {event['type']}\ndata: {json.dumps(event)}\n\n"
 
 
 def _mock_sessions() -> list[SessionSummary]:
     """Return mock session data for MVP."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return [
         SessionSummary(
             id="sess-001",
@@ -279,6 +282,92 @@ def _not_found(resource: str, identifier: str) -> HTTPException:
             )
         ).model_dump(),
     )
+
+
+def _legacy_shell_routes_enabled() -> bool:
+    """Return whether legacy prototype /shell routes should be mounted."""
+    return os.environ.get("HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES") == "1"
+
+
+def _normalize_error_detail(detail: Any, status_code: int) -> dict[str, Any]:
+    """Normalize FastAPI HTTPException detail into the Studio error envelope."""
+    if isinstance(detail, dict) and isinstance(detail.get("error"), dict):
+        error = dict(detail["error"])
+    else:
+        message = detail if isinstance(detail, str) else f"HTTP {status_code}"
+        error = {
+            "code": f"http_{status_code}",
+            "message": str(message),
+            "retryable": False,
+            "source": "adapter",
+            "hint": None,
+        }
+
+    error.setdefault("code", f"http_{status_code}")
+    error.setdefault("message", f"HTTP {status_code}")
+    error.setdefault("retryable", False)
+    error.setdefault("source", "adapter")
+    error.setdefault("hint", None)
+    return {"error": error}
+
+
+async def _http_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Return a consistent Studio error envelope for HTTP exceptions."""
+    if not isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=500,
+            content=_normalize_error_detail(str(exc), 500),
+        )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=_normalize_error_detail(exc.detail, exc.status_code),
+        headers=exc.headers,
+    )
+
+
+async def _validation_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Return Studio error envelope for request validation failures."""
+    message = "Invalid request"
+    if isinstance(exc, RequestValidationError) and exc.errors():
+        message = str(exc.errors()[0].get("msg", message))
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "invalid_request",
+                "message": message,
+                "retryable": False,
+                "source": "adapter",
+                "hint": "Check the request body and parameters.",
+            }
+        },
+    )
+
+
+def create_app(enable_legacy_shell_routes: bool | None = None) -> FastAPI:
+    """Create the FastAPI app with Studio routes and optional legacy shell routes."""
+    application = FastAPI(
+        title="Hermes Desktop Studio Adapter",
+        version="0.1.0",
+        lifespan=_lifespan,
+    )
+    application.add_exception_handler(HTTPException, _http_exception_handler)
+    application.add_exception_handler(RequestValidationError, _validation_exception_handler)
+    application.include_router(studio_router)
+    application.get("/health")(health_root)
+
+    legacy_enabled = (
+        _legacy_shell_routes_enabled()
+        if enable_legacy_shell_routes is None
+        else enable_legacy_shell_routes
+    )
+    if legacy_enabled:
+        application.include_router(legacy_router)
+
+    return application
+
+
+app = create_app()
 
 
 def main() -> None:

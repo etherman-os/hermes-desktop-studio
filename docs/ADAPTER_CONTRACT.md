@@ -2,105 +2,104 @@
 
 ## Base URL
 
-```
+```text
 http://127.0.0.1:39191
 ```
 
-All endpoints require Bearer token from `~/.hermes-local-shell/runtime/token`.
+Desktop frontend code talks to `/studio/*` only. The root `GET /health` endpoint is public adapter/dev tooling health and is not a desktop data path.
 
-## Endpoints
+## Auth
 
-### GET /shell/bootstrap
-Returns adapter info, active profile, available models, recent sessions, and active theme.
+Protected `/studio/*` endpoints require:
 
-### GET /shell/profiles
-List Hermes profiles.
-
-### GET /shell/sessions
-List session metadata (read-only from state.db + transcripts).
-
-### GET /shell/sessions/{session_id}
-Session details and transcript summary.
-
-### POST /shell/runs
-Start a new run.
-
-**Request:**
-```json
-{
-  "session_id": "world-coder-main",
-  "prompt": "src klasorunun yapisini ozetle",
-  "profile": "coder"
-}
+```text
+Authorization: Bearer <token>
 ```
 
-**Response:**
-```json
-{
-  "run_id": "run_...",
-  "status": "started"
-}
+Token sources:
+
+- Tauri desktop: reads `~/.hermes-local-shell/runtime/token` through the Rust command bridge and keeps it in memory.
+- Browser dev: set `VITE_HERMES_STUDIO_ADAPTER_TOKEN`, or copy the adapter-generated token from `~/.hermes-local-shell/runtime/token`.
+- Adapter dev: set `HERMES_STUDIO_ADAPTER_TOKEN` to force a known token; otherwise the adapter generates one at startup.
+
+The token is not stored in `localStorage`.
+
+## Health
+
+- `GET /studio/health` — canonical desktop frontend health endpoint, no auth.
+- `GET /health` — adapter-level CLI/dev health only, no auth.
+
+## Current `/studio/*` Endpoints
+
+- `GET /studio/bootstrap`
+- `GET /studio/profiles`
+- `GET /studio/profiles/active`
+- `POST /studio/profiles/activate`
+- `GET /studio/sessions`
+- `GET /studio/sessions/{session_id}`
+- `POST /studio/runs`
+- `GET /studio/runs/{run_id}/events`
+- `POST /studio/runs/{run_id}/stop`
+- `GET /studio/logs`
+- `GET /studio/logs/stream`
+- `GET /studio/model-config`
+- `GET /studio/themes`
+- `GET /studio/themes/active`
+- `GET /studio/themes/{theme_id}`
+- `POST /studio/themes/activate`
+- `POST /studio/themes/reload`
+- `GET /studio/config`
+- `PATCH /studio/config`
+
+`packages/protocol/openapi.yaml` must document every implemented `/studio/*` path/method. The route parity test fails when implementation and OpenAPI drift.
+
+## Legacy `/shell/*`
+
+Legacy prototype `/shell/*` routes are disabled by default and are not part of the desktop contract. To mount them for reference tooling only:
+
+```bash
+HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES=1 pnpm run dev:adapter
 ```
 
-### GET /shell/runs/{run_id}/events
-SSE stream of normalized events.
-
-### POST /shell/runs/{run_id}/stop
-Stop an active run.
-
-### GET /shell/logs/stream
-SSE stream of log lines.
-
-### GET /shell/config
-Normalized config view.
-
-### PATCH /shell/config
-Safe config mutation (wraps `hermes config set`).
-
-### GET /shell/themes
-List installed themes.
-
-### POST /shell/themes/install
-Install theme from path or GitHub.
-
-### POST /shell/themes/activate
-Activate theme + layout.
+Do not add new desktop features on `/shell/*`.
 
 ## Event Model
 
-Normalized event types:
+All Studio SSE events must match `packages/protocol/events.schema.json` and include:
 
-- `run.started`
-- `assistant.delta`
-- `assistant.completed`
-- `tool.started`
-- `tool.progress`
-- `tool.completed`
-- `approval.requested`
-- `approval.resolved`
-- `run.completed`
-- `run.failed`
-- `run.cancelled`
-- `log.line`
-- `adapter.warning`
+```json
+{
+  "id": "evt_...",
+  "type": "assistant.delta",
+  "timestamp": "2026-05-06T00:00:00Z",
+  "source": "adapter",
+  "payload": {}
+}
+```
+
+`run_id` and `session_id` are optional top-level fields when applicable. Unknown upstream events are normalized to `adapter.warning` or ignored safely; malformed upstream events must not weaken the Studio schema.
 
 ## Error Envelope
+
+All protected endpoint errors use:
 
 ```json
 {
   "error": {
-    "code": "HERMES_AUTH",
-    "message": "Provider kimlik bilgileri gecersiz",
+    "code": "auth_missing",
+    "message": "Missing or invalid Authorization header",
     "retryable": false,
-    "source": "hermes",
-    "hint": "hermes auth veya hermes model ile saglayici ayarlarini dogrula"
+    "source": "adapter",
+    "hint": "Start the adapter and initialize the desktop auth token before calling protected /studio/* endpoints."
   }
 }
 ```
 
-## Auth
+`source` is one of `adapter`, `hermes`, or `studio`.
 
-- Default: Unix domain socket or named pipe (preferred)
-- Fallback: `127.0.0.1` + random bearer token
-- Token file: `0600` permissions, rotated per launch
-- Idempotency-Key header on POSTs by default
+## Read-only Guarantees
+
+- Hermes `state.db` is opened read-only for sessions.
+- Hermes logs are opened read-only and redacted before returning to the UI.
+- Hermes profiles and model/provider config are inspected read-only.
+- The adapter must not mutate Hermes core files unless a safe official Hermes CLI/API write path is explicitly used.

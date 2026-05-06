@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from datetime import UTC
+from typing import Any
 
 import httpx
 
@@ -110,6 +112,6 @@ class HermesClient:
 
 def _now_iso() -> str:
     """Return the current UTC time as an ISO string."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()

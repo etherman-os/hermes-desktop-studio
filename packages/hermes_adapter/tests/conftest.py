@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from hermes_adapter.server import set_auth_token
+from hermes_adapter import theme_repository
+from hermes_adapter.security import set_auth_token
 
 
 @pytest.fixture
@@ -53,3 +54,11 @@ def _reset_auth_token():
     set_auth_token("test-secret-token")
     yield
     set_auth_token(None)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_studio_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep tests from reading or writing the user's Studio config."""
+    config_dir = tmp_path / "studio-config"
+    monkeypatch.setattr(theme_repository, "_STUDIO_CONFIG_DIR", config_dir)
+    monkeypatch.setattr(theme_repository, "_STUDIO_CONFIG_FILE", config_dir / "config.json")

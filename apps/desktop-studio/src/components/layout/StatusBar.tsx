@@ -8,10 +8,12 @@ export function StatusBar() {
   const checking = useAdapterStore((s) => s.checking);
   const backendMode = useAdapterStore((s) => s.backendMode);
   const hermesConnected = useAdapterStore((s) => s.hermesConnected);
+  const authError = useAdapterStore((s) => s.authError);
+  const fallbackReason = useAdapterStore((s) => s.fallbackReason);
   const activeProfile = useProfileStore((s) => s.activeProfile);
 
   const statusColor = connected ? "var(--app-ok)" : checking ? "var(--app-warn)" : "var(--app-danger)";
-  const statusText = connected ? "Connected" : checking ? "Checking..." : "Disconnected";
+  const statusText = connected ? "Connected" : checking ? "Checking..." : authError ? "Auth token missing" : "Disconnected";
 
   let backendLabel = backendMode;
   if (backendMode === "auto") {
@@ -23,6 +25,7 @@ export function StatusBar() {
   }
 
   const profileName = activeProfile?.name ?? "unknown";
+  const adapterTitle = authError ?? fallbackReason ?? statusText;
 
   return (
     <div className="status-bar">
@@ -39,7 +42,7 @@ export function StatusBar() {
       <div style={{ flex: 1 }} />
       <div className="status-item">
         <span className="status-dot" style={{ background: statusColor }} />
-        <span>Adapter: {statusText}</span>
+        <span title={adapterTitle}>Adapter: {statusText}</span>
       </div>
       {connected && (
         <div className="status-item">

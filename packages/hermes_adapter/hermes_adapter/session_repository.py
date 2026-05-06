@@ -55,7 +55,7 @@ class SessionRepository:
 
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
-        self._schema_info: dict[str, list[str]] = {}
+        self._schema_info: dict[str, Any] = {}
         self._sessions_table: str | None = None
         self._messages_table: str | None = None
         self._fts_table: str | None = None
@@ -128,7 +128,8 @@ class SessionRepository:
 
     @property
     def session_count(self) -> int:
-        return self._schema_info.get("session_count", 0)
+        count = self._schema_info.get("session_count", 0)
+        return count if isinstance(count, int) else 0
 
     @property
     def source(self) -> str:

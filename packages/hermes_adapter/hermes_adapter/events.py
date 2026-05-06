@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from hermes_adapter.models import ShellEvent, ShellEventType
-
 
 TERMINAL_EVENTS: set[ShellEventType] = {
     "run.completed",
@@ -38,11 +37,11 @@ def normalize_hermes_event(raw: dict[str, Any]) -> ShellEvent:
     timestamp = (
         datetime.fromisoformat(timestamp_raw)
         if isinstance(timestamp_raw, str)
-        else datetime.now(timezone.utc)
+        else datetime.now(UTC)
     )
 
     return ShellEvent(
-        type=event_type,  # type: ignore[arg-type]
+        type=event_type,
         payload=payload,
         timestamp=timestamp,
     )

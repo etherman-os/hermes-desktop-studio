@@ -68,20 +68,23 @@ export const useLogStore = create<LogState>((set, get) => ({
     const state = get();
     if (state.streaming) return;
 
-    const ac = api.streamLogs({
-      onLogLine: (payload) => {
-        const line: LogLine = {
-          timestamp: payload.timestamp,
-          level: payload.level ?? "info",
-          message: payload.message,
-          source: payload.source ?? source ?? "unknown",
-        };
-        set((s) => ({ lines: [...s.lines.slice(-500), line] }));
+    const ac = api.streamLogs(
+      {
+        onLogLine: (payload) => {
+          const line: LogLine = {
+            timestamp: payload.timestamp,
+            level: payload.level ?? "info",
+            message: payload.message,
+            source: payload.source ?? source ?? "unknown",
+          };
+          set((s) => ({ lines: [...s.lines.slice(-500), line] }));
+        },
+        onError: (err) => {
+          set({ error: err.message, streaming: false });
+        },
       },
-      onError: (err) => {
-        set({ error: err.message, streaming: false });
-      },
-    });
+      source ?? state.selectedSource,
+    );
 
     set({ streaming: true, abortController: ac });
   },

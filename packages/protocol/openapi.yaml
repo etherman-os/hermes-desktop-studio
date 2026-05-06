@@ -19,12 +19,29 @@ security:
 paths:
   /health:
     get:
-      summary: Adapter health check
+      summary: Adapter health check for CLI/dev tooling
+      description: |
+        Public adapter-level health endpoint for development and CLI tooling.
+        The desktop frontend uses /studio/health instead.
       operationId: getHealth
       security: []
       responses:
         "200":
           description: Adapter is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /studio/health:
+    get:
+      summary: Studio health check
+      description: Canonical desktop frontend health endpoint.
+      operationId: getStudioHealth
+      security: []
+      responses:
+        "200":
+          description: Studio adapter health
           content:
             application/json:
               schema:
@@ -64,6 +81,49 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ProfileInfo"
+
+  /studio/profiles/active:
+    get:
+      summary: Active Hermes profile
+      operationId: getActiveProfile
+      responses:
+        "200":
+          description: Active profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileInfo"
+
+  /studio/profiles/activate:
+    post:
+      summary: Activate a Hermes profile
+      description: Currently returns not_implemented unless a safe CLI-backed path exists.
+      operationId: activateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile_id:
+                  type: string
+              required:
+                - profile_id
+      responses:
+        "200":
+          description: Profile activated
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "501":
+          description: Safe profile switching is not implemented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /studio/sessions:
     get:
@@ -227,10 +287,6 @@ paths:
           description: Log source filter
           schema:
             type: string
-            enum:
-              - agent
-              - errors
-              - gateway
         - name: tail
           in: query
           description: Number of recent lines to return
@@ -267,10 +323,6 @@ paths:
           in: query
           schema:
             type: string
-            enum:
-              - agent
-              - errors
-              - gateway
       responses:
         "200":
           description: SSE log stream
@@ -278,6 +330,18 @@ paths:
             text/event-stream:
               schema:
                 type: string
+
+  /studio/model-config:
+    get:
+      summary: Read-only normalized model/provider config
+      operationId: getModelConfig
+      responses:
+        "200":
+          description: Model/provider config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelConfig"
 
   /studio/themes:
     get:
@@ -300,6 +364,42 @@ paths:
                     description: ID of the currently active theme
                 required:
                   - themes
+
+  /studio/themes/active:
+    get:
+      summary: Active normalized theme pack
+      operationId: getActiveTheme
+      responses:
+        "200":
+          description: Active normalized theme data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThemeData"
+
+  /studio/themes/{theme_id}:
+    get:
+      summary: Normalized theme pack by ID
+      operationId: getTheme
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Normalized theme data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThemeData"
+        "404":
+          description: Theme not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /studio/themes/activate:
     post:
@@ -330,6 +430,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /studio/themes/reload:
+    post:
+      summary: Reload theme packs from disk
+      operationId: reloadThemes
+      responses:
+        "200":
+          description: Theme repository reloaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reloaded:
+                    type: boolean
+                  count:
+                    type: integer
+                required:
+                  - reloaded
+                  - count
+
   /studio/config:
     get:
       summary: Normalized config view
@@ -343,7 +463,7 @@ paths:
                 $ref: "#/components/schemas/ConfigView"
     patch:
       summary: Safe config mutation
-      description: Wraps `hermes config set` CLI. Does not mutate files directly.
+      description: Studio-owned/mock config mutation only unless a backend provides an explicit safe official write path. Hermes backend rejects direct config file mutation.
       operationId: updateConfig
       requestBody:
         required: true
@@ -558,6 +678,55 @@ components:
         - run_id
         - status
 
+    ModelConfig:
+      type: object
+      properties:
+        provider:
+          type: string
+        model:
+          type: string
+        base_url:
+          type: string
+          nullable: true
+        api_key_configured:
+          type: boolean
+        api_key_source:
+          type: string
+          nullable: true
+        config_source:
+          type: string
+        temperature:
+          type: number
+          nullable: true
+        max_tokens:
+          type: integer
+          nullable: true
+        context_window:
+          type: integer
+          nullable: true
+        capabilities_available:
+          type: boolean
+        available_models:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+        available_model_count:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+        - provider
+        - model
+        - api_key_configured
+        - config_source
+
     ThemeInfo:
       type: object
       properties:
@@ -579,6 +748,47 @@ components:
         - name
         - version
         - author
+
+    ThemeData:
+      type: object
+      description: Normalized theme/concept pack data after inheritance resolution.
+      properties:
+        meta:
+          type: object
+          additionalProperties: true
+        palette:
+          type: object
+          additionalProperties: true
+        typography:
+          type: object
+          additionalProperties: true
+        borders:
+          type: object
+          additionalProperties: true
+        icons:
+          type: object
+          additionalProperties: true
+        labels:
+          type: object
+          additionalProperties: true
+        empty_states:
+          type: object
+          additionalProperties: true
+        onboarding:
+          type: object
+          additionalProperties: true
+        kanban:
+          type: object
+          additionalProperties: true
+        message_styles:
+          type: object
+          additionalProperties: true
+        accessibility:
+          type: object
+          additionalProperties: true
+        assets:
+          type: object
+          additionalProperties: true
 
     ConfigView:
       type: object
@@ -611,6 +821,9 @@ components:
       required:
         - code
         - message
+        - retryable
+        - source
+        - hint
 
     ErrorResponse:
       type: object

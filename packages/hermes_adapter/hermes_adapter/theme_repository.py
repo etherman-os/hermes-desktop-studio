@@ -10,11 +10,9 @@ import json
 import logging
 import os
 import re
-from copy import deepcopy
+import tomllib
 from pathlib import Path
 from typing import Any
-
-import tomllib
 
 logger = logging.getLogger("hermes_adapter.theme_repository")
 
@@ -30,7 +28,7 @@ _STUDIO_CONFIG_DIR = Path.home() / ".config" / "hermes-desktop-studio"
 _STUDIO_CONFIG_FILE = _STUDIO_CONFIG_DIR / "config.json"
 
 
-def _deep_merge(base: dict, override: dict) -> dict:
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     """Deep merge override into base. Override wins."""
     result = dict(base)
     for key, value in override.items():
@@ -61,9 +59,8 @@ def _validate_theme(data: dict[str, Any], path: Path) -> list[str]:
     palette = data.get("palette")
     if palette and isinstance(palette, dict):
         for key, value in palette.items():
-            if isinstance(value, str) and not value.startswith(("#", "rgb", "hsl", "rgba", "hsla")):
-                if not value.startswith("rgba") and not value.startswith("var("):
-                    warnings.append(f"{path.name}: palette.{key} may not be a valid color: {value}")
+            if isinstance(value, str) and not value.startswith(("#", "rgb", "hsl", "var(")):
+                warnings.append(f"{path.name}: palette.{key} may not be a valid color: {value}")
 
     return warnings
 
@@ -182,7 +179,7 @@ class ThemeRepository:
 
     def _resolve_all_inheritance(self) -> None:
         """Resolve inheritance for all loaded themes."""
-        for theme_id, raw in self._raw_themes.items():
+        for theme_id in self._raw_themes:
             self._themes[theme_id] = self._resolve_theme(theme_id)
 
     def _resolve_theme(self, theme_id: str) -> dict[str, Any]:

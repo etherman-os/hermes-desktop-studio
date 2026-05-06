@@ -6,7 +6,8 @@ Supports mock and Hermes backends. Frontend always talks to /studio/* endpoints.
 from __future__ import annotations
 
 import json
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -35,6 +36,25 @@ def _sse(data: dict[str, Any]) -> str:
     return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
 
 
+def _error_detail(
+    code: str,
+    message: str,
+    *,
+    retryable: bool = False,
+    source: str = "adapter",
+    hint: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "error": {
+            "code": code,
+            "message": message,
+            "retryable": retryable,
+            "source": source,
+            "hint": hint,
+        }
+    }
+
+
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -61,7 +81,10 @@ async def bootstrap(_token: None = Depends(require_token)) -> dict[str, Any]:
         data["backend_status"] = _backend_status
         return data
     except Exception as e:
-        raise HTTPException(status_code=500, detail={"error": {"code": "bootstrap_error", "message": str(e)}})
+        raise HTTPException(
+            status_code=500,
+            detail=_error_detail("bootstrap_error", str(e), retryable=True),
+        ) from e
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +104,7 @@ async def get_active_profile(_token: None = Depends(require_token)) -> dict[str,
     profile = await backend.get_active_profile()
     if profile:
         return profile
-    return {"id": "unknown", "name": "unknown", "active": True}
+    return {"name": "unknown", "path": "", "active": True}
 
 
 @router.post("/profiles/activate")
@@ -90,7 +113,14 @@ async def activate_profile(body: dict[str, Any], _token: None = Depends(require_
     profile_id = body.get("profile_id", "")
     result = await backend.activate_profile(profile_id)
     if result.get("status") == "not_implemented":
-        raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": result.get("message", "Profile switching not implemented")}})
+        raise HTTPException(
+            status_code=501,
+            detail=_error_detail(
+                "not_implemented",
+                result.get("message", "Profile switching not implemented"),
+                hint="Profile switching is intentionally disabled until a safe CLI-backed path is added.",
+            ),
+        )
     return result
 
 
@@ -110,8 +140,11 @@ async def get_session(session_id: str, _token: None = Depends(require_token)) ->
     backend = await _get_backend()
     try:
         return await backend.get_session(session_id)
-    except ValueError:
-        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": f"Session '{session_id}' not found"}})
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=_error_detail("not_found", f"Session '{session_id}' not found"),
+        ) from e
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +160,15 @@ async def start_run(body: dict[str, Any], _token: None = Depends(require_token))
     profile = body.get("profile")
     result = await backend.start_run(session_id, prompt, profile)
     if result.get("status") == "failed":
-        raise HTTPException(status_code=502, detail={"error": {"code": "run_failed", "message": result.get("error", "Run failed")}})
+        raise HTTPException(
+            status_code=502,
+            detail=_error_detail(
+                "run_failed",
+                result.get("error", "Run failed"),
+                retryable=True,
+                source="hermes",
+            ),
+        )
     return result
 
 
@@ -210,8 +251,11 @@ async def get_theme(theme_id: str, _token: None = Depends(require_token)) -> dic
     backend = await _get_backend()
     try:
         return await backend.get_theme(theme_id)
-    except ValueError:
-        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": f"Theme '{theme_id}' not found"}})
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=_error_detail("not_found", f"Theme '{theme_id}' not found"),
+        ) from e
 
 
 @router.post("/themes/activate")
@@ -220,8 +264,11 @@ async def activate_theme(body: dict[str, Any], _token: None = Depends(require_to
     theme_id = body.get("theme_id", "")
     try:
         return await backend.activate_theme(theme_id)
-    except ValueError:
-        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": f"Theme '{theme_id}' not found"}})
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=_error_detail("not_found", f"Theme '{theme_id}' not found"),
+        ) from e
 
 
 @router.post("/themes/reload")
@@ -247,8 +294,14 @@ async def patch_config(body: dict[str, Any], _token: None = Depends(require_toke
     key = body.get("key")
     value = body.get("value")
     if not key:
-        raise HTTPException(status_code=400, detail={"error": {"code": "invalid_request", "message": "key is required"}})
+        raise HTTPException(
+            status_code=400,
+            detail=_error_detail("invalid_request", "key is required"),
+        )
     try:
         return await backend.patch_config(key, value)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail={"error": {"code": "config_error", "message": str(e)}})
+        raise HTTPException(
+            status_code=400,
+            detail=_error_detail("config_error", str(e)),
+        ) from e
