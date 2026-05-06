@@ -6,12 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
 from hermes_adapter import mock_backend
 from hermes_adapter.event_normalizer import normalize_hermes_event
-from hermes_adapter.hermes_backend import _normalize_hermes_event
+from hermes_adapter.hermes_backend import HermesBackend, _normalize_hermes_event
 from hermes_adapter.mock_backend import MockBackend
 
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "protocol" / "events.schema.json"
@@ -43,6 +44,83 @@ async def test_mock_backend_run_events_validate_against_schema(monkeypatch: pyte
         events.append(event)
 
     assert events[-1]["type"] == "run.completed"
+
+
+@pytest.mark.asyncio
+async def test_mock_backend_missing_run_event_validates_against_schema() -> None:
+    backend = MockBackend()
+    events: list[dict[str, Any]] = []
+
+    async for event in backend.stream_run_events("missing-run"):
+        assert_valid_event(event)
+        events.append(event)
+
+    assert [event["type"] for event in events] == ["run.failed"]
+
+
+@pytest.mark.asyncio
+async def test_mock_backend_log_stream_events_validate_against_schema() -> None:
+    backend = MockBackend()
+    stream = backend.stream_logs(source="agent.log")
+
+    event = await anext(stream)
+    await stream.aclose()
+
+    assert event["type"] == "log.line"
+    assert_valid_event(event)
+
+
+@pytest.mark.asyncio
+async def test_hermes_backend_unavailable_run_stream_validates_against_schema() -> None:
+    backend = HermesBackend("http://127.0.0.1:1")
+    stream = backend.stream_run_events("run-unavailable")
+
+    event = await anext(stream)
+    await stream.aclose()
+    await backend.close()
+
+    assert event["type"] == "run.failed"
+    assert_valid_event(event)
+
+
+@pytest.mark.asyncio
+async def test_hermes_backend_unavailable_log_stream_validates_against_schema() -> None:
+    backend = HermesBackend("http://127.0.0.1:1")
+    backend._log_repo = None
+    stream = backend.stream_logs(source="agent.log")
+
+    event = await anext(stream)
+    await stream.aclose()
+    await backend.close()
+
+    assert event["type"] == "log.line"
+    assert_valid_event(event)
+
+
+@pytest.mark.asyncio
+async def test_hermes_backend_http_run_stream_validates_against_schema() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/runs/run-1/events"
+        return httpx.Response(
+            200,
+            content=(
+                'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n'
+                "data: [DONE]\n\n"
+            ),
+        )
+
+    backend = HermesBackend("http://hermes.test")
+    await backend._client.aclose()
+    backend._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    backend._hermes_healthy = True
+
+    events: list[dict[str, Any]] = []
+    async for event in backend.stream_run_events("run-1"):
+        assert_valid_event(event)
+        events.append(event)
+
+    await backend.close()
+    assert [event["type"] for event in events] == ["assistant.delta", "run.completed"]
 
 
 def test_hermes_fixture_replay_events_validate_against_schema() -> None:

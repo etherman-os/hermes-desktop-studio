@@ -27,7 +27,9 @@ describe("studioClient auth bootstrap", () => {
   it("uses an explicit dev env token for protected requests", async () => {
     vi.stubEnv("VITE_HERMES_STUDIO_ADAPTER_TOKEN", "dev-token");
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ adapter_version: "0.1.0" }));
+    const localStorageMock = { setItem: vi.fn(), getItem: vi.fn(), removeItem: vi.fn() };
     vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("localStorage", localStorageMock);
 
     const api = await loadClient();
     const auth = await api.initializeAdapterAuth();
@@ -40,6 +42,8 @@ describe("studioClient auth bootstrap", () => {
         headers: expect.objectContaining({ Authorization: "Bearer dev-token" }),
       }),
     );
+    expect(localStorageMock.setItem).not.toHaveBeenCalled();
+    expect(localStorageMock.getItem).not.toHaveBeenCalled();
   });
 
   it("uses the Tauri token bridge when browser dev env is absent", async () => {

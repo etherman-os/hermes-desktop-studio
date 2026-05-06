@@ -188,14 +188,14 @@ export async function getActiveProfile() {
 }
 
 export async function activateProfile(profileId: string) {
-  return request<{ status: string; message?: string }>("/studio/profiles/activate", {
+  return request<ActivateProfileResponse>("/studio/profiles/activate", {
     method: "POST",
     body: JSON.stringify({ profile_id: profileId }),
   });
 }
 
 export async function getSessions() {
-  return request<{ sessions: SessionSummary[]; total: number; source?: string }>("/studio/sessions");
+  return request<SessionsResponse>("/studio/sessions");
 }
 
 export async function getSession(sessionId: string) {
@@ -203,14 +203,14 @@ export async function getSession(sessionId: string) {
 }
 
 export async function startRun(input: { session_id: string; prompt: string; profile?: string }) {
-  return request<{ run_id: string; status: string }>("/studio/runs", {
+  return request<RunResponse>("/studio/runs", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
 export async function stopRun(runId: string) {
-  return request<{ run_id: string; status: string }>(`/studio/runs/${runId}/stop`, {
+  return request<RunResponse>(`/studio/runs/${runId}/stop`, {
     method: "POST",
   });
 }
@@ -220,7 +220,7 @@ export async function getLogs(source?: string, tail?: number) {
   if (source) params.set("source", source);
   if (tail) params.set("tail", String(tail));
   const qs = params.toString();
-  return request<{ source: string; lines: string[]; total: number }>(`/studio/logs${qs ? `?${qs}` : ""}`);
+  return request<LogsResponse>(`/studio/logs${qs ? `?${qs}` : ""}`);
 }
 
 export interface ModelConfig {
@@ -244,7 +244,7 @@ export async function getModelConfig() {
 }
 
 export async function getThemes() {
-  return request<{ themes: ThemeInfo[]; active: string }>("/studio/themes");
+  return request<ThemesResponse>("/studio/themes");
 }
 
 export interface ThemeData {
@@ -278,20 +278,25 @@ export async function activateTheme(themeId: string) {
 }
 
 export async function reloadThemes() {
-  return request<{ reloaded: boolean; count: number }>("/studio/themes/reload", {
+  return request<ThemeReloadResponse>("/studio/themes/reload", {
     method: "POST",
   });
 }
 
 export async function getConfig() {
-  return request<{ config: Record<string, unknown> }>("/studio/config");
+  return request<ConfigResponse>("/studio/config");
 }
 
 export async function patchConfig(input: { key: string; value: unknown }) {
-  return request<{ config: Record<string, unknown> }>("/studio/config", {
+  return request<ConfigResponse>("/studio/config", {
     method: "PATCH",
     body: JSON.stringify(input),
   });
+}
+
+export interface ActivateProfileResponse {
+  status: string;
+  message?: string;
 }
 
 export interface BootstrapResponse {
@@ -321,12 +326,43 @@ export interface SessionDetail extends SessionSummary {
   transcript_preview: { role: string; content: string }[];
 }
 
+export interface SessionsResponse {
+  sessions: SessionSummary[];
+  total: number;
+  source?: string;
+}
+
+export interface RunResponse {
+  run_id: string;
+  status: string;
+}
+
+export interface LogsResponse {
+  source: string;
+  lines: string[];
+  total: number;
+}
+
 export interface ThemeInfo {
   id: string;
   name: string;
   version: string;
   author: string;
   description: string;
+}
+
+export interface ThemesResponse {
+  themes: ThemeInfo[];
+  active: string;
+}
+
+export interface ThemeReloadResponse {
+  reloaded: boolean;
+  count: number;
+}
+
+export interface ConfigResponse {
+  config: Record<string, unknown>;
 }
 
 export type StudioEventType =
