@@ -93,6 +93,16 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] `packages/protocol/openapi.yaml` documents all implemented `/studio/*` routes
 - [ ] `packages/protocol/events.schema.json` matches MockBackend and Hermes fixture replay events
 
+## Studio Storage
+
+- [ ] `GET /studio/health` includes `storage.available`, `storage.schema_version`, `storage.data_dir`, `storage.db_path`, and `storage.last_error`
+- [ ] `GET /studio/bootstrap` includes the same storage metadata
+- [ ] `studio.db` is created under `HERMES_STUDIO_HOME` when the env var is set
+- [ ] Repeated adapter starts do not duplicate migration rows
+- [ ] `HERMES_STUDIO_DB_PATH=~/.hermes/state.db` is rejected
+- [ ] Hermes `~/.hermes/state.db` is not modified by Studio startup
+- [ ] Storage metadata contains diagnostics only; no secrets are stored in `studio_meta`
+
 ## Status Bar
 
 - [ ] Shows active profile name

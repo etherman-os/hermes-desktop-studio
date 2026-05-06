@@ -79,6 +79,7 @@ hermes-local-studio/
     ROADMAP.md
     PRODUCT_DIRECTION.md
     ADR-0001-desktop-first.md
+    STUDIO_STORAGE.md
 ```
 
 ## Theme / Concept Pack System
@@ -147,6 +148,17 @@ Desktop frontend code must not call `/shell/*`.
 - Studio SSE events match `packages/protocol/events.schema.json` and always include `id`, `type`, `timestamp`, `source`, and `payload`.
 - Errors use `{ "error": { "code", "message", "retryable", "source", "hint" } }`.
 
+### Studio-owned Storage
+
+Hermes Desktop Studio owns a local SQLite database named `studio.db` for Studio preferences, workflow metadata, and future local-only features. It is separate from Hermes Agent `state.db` and must not store secrets.
+
+Path priority:
+- `HERMES_STUDIO_HOME`
+- Platform user data directory for `hermes-desktop-studio`
+- Linux fallback: `~/.local/share/hermes-desktop-studio/`
+
+`GET /studio/health`, root `GET /health`, and `GET /studio/bootstrap` report storage diagnostics. See [docs/STUDIO_STORAGE.md](docs/STUDIO_STORAGE.md).
+
 ### Backend Modes
 
 The adapter supports three backend modes:
@@ -166,6 +178,8 @@ The adapter supports three backend modes:
 | `HERMES_API_KEY` | *(none)* | Optional API key for Hermes |
 | `HERMES_STUDIO_ADAPTER_TOKEN` | *(generated)* | Explicit local adapter auth token for dev |
 | `HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES` | `0` | Set `1` only to mount legacy prototype `/shell/*` routes |
+| `HERMES_STUDIO_HOME` | platform user data dir | Studio-owned data directory for `studio.db` |
+| `HERMES_STUDIO_DB_PATH` | *(none)* | Optional direct path to a file named `studio.db`; guarded against Hermes `state.db` |
 
 ## Development Status
 

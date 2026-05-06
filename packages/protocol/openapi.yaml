@@ -515,6 +515,8 @@ components:
           type: boolean
         uptime_seconds:
           type: number
+        storage:
+          $ref: "#/components/schemas/StorageStatus"
       required:
         - status
         - adapter_version
@@ -554,10 +556,35 @@ components:
             required:
               - id
               - name
+        storage:
+          $ref: "#/components/schemas/StorageStatus"
       required:
         - adapter_version
         - capabilities
         - recent_sessions
+
+    StorageStatus:
+      type: object
+      properties:
+        available:
+          type: boolean
+        schema_version:
+          type: integer
+        data_dir:
+          type: string
+          description: Diagnostic path to the Studio-owned data directory.
+        db_path:
+          type: string
+          description: Diagnostic path to the Studio-owned SQLite database.
+        last_error:
+          type: string
+          nullable: true
+      required:
+        - available
+        - schema_version
+        - data_dir
+        - db_path
+        - last_error
 
     ProfileInfo:
       type: object

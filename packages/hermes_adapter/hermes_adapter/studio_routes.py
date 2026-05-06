@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 
 from hermes_adapter.backend_base import StudioBackend
 from hermes_adapter.security import require_token
+from hermes_adapter.studio_storage import get_studio_storage_status
 
 router = APIRouter(prefix="/studio")
 
@@ -65,6 +66,7 @@ async def health() -> dict[str, Any]:
     backend = await _get_backend()
     h = await backend.health()
     h["backend_status"] = _backend_status
+    h["storage"] = get_studio_storage_status()
     return h
 
 
@@ -79,6 +81,7 @@ async def bootstrap(_token: None = Depends(require_token)) -> dict[str, Any]:
     try:
         data = await backend.bootstrap()
         data["backend_status"] = _backend_status
+        data["storage"] = get_studio_storage_status()
         return data
     except Exception as e:
         raise HTTPException(

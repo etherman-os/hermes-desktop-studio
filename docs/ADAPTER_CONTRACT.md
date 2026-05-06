@@ -29,6 +29,20 @@ The token is not stored in `localStorage`.
 - `GET /studio/health` — canonical desktop frontend health endpoint, no auth.
 - `GET /health` — adapter-level CLI/dev health only, no auth.
 
+Both include `storage` diagnostics for Studio-owned `studio.db`:
+
+```json
+{
+  "storage": {
+    "available": true,
+    "schema_version": 1,
+    "data_dir": "/home/user/.local/share/hermes-desktop-studio",
+    "db_path": "/home/user/.local/share/hermes-desktop-studio/studio.db",
+    "last_error": null
+  }
+}
+```
+
 ## Current `/studio/*` Endpoints
 
 - `GET /studio/bootstrap`
@@ -103,3 +117,4 @@ All protected endpoint errors use:
 - Hermes logs are opened read-only and redacted before returning to the UI.
 - Hermes profiles and model/provider config are inspected read-only.
 - The adapter must not mutate Hermes core files unless a safe official Hermes CLI/API write path is explicitly used.
+- Studio-owned persistence uses `studio.db`; it is separate from Hermes `state.db` and must not store secrets.

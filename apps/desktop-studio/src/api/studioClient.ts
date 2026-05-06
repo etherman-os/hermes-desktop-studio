@@ -160,6 +160,7 @@ export interface HealthResponse {
   adapter_version: string;
   hermes_connected: boolean;
   backend_mode: string;
+  storage?: StorageStatus;
   backend_status?: {
     backend_mode?: string;
     active_backend?: string;
@@ -167,6 +168,14 @@ export interface HealthResponse {
     hermes_url?: string;
     fallback_reason?: string;
   };
+}
+
+export interface StorageStatus {
+  available: boolean;
+  schema_version: number;
+  data_dir: string;
+  db_path: string;
+  last_error: string | null;
 }
 
 export async function checkAdapterHealthDetailed(): Promise<HealthResponse> {
@@ -307,6 +316,7 @@ export interface BootstrapResponse {
   recent_sessions: SessionSummary[];
   active_theme: ThemeInfo | null;
   available_models: { id: string; name: string; provider: string }[];
+  storage?: StorageStatus;
 }
 
 export interface ProfileInfo {

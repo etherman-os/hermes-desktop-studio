@@ -28,6 +28,10 @@ Events are normalized by the adapter. The desktop UI must never consume raw Herm
 
 The theme system is generic and semantic-slot-based. No concept (Minecraft, Minions, LOTR, etc.) is hardcoded into the schemas. Themes map stable semantic keys to their own visual language.
 
+## Studio Storage
+
+Health and bootstrap responses include Studio-owned storage status for `studio.db`. This database is separate from Hermes Agent `state.db` and is intended for Studio preferences, workflow metadata, and future local-only features. It must not store secrets.
+
 ## Plugin Types
 
 | Type | MVP Status | Description |

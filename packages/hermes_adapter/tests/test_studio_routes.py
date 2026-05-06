@@ -31,12 +31,14 @@ class TestHealthEndpoints:
         assert data["status"] == "healthy"
         assert "adapter_version" in data
         assert "hermes_connected" in data
+        assert data["storage"]["available"] is True
 
     def test_studio_health(self, client: TestClient) -> None:
         resp = client.get("/studio/health")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "healthy"
+        assert data["storage"]["schema_version"] == 1
 
     def test_health_no_auth_required(self, client: TestClient) -> None:
         resp = client.get("/studio/health")
@@ -61,6 +63,7 @@ class TestBootstrap:
         assert isinstance(data["recent_sessions"], list)
         assert "active_theme" in data
         assert "available_models" in data
+        assert data["storage"]["available"] is True
 
     def test_missing_auth_uses_error_envelope(self, client: TestClient) -> None:
         resp = client.get("/studio/bootstrap")

@@ -22,6 +22,7 @@ Hermes Local Studio is a local-first, themeable desktop workbench for Hermes Age
 │  - Event normalization                          │
 │  - Hermes API client                            │
 │  - Read-only local state observer               │
+│  - Studio-owned SQLite storage                  │
 └─────────────────────┬───────────────────────────┘
                       │
         ┌─────────────┼─────────────┐
@@ -30,6 +31,7 @@ Hermes Local Studio is a local-first, themeable desktop workbench for Hermes Age
    /v1/runs      config set   ~/.hermes/state.db
    SSE stream    profiles     ~/.hermes/logs
    capabilities  official     ~/.hermes/config.yaml
+                              studio.db (Studio-owned)
 ```
 
 ## Design Principles
@@ -39,7 +41,8 @@ Hermes Local Studio is a local-first, themeable desktop workbench for Hermes Age
 3. **Read-only state access.** For sessions, logs, and config observation, prefer read-only access.
 4. **Write via CLI wrappers.** For mutations, call official `hermes` CLI commands.
 5. **Defensive event handling.** Normalize and sanitize Hermes SSE events; every emitted Studio event includes `id`, `type`, `timestamp`, `source`, and `payload`.
-6. **Desktop workbench, not terminal.** The main product is a dockable desktop app, not a terminal TUI.
+6. **Studio-owned persistence.** Local Studio features use `studio.db`, separate from Hermes Agent `state.db`, and never store secrets.
+7. **Desktop workbench, not terminal.** The main product is a dockable desktop app, not a terminal TUI.
 
 ## Package Layout
 

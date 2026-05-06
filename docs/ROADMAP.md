@@ -199,6 +199,9 @@
 
 ## Phase 6 — Persistent Studio-owned Kanban Workflow
 
+- [x] Phase 6B foundation: Studio-owned `studio.db` location resolution, migrations, metadata, health/bootstrap status
+- [x] Storage safety: no Hermes `state.db` writes, no secrets, guard against `HERMES_STUDIO_DB_PATH` pointing at Hermes state
+- [x] docs/STUDIO_STORAGE.md
 - [ ] Define Studio-owned Kanban persistence schema outside Hermes core/state.db
 - [ ] Add `/studio/kanban/*` protocol paths and OpenAPI coverage before frontend wiring
 - [ ] Implement adapter persistence with local Studio storage and migration/version metadata

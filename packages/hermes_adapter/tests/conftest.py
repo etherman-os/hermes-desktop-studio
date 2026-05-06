@@ -62,3 +62,10 @@ def _isolate_studio_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     config_dir = tmp_path / "studio-config"
     monkeypatch.setattr(theme_repository, "_STUDIO_CONFIG_DIR", config_dir)
     monkeypatch.setattr(theme_repository, "_STUDIO_CONFIG_FILE", config_dir / "config.json")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_studio_storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep tests from reading or writing the user's Studio storage."""
+    monkeypatch.setenv("HERMES_STUDIO_HOME", str(tmp_path / "studio-home"))
+    monkeypatch.delenv("HERMES_STUDIO_DB_PATH", raising=False)

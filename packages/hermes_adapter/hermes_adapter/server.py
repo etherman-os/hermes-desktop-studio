@@ -32,6 +32,7 @@ from hermes_adapter.models import (
 )
 from hermes_adapter.security import generate_token, require_token, set_auth_token, write_token
 from hermes_adapter.studio_routes import router as studio_router
+from hermes_adapter.studio_storage import get_studio_storage_status
 from hermes_adapter.themes import ThemeManager
 
 _theme_manager = ThemeManager()
@@ -63,10 +64,12 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
 async def health_root() -> dict[str, Any]:
     """Root-level health check (no auth required)."""
     from hermes_adapter.studio_routes import _backend_status, _get_backend
+    storage = get_studio_storage_status()
     try:
         backend = await _get_backend()
         h = await backend.health()
         h["backend_status"] = _backend_status
+        h["storage"] = storage
         return h
     except Exception:
         return {
@@ -75,6 +78,7 @@ async def health_root() -> dict[str, Any]:
             "hermes_connected": False,
             "uptime_seconds": 0,
             "backend_mode": "unknown",
+            "storage": storage,
         }
 
 
