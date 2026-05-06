@@ -1,0 +1,95 @@
+[meta]
+id = "example-minions"
+name = "Minions"
+version = "0.1.0"
+author = "etherman-os"
+extends = "default-dark"
+description = "Yellow and blue villain-themed concept pack. Parody example."
+
+[compat]
+studio_api = "^1.0"
+adapter_api = "^1.0"
+
+[palette]
+bg = "#1a1a2e"
+bg_alt = "#141425"
+surface = "#21213a"
+surface_alt = "#2a2a48"
+panel = "#252545"
+border = "#3a3a5c"
+border_subtle = "#2e2e50"
+text = "#f0f0f0"
+text_secondary = "#a0a0b8"
+text_muted = "#7070a0"
+accent = "#f5c518"
+accent_alt = "#ffd966"
+accent_subtle = "rgba(245, 197, 24, 0.15)"
+ok = "#4caf50"
+warn = "#ff9800"
+danger = "#f44336"
+info = "#42a5f5"
+kanban_todo = "#78909c"
+kanban_doing = "#f5c518"
+kanban_done = "#4caf50"
+kanban_blocked = "#f44336"
+
+[borders]
+style = "rounded"
+radius_sm = "6px"
+radius_md = "10px"
+radius_lg = "14px"
+
+[icons]
+profile = "😈"
+session = "📝"
+memory = "🍌"
+tools = "🔧"
+kanban = "📋"
+logs = "📹"
+command = "📋"
+automation = "⚡"
+agent = "🧑‍🔬"
+approval = "🛡️"
+search = "🔍"
+settings = "⚙️"
+send = "🚀"
+stop = "🛑"
+artifacts = "📦"
+activity = "⚡"
+inspector = "🔬"
+theme_gallery = "🎭"
+
+[labels]
+profiles = "Villains"
+sessions = "Missions"
+chat = "Briefing Room"
+kanban = "Master Plan"
+artifacts = "Loot"
+tools = "Gadgets"
+memory = "Vault"
+logs = "Surveillance"
+activity = "Henchmen"
+inspector = "Scanner"
+command_palette = "Blueprint"
+settings = "Lair Settings"
+theme_gallery = "Disguises"
+composer = "Briefing"
+send = "Launch"
+stop = "Abort"
+approve = "Yes Boss"
+deny = "No Way"
+search = "Search Intel"
+
+[empty_states]
+sessions = "No missions yet. Time to plan something villainous!"
+chat = "Ready for your next briefing?"
+kanban = "The master plan board is empty. Add some tasks!"
+
+[message_styles]
+assistant = "bubble"
+user = "compact-card"
+tool = "chip-stream"
+
+[accessibility]
+high_contrast = false
+font_scale = 1.0

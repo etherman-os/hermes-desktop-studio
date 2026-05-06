@@ -204,12 +204,27 @@ class MockBackend(StudioBackend):
     async def list_themes(self) -> dict[str, Any]:
         return {"themes": self._themes(), "active": self._active_theme_id}
 
+    async def get_theme(self, theme_id: str) -> dict[str, Any]:
+        for t in self._themes():
+            if t["id"] == theme_id:
+                return t
+        raise ValueError(f"Theme '{theme_id}' not found")
+
+    async def get_active_theme(self) -> dict[str, Any]:
+        for t in self._themes():
+            if t["id"] == self._active_theme_id:
+                return t
+        return {}
+
     async def activate_theme(self, theme_id: str) -> dict[str, Any]:
         for t in self._themes():
             if t["id"] == theme_id:
                 self._active_theme_id = theme_id
                 return t
         raise ValueError(f"Theme '{theme_id}' not found")
+
+    async def reload_themes(self) -> dict[str, Any]:
+        return {"reloaded": True, "count": len(self._themes())}
 
     async def get_config(self) -> dict[str, Any]:
         return {

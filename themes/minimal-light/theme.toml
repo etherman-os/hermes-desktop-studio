@@ -1,0 +1,89 @@
+[meta]
+id = "minimal-light"
+name = "Minimal Light"
+version = "0.1.0"
+author = "etherman-os"
+description = "Clean, minimal light theme for bright environments."
+
+[compat]
+studio_api = "^1.0"
+adapter_api = "^1.0"
+
+[palette]
+bg = "#ffffff"
+bg_alt = "#f8f9fa"
+surface = "#f1f3f5"
+surface_alt = "#e9ecef"
+panel = "#f1f3f5"
+border = "#dee2e6"
+border_subtle = "#e9ecef"
+text = "#212529"
+text_secondary = "#495057"
+text_muted = "#868e96"
+accent = "#1971c2"
+accent_alt = "#1c7ed6"
+accent_subtle = "rgba(25, 113, 194, 0.1)"
+ok = "#2f9e44"
+warn = "#e67700"
+danger = "#e03131"
+info = "#1971c2"
+kanban_todo = "#868e96"
+kanban_doing = "#e67700"
+kanban_done = "#2f9e44"
+kanban_blocked = "#e03131"
+
+[borders]
+style = "thin"
+radius_sm = "4px"
+radius_md = "8px"
+radius_lg = "12px"
+
+[icons]
+profile = "👤"
+session = "💬"
+memory = "🧠"
+tools = "🔧"
+kanban = "📋"
+logs = "📄"
+command = "⌘"
+automation = "⚡"
+agent = "🤖"
+approval = "🛡️"
+search = "🔍"
+settings = "⚙️"
+send = "▶"
+stop = "⏹"
+artifacts = "📦"
+activity = "⚡"
+inspector = "🔍"
+theme_gallery = "🎨"
+
+[labels]
+profiles = "Profiles"
+sessions = "Sessions"
+chat = "Chat"
+kanban = "Board"
+artifacts = "Files"
+tools = "Tools"
+memory = "Memory"
+logs = "Logs"
+activity = "Activity"
+inspector = "Details"
+command_palette = "Commands"
+settings = "Settings"
+theme_gallery = "Appearance"
+composer = "Message"
+send = "Send"
+stop = "Stop"
+approve = "Approve"
+deny = "Deny"
+search = "Search"
+
+[message_styles]
+assistant = "bubble"
+user = "compact-card"
+tool = "chip-stream"
+
+[accessibility]
+high_contrast = false
+font_scale = 1.0

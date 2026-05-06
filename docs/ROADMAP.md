@@ -138,6 +138,20 @@
 - [x] Tests: 14 new (config repository) — 125 total passing
 - [x] docs/HERMES_MODEL_PROVIDER_VIEWER.md
 
+## Phase 5 — Real Theme Concept Pack Loader (Done)
+
+- [x] theme_repository.py: TOML discovery, validation, inheritance, activate, reload
+- [x] Built-in themes: default-dark, minimal-light, minecraft-overworld, example-minions, example-lotr
+- [x] Theme TOML files updated with full semantic slot labels
+- [x] Backend: list_themes, get_theme, get_active_theme, activate_theme, reload_themes
+- [x] /studio/themes, /studio/themes/{id}, /studio/themes/active, /studio/themes/activate, /studio/themes/reload
+- [x] HermesBackend + MockBackend: both use theme repository
+- [x] Frontend: themeStore loads from adapter, activateTheme via API
+- [x] Theme Gallery: adapter themes, source info, validity, reload button
+- [x] Activation persists in ~/.config/hermes-desktop-studio/config.json
+- [x] Tests: 20 new (theme repository) — 145 total passing
+- [x] docs/THEME_PACKS.md: format, semantic slots, inheritance, search paths, creating custom themes
+
 ## Phase 5 — Polish and Accessibility
 
 - [ ] Keyboard navigation (full keyboard usability)

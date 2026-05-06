@@ -23,6 +23,7 @@ export function AppFrame() {
   const loadProfiles = useProfileStore((s) => s.loadProfiles);
   const loadLogs = useLogStore((s) => s.loadRecent);
   const initTheme = useThemeStore((s) => s.initTheme);
+  const loadThemes = useThemeStore((s) => s.loadFromAdapter);
 
   React.useEffect(() => {
     initTheme();
@@ -31,9 +32,10 @@ export function AppFrame() {
         loadSessions();
         loadProfiles();
         loadLogs();
+        loadThemes();
       }
     });
-  }, [initTheme, checkConnection, loadSessions, loadProfiles, loadLogs]);
+  }, [initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes]);
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

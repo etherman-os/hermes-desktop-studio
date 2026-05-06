@@ -1,0 +1,95 @@
+[meta]
+id = "example-lotr"
+name = "Lord of the Rings"
+version = "0.1.0"
+author = "etherman-os"
+extends = "default-dark"
+description = "Middle-earth themed concept pack with earth and gold tones. Parody example."
+
+[compat]
+studio_api = "^1.0"
+adapter_api = "^1.0"
+
+[palette]
+bg = "#1a150f"
+bg_alt = "#140f0a"
+surface = "#2a2218"
+surface_alt = "#3a3020"
+panel = "#33291d"
+border = "#6b5a3e"
+border_subtle = "#4a3d28"
+text = "#e8dcc8"
+text_secondary = "#a89878"
+text_muted = "#786848"
+accent = "#c9a84c"
+accent_alt = "#e8c968"
+accent_subtle = "rgba(201, 168, 76, 0.15)"
+ok = "#6a9f4a"
+warn = "#c9a84c"
+danger = "#a83232"
+info = "#6888a8"
+kanban_todo = "#786848"
+kanban_doing = "#c9a84c"
+kanban_done = "#6a9f4a"
+kanban_blocked = "#a83232"
+
+[borders]
+style = "rounded"
+radius_sm = "4px"
+radius_md = "8px"
+radius_lg = "12px"
+
+[icons]
+profile = "🏔️"
+session = "📖"
+memory = "🔮"
+tools = "⚔️"
+kanban = "📜"
+logs = "📜"
+command = "📜"
+automation = "🔔"
+agent = "🧙"
+approval = "🛡️"
+search = "🔍"
+settings = "⚙️"
+send = "▶"
+stop = "⏹"
+artifacts = "💎"
+activity = "🔔"
+inspector = "🔍"
+theme_gallery = "🏰"
+
+[labels]
+profiles = "Realms"
+sessions = "Journeys"
+chat = "Council"
+kanban = "Quest Board"
+artifacts = "Artifacts"
+tools = "Weapons"
+memory = "Archives"
+logs = "Palantír"
+activity = "Beacon"
+inspector = "Scrying"
+command_palette = "Spellbook"
+settings = "Settings"
+theme_gallery = "Realms"
+composer = "Message"
+send = "Speak"
+stop = "Silence"
+approve = "Aye"
+deny = "Nay"
+search = "Seek"
+
+[empty_states]
+sessions = "No journeys recorded. The road goes ever on."
+chat = "The Council awaits your words."
+kanban = "The Quest Board is empty. What adventure awaits?"
+
+[message_styles]
+assistant = "bubble"
+user = "compact-card"
+tool = "chip-stream"
+
+[accessibility]
+high_contrast = false
+font_scale = 1.0

@@ -140,10 +140,39 @@ export async function getThemes() {
   return request<{ themes: ThemeInfo[]; active: string }>("/studio/themes");
 }
 
+export interface ThemeData {
+  meta?: { id?: string; name?: string; version?: string; author?: string; description?: string; extends?: string };
+  palette?: Record<string, string>;
+  typography?: Record<string, string>;
+  borders?: Record<string, string>;
+  icons?: Record<string, string>;
+  labels?: Record<string, string>;
+  empty_states?: Record<string, string>;
+  onboarding?: Record<string, string>;
+  kanban?: Record<string, unknown>;
+  message_styles?: Record<string, string>;
+  accessibility?: Record<string, unknown>;
+  assets?: Record<string, string>;
+}
+
+export async function getTheme(themeId: string) {
+  return request<ThemeData>(`/studio/themes/${themeId}`);
+}
+
+export async function getActiveTheme() {
+  return request<ThemeData>("/studio/themes/active");
+}
+
 export async function activateTheme(themeId: string) {
   return request<ThemeInfo>("/studio/themes/activate", {
     method: "POST",
     body: JSON.stringify({ theme_id: themeId }),
+  });
+}
+
+export async function reloadThemes() {
+  return request<{ reloaded: boolean; count: number }>("/studio/themes/reload", {
+    method: "POST",
   });
 }
 

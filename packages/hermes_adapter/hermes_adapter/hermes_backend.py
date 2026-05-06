@@ -18,6 +18,7 @@ from hermes_adapter.config_repository import ConfigRepository
 from hermes_adapter.log_repository import LogRepository, get_hermes_logs_dir
 from hermes_adapter.profile_repository import ProfileRepository
 from hermes_adapter.session_repository import SessionRepository, find_state_db, get_hermes_home
+from hermes_adapter.theme_repository import ThemeRepository
 
 logger = logging.getLogger("hermes_adapter.hermes_backend")
 _debug = get_debug_events()
@@ -179,11 +180,12 @@ class HermesBackend(StudioBackend):
         self._log_repo: LogRepository | None = None
         self._profile_repo: ProfileRepository | None = None
         self._config_repo: ConfigRepository | None = None
+        self._theme_repo: ThemeRepository | None = None
         self._hermes_home = get_hermes_home()
         self._init_repos()
 
     def _init_repos(self) -> None:
-        """Initialize session, log, profile, and config repositories."""
+        """Initialize session, log, profile, config, and theme repositories."""
         try:
             # Session repository
             db_path = find_state_db(self._hermes_home)
@@ -204,6 +206,10 @@ class HermesBackend(StudioBackend):
             # Config repository
             self._config_repo = ConfigRepository(self._hermes_home)
             logger.info("Config repository initialized: available=%s", self._config_repo.available)
+
+            # Theme repository
+            self._theme_repo = ThemeRepository()
+            logger.info("Theme repository initialized: %d themes", len(self._theme_repo.list_themes()))
 
         except Exception as e:
             logger.warning("Failed to initialize repositories: %s", e)
@@ -481,10 +487,32 @@ class HermesBackend(StudioBackend):
             yield _sse_event("log.line", {"source": target, "level": "info", "message": line, "timestamp": _now_iso()})
 
     async def list_themes(self) -> dict[str, Any]:
+        if self._theme_repo:
+            themes = self._theme_repo.list_themes()
+            active = self._theme_repo.get_active_theme_id()
+            return {"themes": themes, "active": active}
         return {"themes": [], "active": ""}
 
+    async def get_theme(self, theme_id: str) -> dict[str, Any]:
+        if self._theme_repo:
+            return self._theme_repo.get_normalized_theme(theme_id)
+        raise ValueError(f"Theme '{theme_id}' not found")
+
+    async def get_active_theme(self) -> dict[str, Any]:
+        if self._theme_repo:
+            return self._theme_repo.get_normalized_theme(self._theme_repo.get_active_theme_id())
+        return {}
+
     async def activate_theme(self, theme_id: str) -> dict[str, Any]:
-        raise ValueError("Theme activation not supported in Hermes backend mode")
+        if self._theme_repo:
+            return self._theme_repo.activate_theme(theme_id)
+        raise ValueError("Theme system not available")
+
+    async def reload_themes(self) -> dict[str, Any]:
+        if self._theme_repo:
+            self._theme_repo.reload()
+            return {"reloaded": True, "count": len(self._theme_repo.list_themes())}
+        return {"reloaded": False, "count": 0}
 
     async def get_config(self) -> dict[str, Any]:
         return {"config": {"backend_mode": "hermes", "hermes_url": self._base_url}}

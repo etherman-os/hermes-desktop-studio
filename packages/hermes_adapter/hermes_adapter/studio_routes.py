@@ -199,6 +199,21 @@ async def list_themes(_token: None = Depends(require_token)) -> dict[str, Any]:
     return await backend.list_themes()
 
 
+@router.get("/themes/active")
+async def get_active_theme(_token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    return await backend.get_active_theme()
+
+
+@router.get("/themes/{theme_id}")
+async def get_theme(theme_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.get_theme(theme_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": f"Theme '{theme_id}' not found"}})
+
+
 @router.post("/themes/activate")
 async def activate_theme(body: dict[str, Any], _token: None = Depends(require_token)) -> dict[str, Any]:
     backend = await _get_backend()
@@ -207,6 +222,12 @@ async def activate_theme(body: dict[str, Any], _token: None = Depends(require_to
         return await backend.activate_theme(theme_id)
     except ValueError:
         raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": f"Theme '{theme_id}' not found"}})
+
+
+@router.post("/themes/reload")
+async def reload_themes(_token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    return await backend.reload_themes()
 
 
 # ---------------------------------------------------------------------------

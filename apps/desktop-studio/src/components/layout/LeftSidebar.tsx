@@ -2,6 +2,7 @@ import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { useProfileStore } from "../../stores/profileStore";
+import { useAdapterStore } from "../../stores/adapterStore";
 
 export function LeftSidebar() {
   const section = useLayoutStore((s) => s.sidebarSection);
@@ -125,35 +126,70 @@ function SearchSection() {
 }
 
 function ThemeGallerySection() {
-  const { ALL_THEMES, activeThemeId, setTheme } = useThemeStoreForGallery();
+  const themes = useThemeStore((s) => s.themes);
+  const adapterThemes = useThemeStore((s) => s.adapterThemes);
+  const activeThemeId = useThemeStore((s) => s.activeThemeId);
+  const activateTheme = useThemeStore((s) => s.activateTheme);
+  const setTheme = useThemeStore((s) => s.setTheme);
+  const reloadThemes = useThemeStore((s) => s.reloadThemes);
+  const connected = useAdapterStore((s) => s.connected);
+
+  // Use adapter themes if available, otherwise local
+  const themeList = adapterThemes.length > 0
+    ? adapterThemes.map((at) => ({
+        id: at.id,
+        name: at.name,
+        description: at.description || "",
+        source: (at as { source?: string }).source ?? "built-in",
+        valid: (at as { valid?: boolean }).valid ?? true,
+        accent: themes[at.id]?.palette?.accent ?? "#58a6ff",
+      }))
+    : Object.values(themes).map((t) => ({
+        id: t.meta.id,
+        name: t.meta.name,
+        description: t.meta.description ?? "",
+        source: "local",
+        valid: true,
+        accent: t.palette?.accent ?? "#58a6ff",
+      }));
 
   return (
     <div className="theme-switcher-panel">
-      {Object.values(ALL_THEMES).map((t) => (
+      {connected && (
+        <div style={{ padding: "var(--app-spacing-xs)", display: "flex", justifyContent: "flex-end" }}>
+          <button
+            onClick={() => reloadThemes()}
+            style={{ background: "transparent", border: "none", color: "var(--app-text-muted)", cursor: "pointer", fontSize: "11px" }}
+            title="Reload themes from disk"
+          >
+            ↻ Reload
+          </button>
+        </div>
+      )}
+      {themeList.map((t) => (
         <button
-          key={t.meta.id}
-          className={`theme-card ${activeThemeId === t.meta.id ? "active" : ""}`}
-          onClick={() => setTheme(t.meta.id)}
+          key={t.id}
+          className={`theme-card ${activeThemeId === t.id ? "active" : ""}`}
+          onClick={() => activateTheme(t.id)}
         >
           <div
             className="theme-swatch"
-            style={{ background: t.palette?.accent ?? "#58a6ff" }}
+            style={{ background: t.accent }}
           />
           <div className="theme-card-info">
-            <div className="theme-card-name">{t.meta.name}</div>
-            <div className="theme-card-desc">{t.meta.description}</div>
+            <div className="theme-card-name">
+              {t.name}
+              {!t.valid && <span style={{ color: "var(--app-warn)", marginLeft: 4, fontSize: "10px" }}>⚠</span>}
+            </div>
+            <div className="theme-card-desc">{t.description}</div>
+            <div style={{ fontSize: "10px", color: "var(--app-text-muted)", marginTop: 2 }}>
+              {t.source}
+            </div>
           </div>
         </button>
       ))}
     </div>
   );
-}
-
-function useThemeStoreForGallery() {
-  const ALL_THEMES = useThemeStore((s) => s.themes);
-  const activeThemeId = useThemeStore((s) => s.activeThemeId);
-  const setTheme = useThemeStore((s) => s.setTheme);
-  return { ALL_THEMES, activeThemeId, setTheme };
 }
 
 function SettingsSection() {

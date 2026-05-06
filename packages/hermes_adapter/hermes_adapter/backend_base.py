@@ -77,10 +77,22 @@ class StudioBackend(ABC):
         """Return installed themes and active theme ID."""
         ...
 
+    async def get_theme(self, theme_id: str) -> dict[str, Any]:
+        """Return a specific theme by ID. Override in subclasses."""
+        raise ValueError(f"Theme '{theme_id}' not found")
+
+    async def get_active_theme(self) -> dict[str, Any]:
+        """Return the active theme data. Override in subclasses."""
+        return {}
+
     @abstractmethod
     async def activate_theme(self, theme_id: str) -> dict[str, Any]:
         """Activate a theme. Returns theme info."""
         ...
+
+    async def reload_themes(self) -> dict[str, Any]:
+        """Reload theme packs from disk. Override in subclasses."""
+        return {"reloaded": False, "count": 0}
 
     @abstractmethod
     async def get_config(self) -> dict[str, Any]:
