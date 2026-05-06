@@ -1,10 +1,12 @@
 {
-  "name": "hermes-local-studio",
+  "name": "hermes-desktop-studio",
   "private": true,
   "description": "Local-first, themeable desktop workbench for Hermes Agent",
   "scripts": {
-    "dev": "pnpm --filter @hermes-studio/desktop-studio dev",
-    "build": "pnpm --filter @hermes-studio/desktop-studio build",
-    "tauri": "pnpm --filter @hermes-studio/desktop-studio tauri"
+    "dev": "pnpm --filter @hermes-desktop-studio/desktop-studio dev",
+    "build": "pnpm --filter @hermes-desktop-studio/desktop-studio build",
+    "tauri": "pnpm --filter @hermes-desktop-studio/desktop-studio tauri",
+    "dev:adapter": ".venv/bin/python -m hermes_adapter.server",
+    "dev:desktop": "pnpm --filter @hermes-desktop-studio/desktop-studio dev"
   }
 }

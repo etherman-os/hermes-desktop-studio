@@ -33,13 +33,20 @@
 - [x] Bottom activity/log panel with mock data
 - [x] Status bar with profile, path, model, theme info
 
-## Phase 3 — Fake Adapter + UI Integration
+## Phase 3 — Fake Adapter + UI Integration (Done)
 
-- [ ] SSE mock streaming (assistant.delta, tool.started, tool.completed, approval.requested)
-- [ ] Chat tab: streaming transcript, user/assistant messages, tool chips
-- [ ] Kanban tab: mock board with 5 columns (triage, ready, doing, blocked, done)
-- [ ] Approval modal
-- [ ] Session sidebar
+- [x] Adapter: `/studio/*` endpoints (16 endpoints, fake in-memory data)
+- [x] Adapter: Fake run with SSE event sequence (run.started → delta → tool → completed)
+- [x] Adapter: Stop run (run.cancelled event)
+- [x] Adapter: Logs stream (fake log.line events every 1.5s)
+- [x] Adapter: Themes, config, profiles, sessions endpoints
+- [x] Desktop: studioClient.ts (typed API client + SSE parser)
+- [x] Desktop: adapterStore (connection status)
+- [x] Desktop: runStore (send prompt, consume SSE, stop)
+- [x] Desktop: sessionStore (load from adapter)
+- [x] Desktop: ChatSurface (real streaming, stop button, tool chips)
+- [x] Desktop: StatusBar (adapter connection indicator)
+- [x] Root dev scripts (dev:adapter, dev:desktop)
 
 ## Phase 4 — Real Hermes Integration
 

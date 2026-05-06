@@ -28,6 +28,7 @@ from hermes_adapter.models import (
     ThemeInfo,
 )
 from hermes_adapter.security import generate_token, require_token, set_auth_token, write_token
+from hermes_adapter.studio_routes import router as studio_router
 from hermes_adapter.themes import ThemeManager
 
 _theme_manager = ThemeManager()
@@ -52,6 +53,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=_lifespan,
 )
+
+# Mount studio routes (Phase 3: fake adapter for desktop studio)
+app.include_router(studio_router)
 
 
 def _get_client() -> HermesClient:

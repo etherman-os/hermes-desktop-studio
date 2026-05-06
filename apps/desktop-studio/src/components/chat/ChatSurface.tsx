@@ -1,29 +1,64 @@
 import { useThemeStore } from "../../stores/themeStore";
-import { mockMessages, mockToolEvents } from "../../fixtures/mockData";
 import { useRunStore } from "../../stores/runStore";
+import { useSessionStore } from "../../stores/sessionStore";
+import { useAdapterStore } from "../../stores/adapterStore";
+import React from "react";
 
 export function ChatSurface() {
   const label = useThemeStore((s) => s.label);
   const isStreaming = useRunStore((s) => s.isStreaming);
+  const messages = useRunStore((s) => s.messages);
+  const sendPrompt = useRunStore((s) => s.sendPrompt);
+  const stopRun = useRunStore((s) => s.stopRun);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const connected = useAdapterStore((s) => s.connected);
+  const [input, setInput] = React.useState("");
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  function handleSend() {
+    const text = input.trim();
+    if (!text) return;
+    setInput("");
+    if (connected) {
+      sendPrompt(text, activeSessionId ?? "s-1");
+    } else {
+      // fallback: just add user message locally
+      useRunStore.getState().appendUserMessage(text);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }
 
   return (
     <div className="chat-container">
       <div className="chat-messages selectable">
-        {mockMessages.map((msg, i) => (
-          <div key={i} className={`chat-message ${msg.role}`}>
-            <div className="chat-message-role">{msg.role}</div>
-            <div className="chat-message-content">{msg.content}</div>
-            {msg.role === "assistant" && i === 1 && (
-              <div style={{ display: "flex", gap: "var(--app-spacing-sm)", flexWrap: "wrap", marginTop: "var(--app-spacing-xs)" }}>
-                {mockToolEvents.map((tool, j) => (
-                  <span key={j} className={`tool-chip ${tool.status}`}>
-                    {tool.status === "completed" ? "✓" : "⏳"} {tool.tool} ({tool.duration})
-                  </span>
-                ))}
+        {messages.map((msg, i) => {
+          if (msg.role === "tool") {
+            return (
+              <div key={i} style={{ display: "flex", gap: "var(--app-spacing-sm)", alignItems: "center" }}>
+                <span className={`tool-chip ${msg.toolStatus === "completed" ? "completed" : msg.toolStatus === "running" ? "running" : ""}`}>
+                  {msg.toolStatus === "completed" ? "✓" : msg.toolStatus === "running" ? "⏳" : "✕"} {msg.toolName}
+                  {msg.toolDuration ? ` (${(msg.toolDuration / 1000).toFixed(1)}s)` : ""}
+                </span>
               </div>
-            )}
-          </div>
-        ))}
+            );
+          }
+          return (
+            <div key={i} className={`chat-message ${msg.role}`}>
+              <div className="chat-message-role">{msg.role}</div>
+              <div className="chat-message-content">{msg.content}</div>
+            </div>
+          );
+        })}
         {isStreaming && (
           <div className="chat-message assistant">
             <div className="typing-indicator">
@@ -33,10 +68,26 @@ export function ChatSurface() {
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
       <div className="composer-bar">
-        <input className="composer-input" placeholder={`${label("composer")}...`} />
-        <button className="composer-send">{label("send")}</button>
+        <input
+          className="composer-input"
+          placeholder={connected ? `${label("composer")}...` : `${label("composer")} (adapter offline)...`}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={false}
+        />
+        {isStreaming ? (
+          <button className="composer-send" onClick={stopRun} style={{ background: "var(--app-danger)" }}>
+            {label("stop")}
+          </button>
+        ) : (
+          <button className="composer-send" onClick={handleSend}>
+            {label("send")}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 import React from "react";
 import { useLayoutStore } from "../../stores/layoutStore";
+import { useThemeStore } from "../../stores/themeStore";
 import { useUiStore } from "../../stores/uiStore";
+import { useAdapterStore } from "../../stores/adapterStore";
+import { useSessionStore } from "../../stores/sessionStore";
 import { LeftRail } from "./LeftRail";
 import { LeftSidebar } from "./LeftSidebar";
 import { CenterArea } from "./CenterArea";
@@ -13,6 +16,16 @@ export function AppFrame() {
   const showRight = useLayoutStore((s) => s.showRightPanel);
   const showBottom = useLayoutStore((s) => s.showBottomPanel);
   const openPalette = useUiStore((s) => s.openCommandPalette);
+  const checkConnection = useAdapterStore((s) => s.checkConnection);
+  const loadSessions = useSessionStore((s) => s.loadFromAdapter);
+  const initTheme = useThemeStore((s) => s.initTheme);
+
+  React.useEffect(() => {
+    initTheme();
+    checkConnection().then((ok) => {
+      if (ok) loadSessions();
+    });
+  }, [initTheme, checkConnection, loadSessions]);
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
