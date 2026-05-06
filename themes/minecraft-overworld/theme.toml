@@ -1,0 +1,78 @@
+[meta]
+id = "minecraft-overworld"
+name = "Minecraft Overworld"
+version = "0.1.0"
+author = "community"
+extends = "default-dark"
+description = "Çimen, taş ve redstone tonlarıyla block hissi veren localfirst Hermes shell teması."
+
+[compat]
+shell_api = "^1.0"
+adapter_api = "^1.0"
+min_hermes = "0.11.0"
+
+[palette]
+bg = "#1a1d14"
+surface = "#2f3b1f"
+surface_alt = "#435a2d"
+panel = "#55331b"
+border = "#8b5a2b"
+text = "#eef6d2"
+muted = "#b8c79f"
+accent = "#7cb342"
+accent_alt = "#c0ca33"
+ok = "#66bb6a"
+warn = "#ffca28"
+danger = "#ff7043"
+info = "#64b5f6"
+status_bg = "#243118"
+
+[borders]
+style = "blocky"
+horizontal = "█"
+vertical = "█"
+corner_tl = "█"
+corner_tr = "█"
+corner_bl = "█"
+corner_br = "█"
+separator = "▓"
+
+[icons]
+profile = "🌍"
+session = "🧭"
+memory = "🧰"
+tools = "⛏"
+logs = "🪵"
+command = "🧱"
+automation = "🔴"
+agent = "🧙"
+approval = "🛡"
+
+[labels]
+profiles = "Dünyalar"
+sessions = "Ender Chest"
+memory = "Sandık"
+tools = "Envanter"
+composer = "Komut Bloğu"
+automation = "Redstone"
+logs = "Sunucu Kayıtları"
+send = "Yerleştir"
+stop = "Durdur"
+resume = "Devam Et"
+
+[chat]
+assistant_prefix = "🧙 Hermes"
+user_prefix = "🧑 Oyuncu"
+tool_prefix = "⛏ Araç"
+approval_prefix = "🛡 Onay"
+
+[assets]
+banner = """
+███
+
+MINECRAFT HERMES
+
+███
+
+█ Dünya seç, komut kaz, build üret
+"""

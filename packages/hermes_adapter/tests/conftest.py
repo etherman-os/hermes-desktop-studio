@@ -1,0 +1,55 @@
+"""Shared fixtures for Hermes Adapter tests."""
+
+from pathlib import Path
+
+import pytest
+
+from hermes_adapter.server import set_auth_token
+
+
+@pytest.fixture
+def project_themes_dir() -> Path:
+    """Return the path to the project's *themes/* directory."""
+    return Path(__file__).resolve().parents[3] / "themes"
+
+
+@pytest.fixture
+def sample_run_started_event() -> dict:
+    return {"type": "run.started", "payload": {"run_id": "r1"}, "source": "hermes"}
+
+
+@pytest.fixture
+def sample_assistant_delta_event() -> dict:
+    return {"type": "assistant.delta", "payload": {"content": "hi"}, "source": "hermes"}
+
+
+@pytest.fixture
+def sample_tool_started_event() -> dict:
+    return {"type": "tool.started", "payload": {"tool": "ls"}, "source": "hermes"}
+
+
+@pytest.fixture
+def sample_run_completed_ok_event() -> dict:
+    return {"type": "run.completed", "payload": {"status": "ok"}, "source": "hermes"}
+
+
+@pytest.fixture
+def sample_run_completed_failure_event() -> dict:
+    return {
+        "type": "run.completed",
+        "payload": {"status": "failed", "error": "Oops"},
+        "source": "hermes",
+    }
+
+
+@pytest.fixture
+def sample_unknown_event() -> dict:
+    return {"type": "hermes.custom", "payload": {}, "source": "hermes"}
+
+
+@pytest.fixture(autouse=True)
+def _reset_auth_token():
+    """Ensure the auth token is clean between bootstrap tests."""
+    set_auth_token("test-secret-token")
+    yield
+    set_auth_token(None)

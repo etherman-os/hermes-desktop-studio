@@ -1,0 +1,11 @@
+┌─────────────────────────────┐
+│      HERMES LOCAL SHELL     │
+│   Local-first AI workspace  │
+├─────────────────────────────┤
+│  Profiles  │ Chat  │ Tools  │
+│  Sessions  │       │ Memory │
+│  Themes    │       │        │
+├─────────────────────────────┤
+│  Logs    │ Tool Activity    │
+└─────────────────────────────┘
+  Default Dark — clean, professional

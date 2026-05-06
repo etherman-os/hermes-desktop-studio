@@ -1,0 +1,16 @@
+[layout]
+mode = "triple-pane"
+left_width = 22
+right_width = 26
+bottom_height = 4
+show_logs_panel = true
+show_memory_panel = true
+show_tool_activity = true
+message_style = "stacked-blocks"
+tool_progress_style = "chips"
+
+[panels]
+left = ["profiles", "sessions", "themes"]
+center = ["chat", "composer"]
+right = ["model", "tools", "memory"]
+bottom = ["logs", "tool_activity"]
