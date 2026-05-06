@@ -1,5 +1,11 @@
 # Theme System
 
+## Overview
+
+The theme system is **generic and semantic-slot-based**. It supports arbitrary concept packs — Minecraft, Minions, Lord of the Rings, Cyberpunk, Minimal, Anime, or anything users create. **No concept is hardcoded into the core application.**
+
+The core app uses stable semantic keys (`profiles`, `sessions`, `chat`, `kanban`, `tools`, `memory`, `logs`, `activity`, `inspector`, `command_palette`). Each concept pack maps these semantic keys to its own visual language, labels, icons, and terminology.
+
 ## Concepts
 
 The theme system is split into three layers:
@@ -12,6 +18,35 @@ The theme system is split into three layers:
 
 In MVP, only Theme pack and Layout pack are supported.
 
+## Semantic Slot System
+
+The core application does not use concept-specific terminology. It uses stable semantic keys:
+
+| Semantic Key | Purpose |
+|-------------|---------|
+| `profiles` | User profile / world selection |
+| `sessions` | Conversation session list |
+| `chat` | Main chat / transcript area |
+| `kanban` | Task board |
+| `tools` | Active tools and capabilities |
+| `memory` | Agent memory and artifacts |
+| `logs` | Log output |
+| `activity` | Background activity and running tasks |
+| `inspector` | Detail inspector panel |
+| `command_palette` | Command palette / quick actions |
+
+Concept packs override the **display labels** for these keys. Examples:
+
+| Semantic Key | Default | Minecraft | LOTR | Minions |
+|-------------|---------|-----------|------|---------|
+| `profiles` | Profiles | Worlds | Realms | Villains |
+| `sessions` | Sessions | Ender Chest | Journeys | Missions |
+| `tools` | Tools | Inventory | Artifacts | Gadgets |
+| `kanban` | Kanban | Task Board | Quest Board | Master Plan |
+| `command_palette` | Command Palette | Command Block | Spellbook | Blueprint |
+
+These are **examples only**. The system is not limited to these concepts.
+
 ## Override Order
 
 1. Built-in base theme
@@ -22,6 +57,8 @@ In MVP, only Theme pack and Layout pack are supported.
 6. Runtime ephemeral override (`:theme set` or settings panel)
 
 ## Theme Pack Format (TOML)
+
+Below is an example using the Minecraft Overworld concept pack. This is **one example** — the same format applies to any concept pack.
 
 ```toml
 [meta]
@@ -60,7 +97,6 @@ sessions = "Ender Chest"
 [chat]
 assistant_prefix = "🧙 Hermes"
 user_prefix = "🧑 Oyuncu"
-
 tool_prefix = "⛏ Araç"
 ```
 
@@ -107,17 +143,17 @@ Hermes YAML skins can be imported with a mapping:
 
 ```bash
 # List installed themes
-hermes-local-shell theme list
+hermes-local-studio theme list
 
 # Install from local path
-hermes-local-shell theme install ./my-theme
+hermes-local-studio theme install ./my-theme
 
 # Install from GitHub
-hermes-local-shell theme install gh:owner/repo
+hermes-local-studio theme install gh:owner/repo
 
 # Import Hermes YAML skin
-hermes-local-shell theme import-hermes ~/.hermes/skins/ares.yaml
+hermes-local-studio theme import-hermes ~/.hermes/skins/ares.yaml
 
 # Enable theme for profile
-hermes-local-shell theme enable minecraft-overworld --profile coder
+hermes-local-studio theme enable minecraft-overworld --profile coder
 ```

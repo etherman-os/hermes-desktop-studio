@@ -59,3 +59,13 @@ htmlcov/
 
 # Reference / Planning docs (not for repo)
 *.pdf
+
+# Node / pnpm
+node_modules/
+*.local
+
+# Tauri
+apps/desktop-shell/src-tauri/target/
+
+# Vite
+apps/desktop-shell/dist/

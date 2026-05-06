@@ -1,7 +1,7 @@
 [project]
-name = "hermes-local-shell"
+name = "hermes-local-studio"
 version = "0.1.0"
-description = "A local-first, themeable UI shell for Hermes Agent"
+description = "A local-first, themeable desktop workbench for Hermes Agent"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
@@ -30,14 +30,20 @@ dev = [
 
 [project.scripts]
 hermes-local-adapter = "hermes_adapter.server:main"
-hermes-local-shell = "hermes_shell_ui.main:main"
+# Note: hermes-local-shell entry point pointed to the legacy Textual UI.
+# The Textual prototype has been moved to legacy/textual-prototype/.
+# To run the legacy prototype, install in editable mode and use:
+#   python -m hermes_shell_ui.main
+# The main product is now the Tauri desktop app under apps/desktop-shell/.
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["packages/hermes_adapter/hermes_adapter", "apps/textual_shell/hermes_shell_ui"]
+packages = ["packages/hermes_adapter/hermes_adapter"]
+# Note: legacy/textual-prototype/apps/textual_shell/hermes_shell_ui is not included
+# in the wheel by default. The Textual prototype is legacy/reference only.
 
 [tool.ruff]
 line-length = 100

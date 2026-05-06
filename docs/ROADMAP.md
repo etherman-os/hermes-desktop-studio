@@ -1,39 +1,61 @@
 # Roadmap
 
-## Phase 1 — MVP (Python + Textual)
+## Phase 0 — Repo Reorganization (Done)
 
-- [x] Repo structure
-- [x] pyproject.toml + packaging
-- [ ] Adapter core (bootstrap, runs, SSE, stop, sessions, logs, config)
-- [ ] Event normalization
-- [ ] Textual MVP (chat, composer, sidebar, tool chips, log panel, status bar)
-- [ ] Theme engine (TOML loader, hot reload, Hermes YAML import)
-- [ ] Default-dark theme
-- [ ] Minecraft-overworld theme
-- [ ] Contract + UI tests
-- [ ] pipx installable package
+- [x] Move Textual TUI prototype to `legacy/textual-prototype/`
+- [x] Create `apps/desktop-shell/` placeholder
+- [x] Add `pnpm-workspace.yaml` and root `package.json`
+- [x] Update README, ARCHITECTURE, ROADMAP for desktop-first direction
+- [x] Add `docs/PRODUCT_DIRECTION.md` and `docs/ADR-0001-desktop-first.md`
+- [x] Add placeholder theme packs (example-minions, example-lotr)
 
-## Phase 2 — Hardening
+## Phase 1 — Protocol and Schemas
 
-- [ ] Real Hermes API integration (health, capabilities, /v1/runs, SSE)
-- [ ] Profile/world switcher UI
+- [ ] `packages/protocol/openapi.yaml` — Adapter API specification (all `/shell/*` endpoints)
+- [ ] `packages/protocol/events.schema.json` — Normalized event types (15 events)
+- [ ] `packages/protocol/theme.schema.json` — Theme pack TOML schema
+- [ ] `packages/protocol/layout.schema.json` — Layout pack TOML schema
+- [ ] `packages/shared-types/src/index.ts` — TypeScript type definitions
+
+## Phase 2 — Desktop Shell Skeleton
+
+- [ ] Tauri v2 + React + TypeScript + Vite project initialization
+- [ ] Main layout: left sidebar / center tabs / right sidebar / bottom panel
+- [ ] CSS variable theming from concept pack data
+- [ ] Theme switcher placeholder (default-dark ↔ minecraft-overworld)
+- [ ] Keyboard shortcuts (Ctrl+K, Ctrl+Enter, Ctrl+1/2/3, Esc)
+- [ ] Zustand stores (theme, session, run, profile)
+- [ ] Command palette placeholder
+
+## Phase 3 — Fake Adapter + UI Integration
+
+- [ ] SSE mock streaming (assistant.delta, tool.started, tool.completed, approval.requested)
+- [ ] Chat tab: streaming transcript, user/assistant messages, tool chips
+- [ ] Kanban tab: mock board with 5 columns (triage, ready, doing, blocked, done)
 - [ ] Approval modal
-- [ ] Session browser with search
-- [ ] Log inspector with filters
-- [ ] Slash completion
-- [ ] Embedded PTY fallback mode
-- [ ] PyInstaller binary builds
+- [ ] Session sidebar
 
-## Phase 3 — Second Frontends
+## Phase 4 — Real Hermes Integration
 
-- [ ] Rust + Ratatui frontend (same adapter contract)
-- [ ] Tauri + Svelte desktop shell (settings studio, theme browser)
+- [ ] Hermes API client (`/v1/capabilities`, `/v1/runs`, SSE, `/stop`)
+- [ ] Event normalizer (defensive: synthesize `run.failed`, `tool.completed`)
+- [ ] Session browser (`state.db` read-only queries)
+- [ ] Logs panel (live tail)
+- [ ] Config UI (`hermes config` CLI wrapper)
+- [ ] Kanban layer (CLI wrappers for board/task operations)
 
-## Phase 4 — Ecosystem
+## Phase 5 — Polish and Accessibility
 
-- [ ] Theme registry / marketplace
-- [ ] Visual theme editor
-- [ ] Widget plugin system
-- [ ] ACP bridge panel
-- [ ] Voice mode surface
-- [ ] Homebrew tap / Debian .deb
+- [ ] Keyboard navigation (full keyboard usability)
+- [ ] High-contrast mode
+- [ ] Reduced motion support
+- [ ] Font scale support
+- [ ] Error states and retry flows
+- [ ] Approval UX refinement
+
+## Phase 6 — Packaging and Release
+
+- [ ] Tauri native installers (Linux, macOS)
+- [ ] Auto-update mechanism
+- [ ] GitHub Releases pipeline
+- [ ] Documentation for users
