@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator
@@ -11,6 +13,29 @@ from typing import Any, AsyncIterator
 import httpx
 
 from hermes_adapter.backend_base import StudioBackend
+from hermes_adapter.backend_config import get_debug_events
+
+logger = logging.getLogger("hermes_adapter.hermes_backend")
+_debug = get_debug_events()
+
+
+def _redact(s: str) -> str:
+    """Redact potential secrets from log strings."""
+    # Redact bearer tokens, API keys, long hex strings
+    s = re.sub(r"Bearer\s+\S+", "Bearer [REDACTED]", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?i)(api[_-]?key|token|secret|password)\s*[:=]\s*\S+", r"\1=[REDACTED]", s)
+    s = re.sub(r"\b[a-f0-9]{32,}\b", "[REDACTED_HEX]", s)
+    return s
+
+
+def _debug_log_raw(event_type: str, data_preview: str = "") -> None:
+    if _debug:
+        logger.info("[DEBUG] Raw Hermes event: type=%s data=%s", event_type, _redact(data_preview[:200]))
+
+
+def _debug_log_normalized(studio_type: str, payload_preview: str = "") -> None:
+    if _debug:
+        logger.info("[DEBUG] Normalized Studio event: type=%s payload=%s", studio_type, _redact(payload_preview[:200]))
 
 
 def _now_iso() -> str:
@@ -294,12 +319,17 @@ class HermesBackend(StudioBackend):
                                 if "choices" in raw_event:
                                     delta = raw_event.get("choices", [{}])[0].get("delta", {})
                                     if delta.get("content"):
-                                        yield _sse_event("assistant.delta", {"text": delta["content"]})
+                                        _debug_log_raw("openai_delta", delta.get("content", ""))
+                                        studio_event = _sse_event("assistant.delta", {"text": delta["content"]})
+                                        _debug_log_normalized("assistant.delta", "")
+                                        yield studio_event
                                         continue
                                 event_type = raw_event.get("type", "unknown")
 
                             raw_event["type"] = event_type
+                            _debug_log_raw(event_type, data_str)
                             normalized = _normalize_hermes_event(raw_event)
+                            _debug_log_normalized(normalized["type"], json.dumps(normalized.get("payload", {}))[:100])
                             yield normalized
 
                             # Stop on terminal events

@@ -1,0 +1,8 @@
+{"event": "run.started", "data": {"type": "run.started", "payload": {"run_id": "run_example_001", "session_id": "s-example"}}}
+{"event": "content_block_delta", "data": {"type": "content_block_delta", "payload": {"delta": {"type": "text_delta", "text": "Hello! "}}}}
+{"event": "content_block_delta", "data": {"type": "content_block_delta", "payload": {"delta": {"type": "text_delta", "text": "I can help you with that."}}}}
+{"event": "tool_start", "data": {"type": "tool_start", "payload": {"tool": "bash", "tool_call_id": "tc_example_001", "input": {"command": "ls -la"}}}}
+{"event": "tool_progress", "data": {"type": "tool_progress", "payload": {"tool": "bash", "tool_call_id": "tc_example_001", "progress": 0.5, "message": "Running..."}}}
+{"event": "tool_end", "data": {"type": "tool_end", "payload": {"tool": "bash", "tool_call_id": "tc_example_001", "success": true, "output": "file1.txt\nfile2.txt"}}}
+{"event": "content_block_stop", "data": {"type": "content_block_stop", "payload": {"model": "claude-sonnet-4-20250514", "total_tokens": 150}}}
+{"event": "run.completed", "data": {"type": "run.completed", "payload": {"run_id": "run_example_001", "total_tokens": 150, "duration_ms": 2500}}}

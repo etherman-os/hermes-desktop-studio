@@ -71,6 +71,15 @@
 - [x] Tests: 16 new tests (event normalization, HermesBackend, auto fallback) — 68 total passing
 - [x] Frontend build: tsc + vite pass
 
+## Phase 4A.5 — Hermes Bridge Hardening (Done)
+
+- [x] Smoke test docs: `docs/REAL_HERMES_SMOKE_TEST.md` with manual test checklist
+- [x] Debug mode: `HERMES_STUDIO_DEBUG_EVENTS=1` logs raw/normalized events with redaction
+- [x] Fixture capture: `scripts/capture_hermes_sse.py` for manual SSE capture
+- [x] Fixture replay test: `tests/fixtures/hermes_sse_sample.jsonl` + replay tests
+- [x] Error hardening: clear messages for Hermes unreachable, auto fallback, hermes mode failures
+- [x] Tests: 72 total passing (4 new fixture replay tests)
+
 ## Phase 4B — Session Browser + Logs (Future)
 
 - [ ] Hermes API client (`/v1/capabilities`, `/v1/runs`, SSE, `/stop`)

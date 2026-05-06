@@ -36,3 +36,12 @@ def get_hermes_api_key() -> str | None:
         API key string or None.
     """
     return os.environ.get("HERMES_API_KEY") or None
+
+
+def get_debug_events() -> bool:
+    """Check if debug event logging is enabled.
+
+    Returns:
+        True if HERMES_STUDIO_DEBUG_EVENTS=1
+    """
+    return os.environ.get("HERMES_STUDIO_DEBUG_EVENTS", "0") == "1"
