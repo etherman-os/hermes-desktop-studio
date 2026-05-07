@@ -1,4 +1,5 @@
 import { useThemeStore } from "../../stores/themeStore";
+import type { ThemeMode } from "../../stores/themeStore";
 import { useAdapterStore } from "../../stores/adapterStore";
 import { useApprovalStore } from "../../stores/approvalStore";
 import { useProfileStore } from "../../stores/profileStore";
@@ -7,8 +8,17 @@ import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useNativeStore } from "../../stores/nativeStore";
 import { useProcessStore } from "../../stores/processStore";
 
+const THEME_CYCLE: ThemeMode[] = ["system", "light", "dark"];
+const THEME_LABELS: Record<ThemeMode, string> = {
+  system: "Auto",
+  light: "Light",
+  dark: "Dark",
+};
+
 export function StatusBar() {
   const activeTheme = useThemeStore((s) => s.activeTheme);
+  const themeMode = useThemeStore((s) => s.themeMode);
+  const setThemeMode = useThemeStore((s) => s.setThemeMode);
   const connected = useAdapterStore((s) => s.connected);
   const checking = useAdapterStore((s) => s.checking);
   const backendMode = useAdapterStore((s) => s.backendMode);
@@ -41,6 +51,12 @@ export function StatusBar() {
   const profileName = activeProfile?.name ?? "unknown";
   const adapterTitle = authError ?? fallbackReason ?? statusText;
   const run = runs.find((item) => item.runId === currentRunId) ?? runs[0];
+
+  function cycleThemeMode() {
+    const idx = THEME_CYCLE.indexOf(themeMode);
+    const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
+    setThemeMode(next);
+  }
 
   return (
     <footer className="status-bar" role="contentinfo" aria-label="Status bar">
@@ -86,6 +102,15 @@ export function StatusBar() {
       <div className="status-item">
         <span>{activeTheme().meta.name}</span>
       </div>
+      <button
+        className="status-item"
+        onClick={cycleThemeMode}
+        title={`Theme: ${THEME_LABELS[themeMode]} (click to cycle)`}
+        style={{ cursor: "pointer", background: "none", border: "none", color: "inherit", padding: "0 4px" }}
+        aria-label={`Switch theme mode, currently ${THEME_LABELS[themeMode]}`}
+      >
+        <span>{THEME_LABELS[themeMode]}</span>
+      </button>
       <div className="status-item">
         <span>v0.1.0</span>
       </div>

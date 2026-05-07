@@ -16,6 +16,7 @@ export function ChatSurface() {
   const stopRun = useRunStore((s) => s.stopRun);
   const activeRunId = useRunStore((s) => s.activeRunId);
   const lastRunId = useRunStore((s) => s.lastRunId);
+  const tokenUsage = useRunStore((s) => s.tokenUsage);
   const runs = useRunLedgerStore((s) => s.runs);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const selectLedgerRun = useRunLedgerStore((s) => s.selectRun);
@@ -129,6 +130,38 @@ export function ChatSurface() {
         )}
         <div ref={messagesEndRef} />
       </div>
+      {tokenUsage && tokenUsage.totalTokens > 0 && (
+        <div className="chat-token-footer" role="status" aria-label="Token usage">
+          <span className="token-stat">
+            {tokenUsage.totalTokens.toLocaleString()} tokens
+          </span>
+          {tokenUsage.promptTokens > 0 && (
+            <span className="token-stat">
+              prompt: {tokenUsage.promptTokens.toLocaleString()}
+            </span>
+          )}
+          {tokenUsage.completionTokens > 0 && (
+            <span className="token-stat">
+              completion: {tokenUsage.completionTokens.toLocaleString()}
+            </span>
+          )}
+          {tokenUsage.cost != null && (
+            <span className="token-stat">
+              ${tokenUsage.cost.toFixed(4)}
+            </span>
+          )}
+          {tokenUsage.durationMs != null && (
+            <span className="token-stat">
+              {(tokenUsage.durationMs / 1000).toFixed(1)}s
+            </span>
+          )}
+          {tokenUsage.model && (
+            <span className="token-stat">
+              {tokenUsage.model}
+            </span>
+          )}
+        </div>
+      )}
       <div className="composer-bar">
         <label htmlFor="composer-input" className="sr-only">Message input</label>
         <input

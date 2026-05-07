@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { parseSSEStream } from "./sseParser";
 import type {
   Approval,
   ApprovalDetail,
@@ -1055,23 +1056,12 @@ export function streamRunEvents(runId: string, handlers: RunEventHandlers): Abor
 
         buffer += decoder.decode(value, { stream: true });
 
-        const blocks = buffer.split("\n\n");
-        buffer = blocks.pop() ?? "";
+        const { events, remainder } = parseSSEStream(buffer);
+        buffer = remainder;
 
-        for (const block of blocks) {
-          const lines = block.split("\n");
-          let eventType = "";
-          let data = "";
-
-          for (const line of lines) {
-            if (line.startsWith("event:")) eventType = line.slice(6).replace(/^ /, "").trim();
-            if (line.startsWith("data:")) data = line.slice(5).replace(/^ /, "");
-          }
-
-          if (!eventType || !data) continue;
-
+        for (const parsed of events) {
           try {
-            const event = JSON.parse(data) as StudioEvent;
+            const event = JSON.parse(parsed.data) as StudioEvent;
             handlers.onEvent?.(event);
 
             switch (event.type) {
@@ -1174,21 +1164,12 @@ export function streamLogs(handlers: LogEventHandlers, source?: string): AbortCo
 
         buffer += decoder.decode(value, { stream: true });
 
-        const blocks = buffer.split("\n\n");
-        buffer = blocks.pop() ?? "";
+        const { events, remainder } = parseSSEStream(buffer);
+        buffer = remainder;
 
-        for (const block of blocks) {
-          const lines = block.split("\n");
-          let data = "";
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) data = line.slice(6);
-          }
-
-          if (!data) continue;
-
+        for (const parsed of events) {
           try {
-            const event = JSON.parse(data);
+            const event = JSON.parse(parsed.data);
             if (event.type === "log.line") {
               handlers.onLogLine?.(event.payload);
             }

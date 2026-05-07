@@ -1,3 +1,4 @@
+import React from "react";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { ArtifactShelf } from "../artifacts/ArtifactShelf";
@@ -20,10 +21,27 @@ const TABS = [
   { id: "worktrees", slot: "worktrees" },
 ] as const;
 
+const COMPONENT_MAP: Record<string, React.ComponentType> = {
+  runs: RunLedger,
+  chat: ChatSurface,
+  board: KanbanBoard,
+  sessions: SessionsPanel,
+  artifacts: ArtifactShelf,
+  processes: ProcessCockpit,
+  checkpoints: CheckpointTimeline,
+  worktrees: WorktreeLauncher,
+};
+
 export function CenterArea() {
   const activeTab = useLayoutStore((s) => s.activeTab);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const label = useThemeStore((s) => s.label);
+  const [visitedTabs] = React.useState(() => new Set<string>(["runs"]));
+
+  // Track visited tabs for lazy mounting
+  if (!visitedTabs.has(activeTab)) {
+    visitedTabs.add(activeTab);
+  }
 
   function handleTabKeyDown(e: React.KeyboardEvent, idx: number) {
     if (e.key === "ArrowRight") {
@@ -57,14 +75,18 @@ export function CenterArea() {
         ))}
       </div>
       <div className="center-content" role="tabpanel" id={`center-panel-${activeTab}`} aria-labelledby={`center-tab-${activeTab}`}>
-        {activeTab === "runs" && <RunLedger />}
-        {activeTab === "chat" && <ChatSurface />}
-        {activeTab === "board" && <KanbanBoard />}
-        {activeTab === "sessions" && <SessionsPanel />}
-        {activeTab === "artifacts" && <ArtifactShelf />}
-        {activeTab === "processes" && <ProcessCockpit />}
-        {activeTab === "checkpoints" && <CheckpointTimeline />}
-        {activeTab === "worktrees" && <WorktreeLauncher />}
+        {TABS.map((tab) => {
+          if (!visitedTabs.has(tab.id)) return null;
+          const Component = COMPONENT_MAP[tab.id];
+          return (
+            <div
+              key={tab.id}
+              style={{ display: activeTab === tab.id ? "contents" : "none" }}
+            >
+              <Component />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

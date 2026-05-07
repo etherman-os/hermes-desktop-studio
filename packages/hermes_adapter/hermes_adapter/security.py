@@ -13,6 +13,8 @@ from pathlib import Path
 
 from fastapi import HTTPException, Request, status
 
+from hermes_adapter.file_utils import safe_write
+
 logger = logging.getLogger("hermes_adapter.security")
 
 # ---------------------------------------------------------------------------
@@ -88,20 +90,19 @@ def get_token_path() -> Path:
 
 
 def write_token(token: str) -> None:
-    """Write the token to disk with restrictive permissions.
+    """Write the token to disk with restrictive permissions using atomic write.
 
-    Creates parent directories if they do not exist.  Uses os.open + os.fdopen
-    to avoid TOCTOU between file creation and chmod.
+    Creates parent directories if they do not exist. Sets 0o600 permissions
+    after the atomic rename to avoid TOCTOU issues.
     """
     path = get_token_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    safe_write(path, token)
+    # Set restrictive permissions after atomic rename
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(token)
-    except Exception:
-        os.close(fd)
-        raise
+        os.chmod(str(path), 0o600)
+    except OSError:
+        logger.warning("Failed to set permissions on token file")
 
 
 def read_token() -> str:

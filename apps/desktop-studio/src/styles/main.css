@@ -586,6 +586,22 @@ body {
   40% { transform: scale(1); opacity: 1; }
 }
 
+.chat-token-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-md);
+  padding: var(--app-spacing-xs) var(--app-spacing-md);
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface);
+  font-size: var(--app-font-size-xs, 0.75rem);
+  color: var(--app-text-muted, var(--app-text-dim, #888));
+  overflow-x: auto;
+}
+
+.token-stat {
+  white-space: nowrap;
+}
+
 .composer-bar {
   display: flex;
   align-items: center;

@@ -10,6 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import yaml  # type: ignore[import-untyped]
+
 from hermes_adapter.approval_repository import ApprovalRepository
 from hermes_adapter.artifact_repository import ArtifactRepository
 from hermes_adapter.backend_base import StudioBackend
@@ -27,6 +29,9 @@ _SECRET_PATTERNS = (
     re.compile(r"(?i)\b(api[_-]?key|token|secret|password)\s*[:=]\s*['\"]?[^'\"\\s]+"),
     re.compile(r"\b[a-f0-9]{32,}\b", re.IGNORECASE),
 )
+
+# YAML frontmatter delimiter pattern
+_FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
 def _now_id() -> str:
@@ -418,46 +423,101 @@ class ContextRepository:
                 try:
                     content = candidate.read_text(encoding="utf-8", errors="replace")
                     data = json.loads(content) if content.strip().startswith("{") else {}
-                    return {
-                        "id": skill_dir.name,
-                        "name": data.get("name", skill_dir.name),
-                        "description": data.get("description", ""),
-                        "version": data.get("version", ""),
-                        "enabled": data.get("enabled", True),
-                        "path": str(skill_dir),
-                        "source": "manifest",
-                    }
+                    return self._skill_dict_to_entry(data, skill_dir, "manifest")
                 except (json.JSONDecodeError, OSError) as exc:
                     warnings.append(f"Skill manifest {candidate.name} parse error: {exc}")
 
         # No manifest found, use directory name
-        return {
-            "id": skill_dir.name,
-            "name": skill_dir.name,
-            "description": "",
-            "version": "",
-            "enabled": True,
-            "path": str(skill_dir),
-            "source": "directory",
-        }
+        return self._skill_dict_to_entry({}, skill_dir, "directory")
 
     def _parse_skill_file(self, path: Path, warnings: list[str]) -> dict[str, Any] | None:
-        """Parse a skill file."""
+        """Parse a skill file (JSON, YAML, or Markdown with frontmatter)."""
         try:
             content = path.read_text(encoding="utf-8", errors="replace")
-            data = json.loads(content) if content.strip().startswith("{") else {}
+            stripped = content.strip()
+
+            # JSON skill file
+            if stripped.startswith("{"):
+                try:
+                    data = json.loads(content)
+                    return self._skill_dict_to_entry(data, path, "file")
+                except json.JSONDecodeError as exc:
+                    warnings.append(f"Skill file {path.name} JSON parse error: {exc}")
+                    return None
+
+            # YAML skill file
+            if path.suffix in (".yaml", ".yml"):
+                try:
+                    data = yaml.safe_load(content)
+                    if isinstance(data, dict):
+                        return self._skill_dict_to_entry(data, path, "file")
+                except yaml.YAMLError as exc:
+                    warnings.append(f"Skill file {path.name} YAML parse error: {exc}")
+                return None
+
+            # Markdown with YAML frontmatter (SKILL.md pattern)
+            if path.suffix == ".md":
+                return self._parse_skill_markdown(content, path, warnings)
+
+            return None
+        except (OSError, ValueError) as exc:
+            warnings.append(f"Skill file {path.name} read error: {exc}")
+            return None
+
+    def _parse_skill_markdown(
+        self, content: str, path: Path, warnings: list[str]
+    ) -> dict[str, Any] | None:
+        """Parse a Markdown skill file with optional YAML frontmatter."""
+        match = _FRONTMATTER_RE.match(content)
+        if not match:
+            # No frontmatter — use filename as fallback
             return {
                 "id": path.stem,
-                "name": data.get("name", path.stem),
-                "description": data.get("description", ""),
-                "version": data.get("version", ""),
-                "enabled": data.get("enabled", True),
+                "name": path.stem,
+                "description": "",
+                "version": "",
+                "author": "",
+                "category": "",
+                "enabled": True,
                 "path": str(path),
-                "source": "file",
+                "source": "markdown",
             }
-        except (json.JSONDecodeError, OSError) as exc:
-            warnings.append(f"Skill file {path.name} parse error: {exc}")
-            return None
+
+        raw_yaml = match.group(1)
+        try:
+            data = yaml.safe_load(raw_yaml)
+            if not isinstance(data, dict):
+                data = {}
+        except yaml.YAMLError as exc:
+            warnings.append(f"Skill {path.name} frontmatter parse error: {exc}")
+            data = {}
+
+        return {
+            "id": data.get("id", path.stem),
+            "name": data.get("name", path.stem),
+            "description": data.get("description", ""),
+            "version": data.get("version", ""),
+            "author": data.get("author", ""),
+            "category": data.get("category", ""),
+            "enabled": data.get("enabled", True),
+            "path": str(path),
+            "source": "frontmatter",
+        }
+
+    @staticmethod
+    def _skill_dict_to_entry(data: dict[str, Any], path: Path, source: str) -> dict[str, Any]:
+        """Convert a parsed dict to a normalized skill entry."""
+        return {
+            "id": data.get("id", path.stem),
+            "name": data.get("name", path.stem),
+            "description": data.get("description", ""),
+            "version": data.get("version", ""),
+            "author": data.get("author", ""),
+            "category": data.get("category", ""),
+            "enabled": data.get("enabled", True),
+            "path": str(path),
+            "source": source,
+        }
 
     @staticmethod
     def _safe_workspace_root(workspace_path: str | None, warnings: list[str]) -> Path | None:

@@ -19,12 +19,22 @@ interface ChatMessage {
   toolDuration?: number;
 }
 
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  cost: number | null;
+  durationMs: number | null;
+  model: string | null;
+}
+
 interface RunState {
   isStreaming: boolean;
   activeRunId: string | null;
   lastRunId: string | null;
   messages: ChatMessage[];
   abortController: AbortController | null;
+  tokenUsage: TokenUsage | null;
   sendPrompt: (prompt: string, sessionId: string, options?: { workspacePath?: string | null; mode?: string }) => Promise<void>;
   stopRun: () => Promise<void>;
   newChat: () => void;
@@ -43,6 +53,7 @@ export const useRunStore = create<RunState>((set, get) => ({
     { id: nextMessageId(), role: "assistant" as const, content: "Welcome to Hermes Desktop Studio. How can I help you today?" },
   ],
   abortController: null,
+  tokenUsage: null,
 
   appendUserMessage: (content) => {
     set((s) => ({ messages: [...s.messages, { id: nextMessageId(), role: "user" as const, content }] }));
@@ -101,10 +112,34 @@ export const useRunStore = create<RunState>((set, get) => ({
           useApprovalStore.getState().recordEvent(event);
         },
         onAssistantDelta: (p) => get().appendAssistantChunk(p.text),
+        onAssistantCompleted: (p) => {
+          const prev = get().tokenUsage;
+          set({
+            tokenUsage: {
+              promptTokens: prev?.promptTokens ?? 0,
+              completionTokens: (prev?.completionTokens ?? 0) + (p.total_tokens ?? 0),
+              totalTokens: (prev?.totalTokens ?? 0) + (p.total_tokens ?? 0),
+              cost: prev?.cost ?? null,
+              durationMs: p.duration_ms ?? prev?.durationMs ?? null,
+              model: p.model ?? prev?.model ?? null,
+            },
+          });
+        },
         onToolStarted: (p) => get().addToolEvent(p.tool, "running"),
         onToolCompleted: (p) => get().addToolEvent(p.tool, "completed", p.duration_ms),
         onKanbanUpdated: () => void useKanbanStore.getState().refreshBoard(),
-        onRunCompleted: () => {
+        onRunCompleted: (p) => {
+          const prev = get().tokenUsage;
+          set({
+            tokenUsage: {
+              promptTokens: prev?.promptTokens ?? 0,
+              completionTokens: prev?.completionTokens ?? 0,
+              totalTokens: p.total_tokens ?? prev?.totalTokens ?? 0,
+              cost: prev?.cost ?? null,
+              durationMs: p.duration_ms ?? prev?.durationMs ?? null,
+              model: prev?.model ?? null,
+            },
+          });
           useRunLedgerStore.getState().finishRun(run.run_id, "completed");
           void useNativeStore.getState().sendNotification("Run Completed", `Run ${run.run_id.slice(0, 8)} finished successfully`);
           get().finalizeRun();
@@ -163,6 +198,7 @@ export const useRunStore = create<RunState>((set, get) => ({
       lastRunId: null,
       abortController: null,
       isStreaming: false,
+      tokenUsage: null,
     });
   },
 

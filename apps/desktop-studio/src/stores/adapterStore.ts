@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import * as api from "../api/studioClient";
 
+const HEALTH_POLL_INTERVAL_MS = 15_000;
+
 interface AdapterState {
   connected: boolean;
   checking: boolean;
@@ -15,11 +17,14 @@ interface AdapterState {
   storageSchemaVersion: number;
   fallbackReason: string | null;
   lastCheckedAt: string | null;
+  _pollTimer: ReturnType<typeof setInterval> | null;
   setConnected: (v: boolean) => void;
   checkConnection: () => Promise<boolean>;
+  startPolling: () => void;
+  stopPolling: () => void;
 }
 
-export const useAdapterStore = create<AdapterState>((set) => ({
+export const useAdapterStore = create<AdapterState>((set, get) => ({
   connected: false,
   checking: false,
   authReady: false,
@@ -33,7 +38,34 @@ export const useAdapterStore = create<AdapterState>((set) => ({
   storageSchemaVersion: 0,
   fallbackReason: null,
   lastCheckedAt: null,
+  _pollTimer: null,
   setConnected: (v) => set({ connected: v }),
+
+  startPolling: () => {
+    const { _pollTimer, connected } = get();
+    // Don't start polling if already connected or already polling
+    if (_pollTimer || connected) return;
+
+    const timer = setInterval(() => {
+      const state = get();
+      // Stop polling once connected
+      if (state.connected) {
+        state.stopPolling();
+        return;
+      }
+      void state.checkConnection();
+    }, HEALTH_POLL_INTERVAL_MS);
+
+    set({ _pollTimer: timer });
+  },
+
+  stopPolling: () => {
+    const { _pollTimer } = get();
+    if (_pollTimer) {
+      clearInterval(_pollTimer);
+      set({ _pollTimer: null });
+    }
+  },
 
   checkConnection: async () => {
     set({ checking: true });
@@ -56,6 +88,8 @@ export const useAdapterStore = create<AdapterState>((set) => ({
           fallbackReason: message,
           lastCheckedAt: new Date().toISOString(),
         });
+        // Start polling on auth failure (adapter may come up later)
+        get().startPolling();
         return false;
       }
 
@@ -77,6 +111,8 @@ export const useAdapterStore = create<AdapterState>((set) => ({
         fallbackReason: bs?.fallback_reason ?? null,
         lastCheckedAt: new Date().toISOString(),
       });
+      // Stop polling on successful connection
+      get().stopPolling();
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Adapter connection failed";
@@ -95,6 +131,8 @@ export const useAdapterStore = create<AdapterState>((set) => ({
         fallbackReason: message,
         lastCheckedAt: new Date().toISOString(),
       });
+      // Start polling on connection failure
+      get().startPolling();
       return false;
     }
   },

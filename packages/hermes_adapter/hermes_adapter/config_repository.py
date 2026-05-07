@@ -24,7 +24,12 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from hermes_adapter.config_cache import ConfigCache
+
 logger = logging.getLogger("hermes_adapter.config_repository")
+
+# Module-level cache instance (5-second TTL)
+_config_cache = ConfigCache(default_ttl=5.0)
 
 _SECRET_PATTERNS = [
     re.compile(r"(?i)(api[_-]?key|token|secret|password|auth)\s*[:=]\s*\S+"),
@@ -202,8 +207,9 @@ def validate_config(data: dict[str, Any]) -> list[str]:
 class ConfigRepository:
     """Read-only access to Hermes model/provider configuration."""
 
-    def __init__(self, hermes_home: Path) -> None:
+    def __init__(self, hermes_home: Path, cache: ConfigCache | None = None) -> None:
         self._hermes_home = hermes_home
+        self._cache = cache or _config_cache
         self._config: dict[str, Any] = {}
         self._config_source: str | None = None
         self._available = False
@@ -272,7 +278,7 @@ class ConfigRepository:
     def get_model_config(self) -> dict[str, Any]:
         """Return normalized model/provider configuration.
 
-        All sensitive values are redacted.
+        All sensitive values are redacted. Results are cached for 5 seconds.
         """
         provider = self._config.get("provider", "")
         model = self._config.get("model", "")
@@ -354,3 +360,28 @@ class ConfigRepository:
             "timezone": display.get("timezone"),
             "theme": display.get("theme"),
         }
+
+    async def get_model_config_cached(self) -> dict[str, Any]:
+        """Async wrapper that caches model config reads."""
+        cached = await self._cache.get("model_config")
+        if cached is not None:
+            return cached
+        result = self.get_model_config()
+        await self._cache.set("model_config", result)
+        return result
+
+    async def get_provider_status_cached(self) -> dict[str, Any]:
+        """Async wrapper that caches provider status reads."""
+        cached = await self._cache.get("provider_status")
+        if cached is not None:
+            return cached
+        result = self.get_provider_status()
+        await self._cache.set("provider_status", result)
+        return result
+
+    async def invalidate_cache(self, prefix: str = "") -> None:
+        """Invalidate cached entries, optionally by prefix."""
+        if prefix:
+            await self._cache.invalidate_prefix(prefix)
+        else:
+            await self._cache.clear()
