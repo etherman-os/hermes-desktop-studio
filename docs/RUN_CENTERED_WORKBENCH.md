@@ -18,8 +18,8 @@ Chat remains important, but it is one surface inside the workbench. It submits p
 | Chat | Prompt and assistant stream surface connected to the current run. |
 | Board | Control surface for runs, sessions, artifacts, and follow-up workflow. |
 | Sessions | Read-only view into Hermes session history. |
-| Artifact Shelf | Future landing zone for files, reports, previews, screenshots, test results, and log snapshots. |
-| Context Stack Inspector | Shows the context that shaped the run: profile, model, memory, skills, references, and repo guidance files. |
+| Artifact Shelf | Persistent Studio-owned landing zone for files, reports, previews, screenshots, test results, and log snapshots. |
+| Context Inspector | Read-only explanation surface for profile, model/provider config, workspace files, runtime state, run/session metadata, and related Studio work. |
 | Approval Center | Future risk gate for tool approvals and policy decisions. |
 | Logs and Diagnostics | Adapter/Hermes observability without exposing Hermes internals to the frontend. |
 
@@ -38,6 +38,12 @@ Phase Product-2 makes Board a real control surface. It loads persistent Studio c
 Artifacts are persistent work outputs from runs, sessions, cards, logs, tests, reports, markdown, JSON, screenshots, HTML source, and file references. They are Studio-owned metadata in `studio.db`, not Hermes Agent state.
 
 Phase Product-3 adds Artifact Shelf v1. Run Ledger can preserve a run summary, markdown report, or log snapshot as an artifact. Sessions can create linked session summaries. Board cards can create linked card summaries. HTML is shown as inert source text until a sanitizer-backed Preview Canvas exists.
+
+## Context Positioning
+
+Context Inspector explains why a run or session may have behaved the way it did. It aggregates active profile, model/provider config, runtime status, selected workspace metadata, selected run/session metadata, related artifacts/cards, and a small allowlist of workspace context files.
+
+Phase Product-4 keeps this read-only. Workspace files are previewed with length limits and secret redaction. Missing files, unavailable Hermes sources, memory, and skills are shown as explicit unavailable states instead of silent blanks. No Hermes `state.db`, profile, config, memory, or skill file is written.
 
 ## Run Ledger Persistence
 
@@ -66,7 +72,7 @@ Hermes Desktop Studio should not copy the Hermes web dashboard feature-for-featu
 
 - Run Ledger history, workflow actions, and summary export
 - Artifact Shelf
-- Context Stack Inspector
+- Context Inspector with safe local reads
 - Approval Center
 - Checkpoint Timeline
 - Preview Canvas

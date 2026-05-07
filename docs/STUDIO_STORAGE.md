@@ -92,6 +92,10 @@ Run Ledger tables support current local workflow actions and future artifacts, c
 
 Phase Product-3 stores artifact metadata and small text outputs in `studio.db`. Artifact records can link to runs, sessions, and Kanban cards. File artifacts are path references only; Studio does not copy arbitrary large files into SQLite. HTML artifacts are shown as inert source text until a sanitizer-backed Preview Canvas exists. See [STUDIO_ARTIFACTS.md](STUDIO_ARTIFACTS.md).
 
+## Context Inspector Use
+
+Phase Product-4 reads Studio-owned run, artifact, and Kanban metadata from `studio.db` to build context snapshots. It does not add write tables of its own in v1 and does not mutate Hermes `state.db`, Hermes config, memory, or skills. Workspace file previews are read directly from the selected workspace with strict allowlists, length limits, and redaction. See [CONTEXT_INSPECTOR.md](CONTEXT_INSPECTOR.md).
+
 ## Troubleshooting
 
 - Set `HERMES_STUDIO_HOME=/tmp/hermes-studio-test` to test with an isolated data directory.

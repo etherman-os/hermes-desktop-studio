@@ -72,8 +72,11 @@ Artifact Shelf v1 supports:
 - create run summary, log snapshot, and markdown report artifacts from Run Ledger
 - create session summary artifacts from Sessions
 - create card summary artifacts from Board
+- inspect related run/session context through Context Inspector
 
 Markdown is rendered using safe React text nodes. JSON is pretty printed. Logs and HTML source are shown as inert monospaced text. File references show path metadata and an "Open file" placeholder.
+
+Context Inspector can show artifacts linked to a selected run or session. This relationship is read-only from the context surface; artifact writes still go only through `/studio/artifacts/*`.
 
 ## Future Work
 

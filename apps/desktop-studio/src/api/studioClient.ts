@@ -5,6 +5,8 @@ import type {
   ArtifactDetail,
   ArtifactListResponse,
   ArtifactUpdateRequest,
+  ContextScope,
+  ContextSnapshot,
   RunLedgerRecentResponse,
   RunLedgerResponse,
   RunLedgerRun,
@@ -17,6 +19,8 @@ export type {
   ArtifactListResponse,
   ArtifactType,
   ArtifactUpdateRequest,
+  ContextScope,
+  ContextSnapshot,
   RunLedgerRecentResponse,
   RunLedgerResponse,
   RunLedgerRun,
@@ -460,6 +464,31 @@ export async function linkArtifactToCard(artifactId: string, cardId: string) {
     method: "POST",
     body: JSON.stringify({ kanban_card_id: cardId }),
   });
+}
+
+function optionalQuery(params: Record<string, string | null | undefined>) {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) searchParams.set(key, value);
+  }
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+}
+
+export async function getCurrentContext(workspacePath?: string | null) {
+  return request<ContextSnapshot>(`/studio/context/current${optionalQuery({ workspace_path: workspacePath })}`);
+}
+
+export async function getRunContext(runId: string) {
+  return request<ContextSnapshot>(`/studio/context/runs/${runId}`);
+}
+
+export async function getSessionContext(sessionId: string) {
+  return request<ContextSnapshot>(`/studio/context/sessions/${sessionId}`);
+}
+
+export async function getCurrentWorkspaceContext(workspacePath?: string | null) {
+  return request<ContextSnapshot>(`/studio/context/workspaces/current${optionalQuery({ workspace_path: workspacePath })}`);
 }
 
 export interface ActivateProfileResponse {

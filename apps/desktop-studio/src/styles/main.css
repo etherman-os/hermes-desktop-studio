@@ -1988,6 +1988,105 @@ body {
   text-align: right;
 }
 
+.context-scroll {
+  min-height: 0;
+  overflow: auto;
+  padding: var(--app-spacing-sm);
+}
+
+.context-section {
+  padding: var(--app-spacing-sm);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.context-section-title {
+  margin-bottom: var(--app-spacing-sm);
+  color: var(--app-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.context-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-sm);
+}
+
+.context-file {
+  padding: var(--app-spacing-sm);
+  border: 1px solid var(--app-border-subtle);
+  background: var(--app-bg);
+}
+
+.context-file.available {
+  border-color: color-mix(in srgb, var(--app-accent) 48%, var(--app-border-subtle));
+}
+
+.context-file-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-spacing-sm);
+  color: var(--app-text-secondary);
+  font-size: 12px;
+}
+
+.context-file-header strong {
+  color: var(--app-text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.context-file pre {
+  overflow: hidden;
+  max-height: 140px;
+  margin-top: var(--app-spacing-sm);
+  color: var(--app-text-secondary);
+  font-family: var(--app-font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.context-related {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-spacing-sm);
+}
+
+.context-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-spacing-sm);
+  padding: var(--app-spacing-sm);
+  border: 1px solid var(--app-border-subtle);
+  background: var(--app-bg);
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+.context-pill strong {
+  color: var(--app-text);
+}
+
+.context-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--app-spacing-sm);
+}
+
+.context-link-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--app-spacing-md);
+  color: var(--app-text-secondary);
+  font-size: 11px;
+}
+
 .panel-note,
 .sidebar-note,
 .kanban-empty-column {

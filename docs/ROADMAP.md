@@ -278,12 +278,23 @@
 - [x] Board cards can create linked card summary artifacts
 - [x] No Hermes core changes, no Hermes `state.db` writes, no cloud sync, and no animated concept-pack work
 
+## Phase Product-4 — Context Inspector v1 (Done)
+
+- [x] Read-only Context Inspector aggregation service for current, run, session, and workspace scopes
+- [x] `/studio/context/*` protocol paths with OpenAPI route parity coverage
+- [x] Safe workspace context file discovery for SOUL.md, AGENTS.md, CLAUDE.md, README.md, package.json, pyproject.toml, and Cargo.toml
+- [x] Length-limited previews, secret redaction, path traversal rejection, and symlink skipping
+- [x] Context snapshots include active profile, model/provider config, runtime status, storage status, workspace, run/session metadata, related artifacts, related Kanban cards, and related runs/sessions
+- [x] Frontend Context Inspector store and UI for current/run/session/workspace scopes with loading, error, warnings, unavailable memory/skills states, and related work
+- [x] Run Ledger, Sessions, Artifact Shelf, and linked Board cards can open scoped context
+- [x] No Hermes core changes, no Hermes `state.db` writes, no Hermes config writes, and no memory/skill editor work
+
 ## Next Core Layers
 
 - [x] Persist Run Ledger history in Studio-owned `studio.db`
 - [x] Artifact Shelf v1 with persistent metadata and safe text/reference viewer
+- [x] Context Inspector v1 with safe read-only local aggregation
 - [ ] Artifact extraction from real run outputs and sanitized Preview Canvas
-- [ ] Context Stack Inspector backed by safe local reads
 - [ ] Approval Center with real pending approval flows
 - [ ] Checkpoint Timeline
 - [ ] Preview Canvas

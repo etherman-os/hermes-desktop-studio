@@ -97,6 +97,16 @@ export type {
 } from "./artifacts";
 
 export type {
+  ContextScope,
+  ContextWorkspace,
+  ContextCollection,
+  ContextFile,
+  ContextFiles,
+  ContextRelated,
+  ContextSnapshot,
+} from "./context";
+
+export type {
   PluginType,
   PluginStatus,
   PluginPackageInfo,

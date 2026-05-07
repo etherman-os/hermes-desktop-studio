@@ -1,6 +1,8 @@
 import React from "react";
 import type { ArtifactDetail, ArtifactType } from "../../api/studioClient";
 import { useArtifactStore } from "../../stores/artifactStore";
+import { useContextStore } from "../../stores/contextStore";
+import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
 
 const ARTIFACT_TYPES: Array<{ id: "all" | ArtifactType; label: string }> = [
@@ -303,6 +305,10 @@ export function ArtifactShelf() {
   const archiveArtifact = useArtifactStore((s) => s.archiveArtifact);
   const setFilterType = useArtifactStore((s) => s.setFilterType);
   const setSearch = useArtifactStore((s) => s.setSearch);
+  const loadRunContext = useContextStore((s) => s.loadRunContext);
+  const loadSessionContext = useContextStore((s) => s.loadSessionContext);
+  const setSidebarSection = useLayoutStore((s) => s.setSidebarSection);
+  const showSidebar = useLayoutStore((s) => s.showSidebar);
   const label = useThemeStore((s) => s.label);
   const icon = useThemeStore((s) => s.icon);
   const [editorOpen, setEditorOpen] = React.useState(false);
@@ -330,6 +336,18 @@ export function ArtifactShelf() {
       source: "manual",
     });
     if (artifact) setEditorOpen(false);
+  }
+
+  async function inspectArtifactContext(artifact: ArtifactDetail) {
+    setSidebarSection("context");
+    showSidebar();
+    if (artifact.run_id) {
+      await loadRunContext(artifact.run_id);
+      return;
+    }
+    if (artifact.session_id) {
+      await loadSessionContext(artifact.session_id);
+    }
   }
 
   return (
@@ -399,6 +417,9 @@ export function ArtifactShelf() {
 
         <div className="artifact-detail-pane">
           <div className="artifact-detail-actions">
+            {selectedArtifact && (selectedArtifact.run_id || selectedArtifact.session_id) && (
+              <button className="tool-button" onClick={() => void inspectArtifactContext(selectedArtifact)}>Inspect Context</button>
+            )}
             {selectedArtifact && <button className="tool-button danger" disabled={saving} onClick={() => void archiveArtifact(selectedArtifact.id)}>Archive</button>}
           </div>
           <ArtifactViewer artifact={selectedArtifact} />

@@ -5,6 +5,7 @@ import { useRunLedgerStore } from "../../stores/runLedgerStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useKanbanStore } from "../../stores/kanbanStore";
 import { useArtifactStore } from "../../stores/artifactStore";
+import { useContextStore } from "../../stores/contextStore";
 import * as api from "../../api/studioClient";
 
 interface SessionDetailData {
@@ -65,6 +66,9 @@ export function SessionsPanel() {
   const artifactSaving = useArtifactStore((s) => s.saving);
   const artifactMessage = useArtifactStore((s) => s.actionMessage);
   const artifactError = useArtifactStore((s) => s.error);
+  const loadSessionContext = useContextStore((s) => s.loadSessionContext);
+  const setSidebarSection = useLayoutStore((s) => s.setSidebarSection);
+  const showSidebar = useLayoutStore((s) => s.showSidebar);
 
   async function createCardFromSession() {
     if (!detail) return;
@@ -101,6 +105,13 @@ export function SessionsPanel() {
       source: "session",
     });
     if (artifact) setActiveTab("artifacts");
+  }
+
+  async function inspectSessionContext() {
+    if (!detail) return;
+    setSidebarSection("context");
+    showSidebar();
+    await loadSessionContext(detail.id);
   }
 
   if (!loaded) {
@@ -207,6 +218,7 @@ export function SessionsPanel() {
                 <button className="tool-button" disabled={artifactSaving} onClick={() => void createArtifactFromSession()}>
                   {artifactSaving ? "Creating Artifact" : "Create Artifact from Session"}
                 </button>
+                <button className="tool-button" onClick={() => void inspectSessionContext()}>Inspect Context</button>
                 <button
                   className="tool-button"
                   disabled={!relatedRun}

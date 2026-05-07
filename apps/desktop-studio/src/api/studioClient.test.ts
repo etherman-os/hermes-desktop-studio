@@ -218,4 +218,47 @@ describe("studioClient protocol surface", () => {
     expect(fetchMock.mock.calls[2][0]).toBe("http://127.0.0.1:39191/studio/artifacts/artifact_1/link-run");
     expect(fetchMock.mock.calls[3][0]).toBe("http://127.0.0.1:39191/studio/artifacts/artifact_1/archive");
   });
+
+  it("uses /studio/context/* for Context Inspector calls", async () => {
+    vi.stubEnv("VITE_HERMES_STUDIO_ADAPTER_TOKEN", "dev-token");
+    const context = {
+      id: "ctx_1",
+      scope: "current",
+      active_profile: { name: "coder" },
+      model: { provider: "anthropic", model: "claude-sonnet-4-20250514" },
+      runtime: { backend_status: { backend_mode: "mock" } },
+      storage: { available: true },
+      workspace: { available: true, path: "/work/repo", name: "repo" },
+      session: null,
+      run: null,
+      memory: { available: false, items: [], warnings: [] },
+      skills: { available: false, items: [], warnings: [] },
+      context_files: { items: [], warnings: [] },
+      related: { artifacts: [], kanban_cards: [], sessions: [], runs: [] },
+      warnings: [],
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(context))
+      .mockResolvedValueOnce(jsonResponse({ ...context, scope: "run" }))
+      .mockResolvedValueOnce(jsonResponse({ ...context, scope: "session" }))
+      .mockResolvedValueOnce(jsonResponse({ ...context, scope: "workspace" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = await loadClient();
+    await api.initializeAdapterAuth();
+    await api.getCurrentContext("/work/repo");
+    await api.getRunContext("run-1");
+    await api.getSessionContext("s-1");
+    await api.getCurrentWorkspaceContext("/work/repo");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:39191/studio/context/current?workspace_path=%2Fwork%2Frepo");
+    expect(fetchMock.mock.calls[0][1]).toEqual(
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer dev-token" }),
+      }),
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe("http://127.0.0.1:39191/studio/context/runs/run-1");
+    expect(fetchMock.mock.calls[2][0]).toBe("http://127.0.0.1:39191/studio/context/sessions/s-1");
+    expect(fetchMock.mock.calls[3][0]).toBe("http://127.0.0.1:39191/studio/context/workspaces/current?workspace_path=%2Fwork%2Frepo");
+  });
 });

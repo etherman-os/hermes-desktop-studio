@@ -82,6 +82,10 @@ Both include `storage` diagnostics for Studio-owned `studio.db`:
 - `POST /studio/artifacts/{artifact_id}/link-run`
 - `POST /studio/artifacts/{artifact_id}/link-session`
 - `POST /studio/artifacts/{artifact_id}/link-card`
+- `GET /studio/context/current`
+- `GET /studio/context/runs/{run_id}`
+- `GET /studio/context/sessions/{session_id}`
+- `GET /studio/context/workspaces/current`
 - `GET /studio/config`
 - `PATCH /studio/config`
 
@@ -119,6 +123,8 @@ Run Ledger persistence stores normalized Studio event envelopes in Studio-owned 
 
 Artifact persistence stores Studio-owned metadata and bounded text outputs in `studio.db`. File artifacts are references only, and HTML/script content is never executed by the adapter or desktop client.
 
+Context Inspector responses aggregate read-only Studio and Hermes-adjacent metadata under `/studio/context/*`. Workspace file discovery is allowlist-based, length-limited, redacted, and does not follow symlinks or path traversal. The context surface must not write Hermes state, profiles, config, memory, or skills.
+
 ## Error Envelope
 
 All protected endpoint errors use:
@@ -146,3 +152,4 @@ All protected endpoint errors use:
 - Studio-owned persistence uses `studio.db`; it is separate from Hermes `state.db` and must not store secrets.
 - Studio-owned Kanban writes go only to `studio.db`; session/run links store IDs only.
 - Studio-owned Artifact writes go only to `studio.db`; file artifacts store references only.
+- Context Inspector reads Studio-owned metadata and allowlisted workspace files only; it does not mutate Hermes or Studio workflow records.

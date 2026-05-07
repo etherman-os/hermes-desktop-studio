@@ -126,6 +126,40 @@ class KanbanRepository:
             self._ensure_default_board(conn)
             return self._get_board(conn, clean_board_id)
 
+    def find_cards(
+        self,
+        *,
+        run_id: str | None = None,
+        session_id: str | None = None,
+        card_id: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        filters = ["archived_at IS NULL"]
+        params: list[Any] = []
+        if run_id:
+            filters.append("run_id = ?")
+            params.append(_clean_optional_id(run_id, "run_id"))
+        if session_id:
+            filters.append("session_id = ?")
+            params.append(_clean_optional_id(session_id, "session_id"))
+        if card_id:
+            filters.append("id = ?")
+            params.append(self._clean_card_id(card_id))
+        safe_limit = min(max(limit, 1), 100)
+        where = " AND ".join(filters)
+        with self._storage.connect() as conn:
+            self._ensure_default_board(conn)
+            rows = conn.execute(
+                f"""
+                SELECT * FROM cards
+                WHERE {where}
+                ORDER BY updated_at DESC, id DESC
+                LIMIT ?
+                """,
+                (*params, safe_limit),
+            ).fetchall()
+            return [self._card_dict(row) for row in rows]
+
     def create_card(self, input_data: Mapping[str, Any]) -> dict[str, Any]:
         title = _clean_text(input_data.get("title"), "title", max_length=200, required=True)
         description = _clean_text(input_data.get("description"), "description", max_length=5000)

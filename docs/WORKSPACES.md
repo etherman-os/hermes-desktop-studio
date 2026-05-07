@@ -9,6 +9,7 @@ Phase UX-2 keeps workspaces deliberately small:
 - recent workspace list stored locally in the desktop frontend
 - New Run modal includes workspace path
 - Run Ledger displays persisted workspace metadata
+- Context Inspector discovers a small allowlist of workspace files read-only
 
 Workspace paths are Studio-owned metadata in `studio.db`. They are not written to Hermes `state.db`.
 
@@ -27,3 +28,7 @@ When Hermes exposes an official safe workspace/cwd field, the adapter can transl
 5. Submit through `POST /studio/runs`.
 
 The Run Ledger remains the operational record. Chat is the prompt/conversation surface.
+
+## Context Files
+
+Context Inspector can preview `SOUL.md`, `AGENTS.md`, `CLAUDE.md`, `README.md`, `package.json`, `pyproject.toml`, and `Cargo.toml` from the selected workspace. It does not scan recursively, does not follow symlinks, rejects path traversal, limits preview size, and redacts obvious secrets.

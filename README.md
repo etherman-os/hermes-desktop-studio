@@ -81,6 +81,7 @@ hermes-local-studio/
     RUN_CENTERED_WORKBENCH.md
     RUNTIME_STATUS.md
     WORKSPACES.md
+    CONTEXT_INSPECTOR.md
     UI_DIRECTION.md
     ROADMAP.md
     PRODUCT_DIRECTION.md
@@ -194,6 +195,10 @@ Persistent Kanban data uses the same Studio-owned `studio.db`, never Hermes `sta
 
 Artifact Shelf data uses Studio-owned `studio.db`, never Hermes `state.db`. Artifacts can store bounded redacted text content or local file references, and can link to runs, sessions, and Kanban cards. HTML artifacts are shown as inert source text; Studio does not execute artifact scripts. See [docs/STUDIO_ARTIFACTS.md](docs/STUDIO_ARTIFACTS.md).
 
+### Context Inspector
+
+Context Inspector is a read-only aggregation surface for active profile, model/provider config, workspace files, run/session metadata, related artifacts, related Kanban cards, and runtime status. It reads only a small allowlist of workspace files, redacts obvious secrets, skips unsafe paths/symlinks, and never writes Hermes `state.db` or Hermes config files. See [docs/CONTEXT_INSPECTOR.md](docs/CONTEXT_INSPECTOR.md).
+
 ### Run-Centered Workbench
 
 The Run Ledger is the default desktop surface. It tracks live runs from the Studio SSE stream and persists recent run metadata/events in Studio-owned `studio.db`. Selecting a run shows the prompt preview, status, backend/model, duration, grouped assistant/tool events, warnings/errors, and selected event payloads. Runs can create linked Kanban cards and persistent artifacts. Checkpoints and diffs remain future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
@@ -234,7 +239,7 @@ HERMES_STUDIO_BACKEND=hermes HERMES_API_BASE_URL=http://127.0.0.1:8642 pnpm run 
 pnpm run tauri dev
 ```
 
-Studio workspaces are local project paths used as run metadata. They are shown in the top/status bars and persisted with Run Ledger records in `studio.db`. Workspace paths are not forwarded to Hermes until an official Hermes cwd/workspace field is verified. See [docs/RUNTIME_STATUS.md](docs/RUNTIME_STATUS.md) and [docs/WORKSPACES.md](docs/WORKSPACES.md).
+Studio workspaces are local project paths used as run metadata and read-only Context Inspector input. They are shown in the top/status bars and persisted with Run Ledger records in `studio.db`. Workspace paths are not forwarded to Hermes until an official Hermes cwd/workspace field is verified. See [docs/RUNTIME_STATUS.md](docs/RUNTIME_STATUS.md), [docs/WORKSPACES.md](docs/WORKSPACES.md), and [docs/CONTEXT_INSPECTOR.md](docs/CONTEXT_INSPECTOR.md).
 
 ## Development Status
 

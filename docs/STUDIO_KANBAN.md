@@ -20,6 +20,8 @@ Phase Product-2 connects the desktop Board surface to the persistent backend. Th
 
 Phase Product-3 lets Board cards create linked artifact summaries. Artifact metadata is stored in Studio-owned `studio.db` and links back with `kanban_card_id`.
 
+Phase Product-4 lets Context Inspector surface cards related to a selected run or session. The context surface is read-only; persistent card writes still go only through `/studio/kanban/*`.
+
 ## Storage
 
 Kanban tables are created by Studio storage migration `2: persistent_kanban`:
@@ -83,6 +85,7 @@ The desktop Board uses a Zustand Kanban store backed only by `/studio/kanban/*`.
 - Create linked cards from Run Ledger runs.
 - Create linked cards from Hermes sessions.
 - Create linked artifacts from cards.
+- Inspect linked run/session context for cards that have `run_id` or `session_id`.
 
 ## Future Work
 

@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from hermes_adapter.backend_base import StudioBackend
+from hermes_adapter.context_repository import ContextRepository
 from hermes_adapter.run_ledger_repository import RunLedgerRepository
 from hermes_adapter.security import require_token
 from hermes_adapter.studio_events import make_studio_event
@@ -639,6 +640,62 @@ async def link_artifact_to_card(
         return await backend.link_artifact_to_card(artifact_id, body.get("kanban_card_id", body.get("card_id", "")))
     except (RuntimeError, ValueError) as e:
         raise _artifact_http_error(e) from e
+
+
+# ---------------------------------------------------------------------------
+# Context Inspector
+# ---------------------------------------------------------------------------
+
+
+def _context_http_error(error: ValueError | RuntimeError) -> HTTPException:
+    message = str(error)
+    status_code = 400
+    return HTTPException(
+        status_code=status_code,
+        detail=_error_detail("context_error", message, source="studio"),
+    )
+
+
+@router.get("/context/current")
+async def get_current_context(
+    workspace_path: str | None = Query(None, description="Selected Studio workspace path"),
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await ContextRepository().current(backend, _backend_status, workspace_path=workspace_path)
+    except (RuntimeError, ValueError) as e:
+        raise _context_http_error(e) from e
+
+
+@router.get("/context/runs/{run_id}")
+async def get_run_context(run_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await ContextRepository().for_run(backend, _backend_status, run_id)
+    except (RuntimeError, ValueError) as e:
+        raise _context_http_error(e) from e
+
+
+@router.get("/context/sessions/{session_id}")
+async def get_session_context(session_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await ContextRepository().for_session(backend, _backend_status, session_id)
+    except (RuntimeError, ValueError) as e:
+        raise _context_http_error(e) from e
+
+
+@router.get("/context/workspaces/current")
+async def get_current_workspace_context(
+    workspace_path: str | None = Query(None, description="Selected Studio workspace path"),
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await ContextRepository().workspace_current(backend, _backend_status, workspace_path=workspace_path)
+    except (RuntimeError, ValueError) as e:
+        raise _context_http_error(e) from e
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,9 @@
 import React from "react";
 import type { KanbanCard, KanbanColumn } from "../../api/studioClient";
 import { useArtifactStore } from "../../stores/artifactStore";
+import { useContextStore } from "../../stores/contextStore";
 import { useKanbanStore } from "../../stores/kanbanStore";
+import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
 
 type CardPriority = "low" | "medium" | "high" | "urgent";
@@ -199,6 +201,10 @@ export function KanbanBoard() {
   const loadArtifacts = useArtifactStore((s) => s.loadArtifacts);
   const createArtifact = useArtifactStore((s) => s.createArtifact);
   const artifactSaving = useArtifactStore((s) => s.saving);
+  const loadRunContext = useContextStore((s) => s.loadRunContext);
+  const loadSessionContext = useContextStore((s) => s.loadSessionContext);
+  const setSidebarSection = useLayoutStore((s) => s.setSidebarSection);
+  const showSidebar = useLayoutStore((s) => s.showSidebar);
   const label = useThemeStore((s) => s.label);
   const icon = useThemeStore((s) => s.icon);
 
@@ -294,6 +300,18 @@ export function KanbanBoard() {
     await loadArtifacts({ limit: 250 });
   }
 
+  async function inspectCardContext(card: KanbanCard) {
+    setSidebarSection("context");
+    showSidebar();
+    if (card.run_id) {
+      await loadRunContext(card.run_id);
+      return;
+    }
+    if (card.session_id) {
+      await loadSessionContext(card.session_id);
+    }
+  }
+
   return (
     <div className="board-surface">
       <div className="surface-header">
@@ -374,6 +392,7 @@ export function KanbanBoard() {
                     <div className="kanban-card-actions">
                       <button className="tool-button" onClick={() => setEditor({ mode: "edit", card })}>Edit</button>
                       <button className="tool-button" disabled={artifactSaving} onClick={() => void createArtifactFromCard(card)}>Create Artifact</button>
+                      {(card.run_id || card.session_id) && <button className="tool-button" onClick={() => void inspectCardContext(card)}>Context</button>}
                       <select
                         className="studio-select kanban-move-select"
                         value=""

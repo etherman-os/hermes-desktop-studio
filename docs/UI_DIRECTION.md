@@ -15,7 +15,7 @@ The desktop UI should feel like a compact operations workbench.
 
 - Run Ledger: current/last run, event timeline, selected event payload.
 - Artifact Shelf: categories for files, markdown, screenshots, tests, log snapshots, HTML previews, and reports.
-- Context Stack Inspector: SOUL.md, AGENTS.md, CLAUDE.md, memory, skills, references, active profile, model/provider.
+- Context Inspector: read-only active profile, model/provider, workspace files, memory/skills availability, runtime warnings, and related runs/sessions/cards/artifacts.
 - Approval Center: pending and recent approval events.
 - Checkpoint Timeline and Preview Canvas come later.
 

@@ -76,7 +76,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Right inspector shows selected run, model, tools, memory, context, approvals, and diagnostics
 - [ ] Bottom panel Activity and Tool Events reflect current run events
 - [ ] Artifact Shelf renders persisted artifacts, filters, search, and selected artifact details
-- [ ] Context Inspector placeholder renders guidance files, memory, skills, references, active profile, and model/provider status
+- [ ] Context Inspector renders active profile, model/provider, workspace files, runtime status, memory/skills availability, warnings, and related Studio work
 - [ ] Approval Center shows no pending approvals and recent approval events when present
 - [ ] Themes still switch after the UX-1 shell realignment
 - [ ] Logs, profiles, sessions, and model viewer still load from the adapter when available
@@ -116,7 +116,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Sessions section lists sessions from adapter
 - [ ] Clicking a session sets it as active
 - [ ] Profiles section shows profile list
-- [ ] Context section shows the Context Stack Inspector placeholder
+- [ ] Context section shows the read-only Context Inspector
 - [ ] Logs section can switch bottom panel tabs
 - [ ] Theme Gallery shows 5 theme cards
 - [ ] Clicking a theme card switches theme
@@ -128,7 +128,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Model section shows model/provider info
 - [ ] Tools section shows tool events for the selected run
 - [ ] Memory section shows current placeholder memory entries
-- [ ] Context section shows current placeholder context entries
+- [ ] Context section shows current context status and warnings
 - [ ] Diagnostics section shows adapter/backend/Hermes status
 
 ## Bottom Panel
@@ -234,6 +234,28 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Sessions can create a linked session summary artifact
 - [ ] Board cards can create linked card summary artifacts
 - [ ] Adapter unavailable state is visible and does not crash the shelf
+
+## Context Inspector
+
+- [ ] `GET /studio/context/current` returns active profile, model/provider, runtime, storage, workspace, context files, related work, and warnings
+- [ ] `GET /studio/context/runs/{run_id}` returns selected run metadata and related artifacts/cards/sessions
+- [ ] `GET /studio/context/sessions/{session_id}` returns selected session metadata and related runs/artifacts/cards
+- [ ] `GET /studio/context/workspaces/current` accepts a selected workspace path and discovers allowlisted project files read-only
+- [ ] Context routes require adapter auth and return standard error envelopes
+- [ ] OpenAPI route parity includes all `/studio/context/*` routes
+- [ ] SOUL.md, AGENTS.md, CLAUDE.md, README.md, package.json, pyproject.toml, and Cargo.toml previews are length-limited
+- [ ] Obvious API keys, tokens, passwords, bearer strings, and long hex secrets are redacted from previews
+- [ ] Workspace path traversal is rejected without crashing
+- [ ] Symlink context files are skipped
+- [ ] Missing workspace or missing files shows a useful empty/unavailable state
+- [ ] Context Inspector loads current context from the Context activity
+- [ ] Run Ledger "Inspect Context" opens run-scoped context
+- [ ] Sessions "Inspect Context" opens session-scoped context
+- [ ] Artifact detail can inspect related run/session context when linked
+- [ ] Linked Board cards can inspect run/session context when linked
+- [ ] Memory and Skills sections are clearly read-only/unavailable when not implemented
+- [ ] Context Inspector remains useful when Hermes runtime is unavailable by showing Studio-owned context and warnings
+- [ ] Context tests verify no writes to Hermes `state.db`
 
 ## Status Bar
 

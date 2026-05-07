@@ -40,6 +40,10 @@ Persistent Kanban backend calls live under `/studio/kanban/*` and use Studio-own
 
 Persistent Artifact Shelf calls live under `/studio/artifacts/*` and use Studio-owned `studio.db`. Artifact records can link to runs, sessions, and Kanban cards. Text content is bounded/redacted, file artifacts are metadata references only, and HTML/script content is not executed by Studio.
 
+## Context Protocol
+
+Read-only Context Inspector calls live under `/studio/context/*`. Context snapshots aggregate active profile, model/provider config, runtime/storage status, workspace metadata, run/session metadata, related Studio artifacts/cards/runs/sessions, and small allowlisted workspace file previews. Context routes must not mutate Hermes `state.db`, Hermes config/profile files, Studio workflow records, memory, or skills.
+
 ## Plugin Types
 
 | Type | MVP Status | Description |

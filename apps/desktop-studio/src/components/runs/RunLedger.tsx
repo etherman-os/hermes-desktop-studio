@@ -1,6 +1,7 @@
 import React from "react";
 import type { StudioEvent } from "../../api/studioClient";
 import { useArtifactStore } from "../../stores/artifactStore";
+import { useContextStore } from "../../stores/contextStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useLogStore } from "../../stores/logStore";
 import { useRunLedgerStore, type RunRecord } from "../../stores/runLedgerStore";
@@ -229,9 +230,12 @@ export function RunLedger() {
   const artifactSaving = useArtifactStore((s) => s.saving);
   const artifactMessage = useArtifactStore((s) => s.actionMessage);
   const artifactError = useArtifactStore((s) => s.error);
+  const loadRunContext = useContextStore((s) => s.loadRunContext);
   const logLines = useLogStore((s) => s.lines);
   const loadRecentLogs = useLogStore((s) => s.loadRecent);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
+  const setSidebarSection = useLayoutStore((s) => s.setSidebarSection);
+  const showSidebar = useLayoutStore((s) => s.showSidebar);
   const setActiveSession = useSessionStore((s) => s.setActiveSession);
   const run = runs.find((item) => item.runId === selectedRunId)
     ?? runs.find((item) => item.runId === currentRunId)
@@ -299,6 +303,13 @@ export function RunLedger() {
     if (artifact) setActiveTab("artifacts");
   }
 
+  async function inspectRunContext() {
+    if (!run) return;
+    setSidebarSection("context");
+    showSidebar();
+    await loadRunContext(run.runId);
+  }
+
   if (!run && !loading) {
     return (
       <div className="workbench-empty">
@@ -324,6 +335,7 @@ export function RunLedger() {
           {run && <button className="tool-button" onClick={() => void createRunSummaryArtifact("summary")} disabled={artifactSaving}>Create Artifact from Run</button>}
           {run && <button className="tool-button" onClick={() => void createRunSummaryArtifact("report")} disabled={artifactSaving}>Create Markdown Report</button>}
           {run && <button className="tool-button" onClick={() => void createLogSnapshotArtifact()} disabled={artifactSaving}>Create Log Snapshot</button>}
+          {run && <button className="tool-button" onClick={() => void inspectRunContext()}>Inspect Context</button>}
           {run && <button className="tool-button" onClick={() => void handleCopySummary()}>Copy Run Summary</button>}
           {run?.sessionId && <button className="tool-button" onClick={openSession}>Open Related Session</button>}
           <button className="tool-button" onClick={() => void loadRecentRuns()}>{loading ? "Refreshing" : "Refresh"}</button>
