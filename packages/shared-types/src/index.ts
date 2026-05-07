@@ -84,6 +84,19 @@ export type {
 } from "./runs";
 
 export type {
+  ArtifactType,
+  Artifact,
+  ArtifactEvent,
+  ArtifactDetail,
+  ArtifactListResponse,
+  ArtifactCreateRequest,
+  ArtifactUpdateRequest,
+  ArtifactLinkRunRequest,
+  ArtifactLinkSessionRequest,
+  ArtifactLinkCardRequest,
+} from "./artifacts";
+
+export type {
   PluginType,
   PluginStatus,
   PluginPackageInfo,

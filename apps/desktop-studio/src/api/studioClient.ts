@@ -1,7 +1,26 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { RunLedgerRecentResponse, RunLedgerResponse, RunLedgerRun } from "@hermes-studio/shared-types";
+import type {
+  Artifact,
+  ArtifactCreateRequest,
+  ArtifactDetail,
+  ArtifactListResponse,
+  ArtifactUpdateRequest,
+  RunLedgerRecentResponse,
+  RunLedgerResponse,
+  RunLedgerRun,
+} from "@hermes-studio/shared-types";
 
-export type { RunLedgerRecentResponse, RunLedgerResponse, RunLedgerRun } from "@hermes-studio/shared-types";
+export type {
+  Artifact,
+  ArtifactCreateRequest,
+  ArtifactDetail,
+  ArtifactListResponse,
+  ArtifactType,
+  ArtifactUpdateRequest,
+  RunLedgerRecentResponse,
+  RunLedgerResponse,
+  RunLedgerRun,
+} from "@hermes-studio/shared-types";
 
 const ADAPTER_URL = "http://127.0.0.1:39191";
 const TOKEN_UNAVAILABLE_MESSAGE =
@@ -369,6 +388,77 @@ export async function linkKanbanCardToRun(cardId: string, runId: string) {
   return request<KanbanCard>(`/studio/kanban/cards/${cardId}/link-run`, {
     method: "POST",
     body: JSON.stringify({ run_id: runId } satisfies KanbanLinkRunRequest),
+  });
+}
+
+export interface ArtifactListParams {
+  type?: string;
+  source?: string;
+  run_id?: string;
+  session_id?: string;
+  card_id?: string;
+  search?: string;
+  include_archived?: boolean;
+  limit?: number;
+}
+
+function artifactQuery(params?: ArtifactListParams) {
+  if (!params) return "";
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    searchParams.set(key, String(value));
+  }
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+}
+
+export async function listArtifacts(params?: ArtifactListParams) {
+  return request<ArtifactListResponse>(`/studio/artifacts${artifactQuery(params)}`);
+}
+
+export async function getArtifact(artifactId: string) {
+  return request<ArtifactDetail>(`/studio/artifacts/${artifactId}`);
+}
+
+export async function createArtifact(input: ArtifactCreateRequest) {
+  return request<ArtifactDetail>("/studio/artifacts", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateArtifact(artifactId: string, input: ArtifactUpdateRequest) {
+  return request<ArtifactDetail>(`/studio/artifacts/${artifactId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function archiveArtifact(artifactId: string) {
+  return request<ArtifactDetail>(`/studio/artifacts/${artifactId}/archive`, {
+    method: "POST",
+  });
+}
+
+export async function linkArtifactToRun(artifactId: string, runId: string) {
+  return request<ArtifactDetail>(`/studio/artifacts/${artifactId}/link-run`, {
+    method: "POST",
+    body: JSON.stringify({ run_id: runId }),
+  });
+}
+
+export async function linkArtifactToSession(artifactId: string, sessionId: string) {
+  return request<ArtifactDetail>(`/studio/artifacts/${artifactId}/link-session`, {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+}
+
+export async function linkArtifactToCard(artifactId: string, cardId: string) {
+  return request<ArtifactDetail>(`/studio/artifacts/${artifactId}/link-card`, {
+    method: "POST",
+    body: JSON.stringify({ kanban_card_id: cardId }),
   });
 }
 

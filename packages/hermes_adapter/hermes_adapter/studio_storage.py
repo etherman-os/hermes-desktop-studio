@@ -177,6 +177,47 @@ _MIGRATIONS: tuple[_Migration, ...] = (
             "ALTER TABLE runs ADD COLUMN workspace_path TEXT",
         ),
     ),
+    _Migration(
+        version=5,
+        name="persistent_artifacts",
+        statements=(
+            """
+            CREATE TABLE IF NOT EXISTS artifacts (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              type TEXT NOT NULL,
+              description TEXT,
+              content_text TEXT,
+              file_path TEXT,
+              mime_type TEXT,
+              size_bytes INTEGER,
+              run_id TEXT,
+              session_id TEXT,
+              kanban_card_id TEXT,
+              source TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              archived_at TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS artifact_events (
+              id TEXT PRIMARY KEY,
+              artifact_id TEXT NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+              type TEXT NOT NULL,
+              payload_json TEXT NOT NULL,
+              created_at TEXT NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_created_at ON artifacts(created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_type ON artifacts(type)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_run_id ON artifacts(run_id)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_session_id ON artifacts(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_card_id ON artifacts(kanban_card_id)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_archived_at ON artifacts(archived_at)",
+            "CREATE INDEX IF NOT EXISTS idx_artifact_events_artifact_created ON artifact_events(artifact_id, created_at)",
+        ),
+    ),
 )
 
 

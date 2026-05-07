@@ -35,7 +35,7 @@ Both include `storage` diagnostics for Studio-owned `studio.db`:
 {
   "storage": {
     "available": true,
-    "schema_version": 4,
+    "schema_version": 5,
     "data_dir": "/home/user/.local/share/hermes-desktop-studio",
     "db_path": "/home/user/.local/share/hermes-desktop-studio/studio.db",
     "last_error": null
@@ -74,6 +74,14 @@ Both include `storage` diagnostics for Studio-owned `studio.db`:
 - `POST /studio/kanban/cards/{card_id}/archive`
 - `POST /studio/kanban/cards/{card_id}/link-session`
 - `POST /studio/kanban/cards/{card_id}/link-run`
+- `GET /studio/artifacts`
+- `GET /studio/artifacts/{artifact_id}`
+- `POST /studio/artifacts`
+- `PATCH /studio/artifacts/{artifact_id}`
+- `POST /studio/artifacts/{artifact_id}/archive`
+- `POST /studio/artifacts/{artifact_id}/link-run`
+- `POST /studio/artifacts/{artifact_id}/link-session`
+- `POST /studio/artifacts/{artifact_id}/link-card`
 - `GET /studio/config`
 - `PATCH /studio/config`
 
@@ -109,6 +117,8 @@ All Studio SSE events must match `packages/protocol/events.schema.json` and incl
 
 Run Ledger persistence stores normalized Studio event envelopes in Studio-owned `studio.db`. Workspace paths are Studio-side run metadata and are not forwarded to Hermes unless an official Hermes runtime field is verified. Persistence failure may emit `adapter.warning`, but it must not break live SSE streaming. Hermes `state.db` remains read-only.
 
+Artifact persistence stores Studio-owned metadata and bounded text outputs in `studio.db`. File artifacts are references only, and HTML/script content is never executed by the adapter or desktop client.
+
 ## Error Envelope
 
 All protected endpoint errors use:
@@ -135,3 +145,4 @@ All protected endpoint errors use:
 - The adapter must not mutate Hermes core files unless a safe official Hermes CLI/API write path is explicitly used.
 - Studio-owned persistence uses `studio.db`; it is separate from Hermes `state.db` and must not store secrets.
 - Studio-owned Kanban writes go only to `studio.db`; session/run links store IDs only.
+- Studio-owned Artifact writes go only to `studio.db`; file artifacts store references only.

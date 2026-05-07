@@ -795,6 +795,275 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /studio/artifacts:
+    get:
+      summary: List Studio-owned artifacts
+      description: Persistent artifact summaries from Studio-owned studio.db.
+      operationId: listArtifacts
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: run_id
+          in: query
+          schema:
+            type: string
+        - name: session_id
+          in: query
+          schema:
+            type: string
+        - name: card_id
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: include_archived
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 100
+      responses:
+        "200":
+          description: Artifact summaries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactListResponse"
+        "401":
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create a Studio-owned artifact
+      description: Creates artifact metadata and optional small text content in Studio-owned studio.db. HTML is not executed by Studio.
+      operationId: createArtifact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtifactCreateRequest"
+      responses:
+        "200":
+          description: Created artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        "400":
+          description: Invalid or unsafe artifact input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/artifacts/{artifact_id}:
+    get:
+      summary: Get a Studio-owned artifact by ID
+      operationId: getArtifact
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Artifact detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactDetail"
+        "404":
+          description: Artifact not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a Studio-owned artifact
+      operationId: updateArtifact
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtifactUpdateRequest"
+      responses:
+        "200":
+          description: Updated artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        "400":
+          description: Invalid or unsafe artifact input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Artifact not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/artifacts/{artifact_id}/archive:
+    post:
+      summary: Archive a Studio-owned artifact
+      operationId: archiveArtifact
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Archived artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        "404":
+          description: Artifact not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/artifacts/{artifact_id}/link-run:
+    post:
+      summary: Link an artifact to a run ID
+      operationId: linkArtifactToRun
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtifactLinkRunRequest"
+      responses:
+        "200":
+          description: Linked artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        "400":
+          description: Invalid run link input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Artifact not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/artifacts/{artifact_id}/link-session:
+    post:
+      summary: Link an artifact to a Hermes session ID
+      operationId: linkArtifactToSession
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtifactLinkSessionRequest"
+      responses:
+        "200":
+          description: Linked artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        "400":
+          description: Invalid session link input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Artifact not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/artifacts/{artifact_id}/link-card:
+    post:
+      summary: Link an artifact to a Studio Kanban card ID
+      operationId: linkArtifactToCard
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtifactLinkCardRequest"
+      responses:
+        "200":
+          description: Linked artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        "400":
+          description: Invalid card link input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Artifact not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /studio/config:
     get:
       summary: Normalized config view
@@ -1473,6 +1742,223 @@ components:
           type: string
       required:
         - run_id
+
+    ArtifactType:
+      type: string
+      enum:
+        - markdown
+        - text
+        - log_snapshot
+        - test_result
+        - report
+        - html
+        - screenshot
+        - file_reference
+        - json
+        - unknown
+
+    Artifact:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          $ref: "#/components/schemas/ArtifactType"
+        description:
+          type: string
+          nullable: true
+        file_path:
+          type: string
+          nullable: true
+        file_name:
+          type: string
+          nullable: true
+        mime_type:
+          type: string
+          nullable: true
+        size_bytes:
+          type: integer
+          nullable: true
+        run_id:
+          type: string
+          nullable: true
+        session_id:
+          type: string
+          nullable: true
+        kanban_card_id:
+          type: string
+          nullable: true
+        source:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        has_content:
+          type: boolean
+      required:
+        - id
+        - title
+        - type
+        - source
+        - created_at
+        - updated_at
+        - has_content
+
+    ArtifactDetail:
+      allOf:
+        - $ref: "#/components/schemas/Artifact"
+        - type: object
+          properties:
+            content_text:
+              type: string
+              nullable: true
+            events:
+              type: array
+              items:
+                $ref: "#/components/schemas/ArtifactEvent"
+
+    ArtifactEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        artifact_id:
+          type: string
+        type:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - artifact_id
+        - type
+        - payload
+        - created_at
+
+    ArtifactListResponse:
+      type: object
+      properties:
+        artifacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Artifact"
+        total:
+          type: integer
+      required:
+        - artifacts
+        - total
+
+    ArtifactCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        type:
+          $ref: "#/components/schemas/ArtifactType"
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+        content_text:
+          type: string
+          maxLength: 200000
+          nullable: true
+        file_path:
+          type: string
+          maxLength: 2000
+          nullable: true
+        mime_type:
+          type: string
+          maxLength: 128
+          nullable: true
+        size_bytes:
+          type: integer
+          minimum: 0
+          nullable: true
+        run_id:
+          type: string
+          nullable: true
+        session_id:
+          type: string
+          nullable: true
+        kanban_card_id:
+          type: string
+          nullable: true
+        source:
+          type: string
+      required:
+        - title
+
+    ArtifactUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        type:
+          $ref: "#/components/schemas/ArtifactType"
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+        content_text:
+          type: string
+          maxLength: 200000
+          nullable: true
+        file_path:
+          type: string
+          maxLength: 2000
+          nullable: true
+        mime_type:
+          type: string
+          maxLength: 128
+          nullable: true
+        size_bytes:
+          type: integer
+          minimum: 0
+          nullable: true
+        source:
+          type: string
+      additionalProperties: false
+
+    ArtifactLinkRunRequest:
+      type: object
+      properties:
+        run_id:
+          type: string
+      required:
+        - run_id
+
+    ArtifactLinkSessionRequest:
+      type: object
+      properties:
+        session_id:
+          type: string
+      required:
+        - session_id
+
+    ArtifactLinkCardRequest:
+      type: object
+      properties:
+        kanban_card_id:
+          type: string
+        card_id:
+          type: string
+          description: Backward-compatible alias accepted by the adapter.
 
     ConfigView:
       type: object

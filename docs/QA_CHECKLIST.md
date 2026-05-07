@@ -75,7 +75,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] "Open Related Session" switches to the Sessions tab when `session_id` exists
 - [ ] Right inspector shows selected run, model, tools, memory, context, approvals, and diagnostics
 - [ ] Bottom panel Activity and Tool Events reflect current run events
-- [ ] Artifact Shelf placeholder renders categories for files, markdown, screenshots, tests, log snapshots, HTML previews, and reports
+- [ ] Artifact Shelf renders persisted artifacts, filters, search, and selected artifact details
 - [ ] Context Inspector placeholder renders guidance files, memory, skills, references, active profile, and model/provider status
 - [ ] Approval Center shows no pending approvals and recent approval events when present
 - [ ] Themes still switch after the UX-1 shell realignment
@@ -107,7 +107,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Chat tab renders prompt/chat surface
 - [ ] Board tab renders the paused board control surface
 - [ ] Board uses Studio-owned Kanban data or clearly reports adapter/backend unavailability
-- [ ] Artifacts tab renders Artifact Shelf placeholder
+- [ ] Artifacts tab renders persistent Artifact Shelf
 - [ ] Sessions tab renders sessions surface
 - [ ] Switching tabs during streaming does not break the stream
 
@@ -179,6 +179,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] `runs` and `run_events` tables are created by migration 3
 - [ ] Run Ledger payloads and prompt previews are redacted before persistence
 - [ ] Persistence errors emit a warning or UI notice without breaking live run streaming
+- [ ] `artifacts` and `artifact_events` tables are created by migration 5
+- [ ] Artifact content is redacted and bounded before persistence
 
 ## Studio Kanban Backend
 
@@ -205,6 +207,33 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Sessions "Create Card from Session" creates a linked card and Board refreshes
 - [ ] Theme switching preserves readable columns/cards and uses semantic CSS variables
 - [ ] No drag-and-drop is required for this phase
+
+## Studio Artifacts
+
+- [ ] `GET /studio/artifacts` lists persisted artifact summaries without content bodies
+- [ ] `GET /studio/artifacts/{artifact_id}` returns artifact detail and content
+- [ ] `POST /studio/artifacts` creates markdown/text/log/report/json/file-reference artifacts
+- [ ] `PATCH /studio/artifacts/{artifact_id}` updates sanitized artifact fields
+- [ ] Archive removes the artifact from the active shelf
+- [ ] Link-run, link-session, and link-card endpoints persist IDs
+- [ ] Secret-like text is redacted from artifact content
+- [ ] Oversized content is rejected safely
+- [ ] HTML artifacts are displayed as inert source text, not executed
+- [ ] File-reference artifacts store path metadata only
+- [ ] Artifact tests verify no writes to Hermes `state.db`
+
+## Artifact Shelf Frontend
+
+- [ ] Artifact Shelf loads persisted artifacts from `/studio/artifacts`
+- [ ] Search and type filters update the list
+- [ ] Manual Create Artifact persists and selects the new artifact
+- [ ] Detail viewer renders markdown/text/json/log source safely
+- [ ] Run Ledger can create a run summary artifact
+- [ ] Run Ledger can create a markdown report artifact
+- [ ] Run Ledger can create a log snapshot artifact
+- [ ] Sessions can create a linked session summary artifact
+- [ ] Board cards can create linked card summary artifacts
+- [ ] Adapter unavailable state is visible and does not crash the shelf
 
 ## Status Bar
 

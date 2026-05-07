@@ -33,6 +33,12 @@ Phase Product-1 adds a small workflow bridge: a run can create a Kanban card in 
 
 Phase Product-2 makes Board a real control surface. It loads persistent Studio cards, supports create/edit/move/archive actions, and keeps run/session links visible. Drag-and-drop stays out of scope until the workflow proves it needs that interaction.
 
+## Artifact Positioning
+
+Artifacts are persistent work outputs from runs, sessions, cards, logs, tests, reports, markdown, JSON, screenshots, HTML source, and file references. They are Studio-owned metadata in `studio.db`, not Hermes Agent state.
+
+Phase Product-3 adds Artifact Shelf v1. Run Ledger can preserve a run summary, markdown report, or log snapshot as an artifact. Sessions can create linked session summaries. Board cards can create linked card summaries. HTML is shown as inert source text until a sanitizer-backed Preview Canvas exists.
+
 ## Run Ledger Persistence
 
 Run Ledger history is Studio-owned. Recent run metadata and normalized Studio event envelopes are persisted in `studio.db` through:

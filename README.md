@@ -177,7 +177,7 @@ Desktop frontend code must not call `/shell/*`.
 
 ### Studio-owned Storage
 
-Hermes Desktop Studio owns a local SQLite database named `studio.db` for Studio preferences, Kanban workflow metadata, and local-only features. It is separate from Hermes Agent `state.db` and must not store secrets.
+Hermes Desktop Studio owns a local SQLite database named `studio.db` for Studio preferences, Kanban workflow metadata, Run Ledger history, Artifact Shelf metadata, and local-only features. It is separate from Hermes Agent `state.db` and must not store secrets.
 
 Path priority:
 - `HERMES_STUDIO_HOME`
@@ -188,11 +188,15 @@ Path priority:
 
 ### Studio-owned Kanban Backend
 
-Persistent Kanban data uses the same Studio-owned `studio.db`, never Hermes `state.db`. The Board surface now uses `/studio/kanban/*` to load the default board, create/edit/move/archive cards, and show linked run/session indicators. Drag-and-drop, cloud sync, artifact links, and review/release workflows remain future layers. See [docs/STUDIO_KANBAN.md](docs/STUDIO_KANBAN.md).
+Persistent Kanban data uses the same Studio-owned `studio.db`, never Hermes `state.db`. The Board surface now uses `/studio/kanban/*` to load the default board, create/edit/move/archive cards, show linked run/session indicators, and create linked card artifacts. Drag-and-drop, cloud sync, and review/release workflows remain future layers. See [docs/STUDIO_KANBAN.md](docs/STUDIO_KANBAN.md).
+
+### Studio-owned Artifact Shelf
+
+Artifact Shelf data uses Studio-owned `studio.db`, never Hermes `state.db`. Artifacts can store bounded redacted text content or local file references, and can link to runs, sessions, and Kanban cards. HTML artifacts are shown as inert source text; Studio does not execute artifact scripts. See [docs/STUDIO_ARTIFACTS.md](docs/STUDIO_ARTIFACTS.md).
 
 ### Run-Centered Workbench
 
-The Run Ledger is the default desktop surface. It tracks live runs from the Studio SSE stream and persists recent run metadata/events in Studio-owned `studio.db`. Selecting a run shows the prompt preview, status, backend/model, duration, grouped assistant/tool events, warnings/errors, and selected event payloads. Runs can create linked Kanban cards in the Studio-owned default Inbox. Checkpoints, artifacts, and diffs remain future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
+The Run Ledger is the default desktop surface. It tracks live runs from the Studio SSE stream and persists recent run metadata/events in Studio-owned `studio.db`. Selecting a run shows the prompt preview, status, backend/model, duration, grouped assistant/tool events, warnings/errors, and selected event payloads. Runs can create linked Kanban cards and persistent artifacts. Checkpoints and diffs remain future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
 
 ### Backend Modes
 

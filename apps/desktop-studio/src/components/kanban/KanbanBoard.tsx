@@ -1,5 +1,6 @@
 import React from "react";
 import type { KanbanCard, KanbanColumn } from "../../api/studioClient";
+import { useArtifactStore } from "../../stores/artifactStore";
 import { useKanbanStore } from "../../stores/kanbanStore";
 import { useThemeStore } from "../../stores/themeStore";
 
@@ -194,6 +195,10 @@ export function KanbanBoard() {
   const archiveCard = useKanbanStore((s) => s.archiveCard);
   const linkCardToSession = useKanbanStore((s) => s.linkCardToSession);
   const linkCardToRun = useKanbanStore((s) => s.linkCardToRun);
+  const artifacts = useArtifactStore((s) => s.artifacts);
+  const loadArtifacts = useArtifactStore((s) => s.loadArtifacts);
+  const createArtifact = useArtifactStore((s) => s.createArtifact);
+  const artifactSaving = useArtifactStore((s) => s.saving);
   const label = useThemeStore((s) => s.label);
   const icon = useThemeStore((s) => s.icon);
 
@@ -205,6 +210,10 @@ export function KanbanBoard() {
     requestedInitialLoad.current = true;
     void loadDefaultBoard();
   }, [board, loadDefaultBoard]);
+
+  React.useEffect(() => {
+    void loadArtifacts({ limit: 250 });
+  }, [loadArtifacts]);
 
   const columns = board?.columns ?? [];
   const activeCards = columns.flatMap((column) => column.cards).filter((card) => !card.archived_at);
@@ -257,6 +266,32 @@ export function KanbanBoard() {
       column_id: columnId,
       position: target?.cards.length ?? 0,
     });
+  }
+
+  async function createArtifactFromCard(card: KanbanCard) {
+    await createArtifact({
+      title: `Card summary: ${card.title}`,
+      type: "markdown",
+      description: `Created from Kanban card ${card.id}`,
+      content_text: [
+        "# Kanban Card Summary",
+        "",
+        `- Card ID: ${card.id}`,
+        `- Status: ${card.status}`,
+        `- Priority: ${card.priority}`,
+        `- Run: ${card.run_id ?? "none"}`,
+        `- Session: ${card.session_id ?? "none"}`,
+        "",
+        "## Description",
+        "",
+        card.description || "(no description)",
+      ].join("\n"),
+      run_id: card.run_id,
+      session_id: card.session_id,
+      kanban_card_id: card.id,
+      source: "kanban",
+    });
+    await loadArtifacts({ limit: 250 });
   }
 
   return (
@@ -331,10 +366,14 @@ export function KanbanBoard() {
                       <span className={`priority-badge priority-${normalizePriority(card.priority)}`}>{normalizePriority(card.priority)}</span>
                       {card.run_id && <span className="kanban-link-chip">Run {card.run_id}</span>}
                       {card.session_id && <span className="kanban-link-chip">Session {card.session_id}</span>}
+                      <span className="kanban-link-chip">
+                        {artifacts.filter((artifact) => artifact.kanban_card_id === card.id).length} artifacts
+                      </span>
                       <span>Updated {formatUpdated(card.updated_at)}</span>
                     </div>
                     <div className="kanban-card-actions">
                       <button className="tool-button" onClick={() => setEditor({ mode: "edit", card })}>Edit</button>
+                      <button className="tool-button" disabled={artifactSaving} onClick={() => void createArtifactFromCard(card)}>Create Artifact</button>
                       <select
                         className="studio-select kanban-move-select"
                         value=""

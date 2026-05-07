@@ -2,7 +2,7 @@
 
 Hermes Desktop Studio owns a local SQLite database named `studio.db`.
 
-This database is for Studio-only state such as preferences, Kanban workflow metadata, run ledger history, and local-only features. It is not Hermes Agent state, and it must never replace or mutate Hermes `state.db`.
+This database is for Studio-only state such as preferences, Kanban workflow metadata, run ledger history, artifact metadata, and local-only features. It is not Hermes Agent state, and it must never replace or mutate Hermes `state.db`.
 
 ## Location
 
@@ -43,6 +43,11 @@ Migration `4: run_workspace_metadata` adds:
 
 - `runs.workspace_path`
 
+Migration `5: persistent_artifacts` creates Studio-owned Artifact Shelf tables:
+
+- `artifacts`
+- `artifact_events`
+
 The migrations write metadata such as `schema_version`, `initialized_at`, and `storage_owner`.
 
 Migrations are idempotent. Reopening `studio.db` does not duplicate migration records.
@@ -63,7 +68,7 @@ Migrations are idempotent. Reopening `studio.db` does not duplicate migration re
 {
   "storage": {
     "available": true,
-    "schema_version": 4,
+    "schema_version": 5,
     "data_dir": "/home/user/.local/share/hermes-desktop-studio",
     "db_path": "/home/user/.local/share/hermes-desktop-studio/studio.db",
     "last_error": null
@@ -82,6 +87,10 @@ Phase 6C Kanban persistence uses this storage foundation. Kanban tables remain S
 Phase Product-1 stores recent run metadata and normalized Studio event envelopes in `studio.db`. Prompt previews and event payloads are redacted before storage. Run history remains Studio-owned and must not write to Hermes `state.db`.
 
 Run Ledger tables support current local workflow actions and future artifacts, checkpoints, diffs, and result summaries. Phase UX-2 adds `workspace_path` as Studio-side run metadata for project-folder orientation. It is not forwarded to Hermes unless an official Hermes runtime field is verified.
+
+## Artifact Shelf Use
+
+Phase Product-3 stores artifact metadata and small text outputs in `studio.db`. Artifact records can link to runs, sessions, and Kanban cards. File artifacts are path references only; Studio does not copy arbitrary large files into SQLite. HTML artifacts are shown as inert source text until a sanitizer-backed Preview Canvas exists. See [STUDIO_ARTIFACTS.md](STUDIO_ARTIFACTS.md).
 
 ## Troubleshooting
 

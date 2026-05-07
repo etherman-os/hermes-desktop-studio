@@ -20,7 +20,7 @@ def test_creates_data_dir_and_studio_db(tmp_path: Path) -> None:
     status = storage.initialize()
 
     assert status.available is True
-    assert status.schema_version == 4
+    assert status.schema_version == 5
     assert data_dir.is_dir()
     assert (data_dir / "studio.db").is_file()
 
@@ -41,14 +41,15 @@ def test_migrations_are_idempotent(tmp_path: Path) -> None:
         (2, "persistent_kanban"),
         (3, "persistent_run_ledger"),
         (4, "run_workspace_metadata"),
+        (5, "persistent_artifacts"),
     ]
 
 
 def test_schema_version_is_reported(tmp_path: Path) -> None:
     storage = StudioStorage(data_dir=tmp_path / "studio-data")
 
-    assert storage.initialize().schema_version == 4
-    assert storage.get_schema_version() == 4
+    assert storage.initialize().schema_version == 5
+    assert storage.get_schema_version() == 5
 
 
 def test_studio_meta_can_read_write_non_secret_values(tmp_path: Path) -> None:
@@ -149,7 +150,7 @@ def test_health_and_bootstrap_include_storage_metadata(tmp_path: Path, monkeypat
 
     for payload in (health, root_health, bootstrap):
         assert payload["storage"]["available"] is True
-        assert payload["storage"]["schema_version"] == 4
+        assert payload["storage"]["schema_version"] == 5
         assert payload["storage"]["db_path"].endswith("studio.db")
         assert payload["storage"]["last_error"] is None
 

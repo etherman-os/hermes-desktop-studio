@@ -16,7 +16,7 @@
 - [x] `packages/protocol/theme.schema.json` — Theme pack TOML schema
 - [x] `packages/protocol/layout.schema.json` — Layout pack TOML schema
 - [x] `packages/protocol/plugin.schema.json` — Plugin manifest schema
-- [x] `packages/shared-types/src/` — TypeScript type definitions (events, theme, layout, Kanban, runs, plugin)
+- [x] `packages/shared-types/src/` — TypeScript type definitions (events, theme, layout, Kanban, runs, artifacts, plugin)
 
 ## Phase 2 — Desktop Studio Skeleton (Done)
 
@@ -265,10 +265,24 @@
 - [x] Sessions can create linked Studio-owned Kanban cards
 - [x] No Hermes core changes, no Hermes `state.db` writes, no cloud sync, and no animated concept-pack work
 
+## Phase Product-3 — Artifact Shelf v1 (Done)
+
+- [x] Studio-owned Artifact migration: `artifacts` and `artifact_events` in `studio.db`
+- [x] `/studio/artifacts/*` protocol paths with OpenAPI route parity coverage
+- [x] Artifact repository with create/list/detail/update/archive and run/session/card link operations
+- [x] Redaction for obvious secret-like text and bounded content size
+- [x] Artifact Shelf frontend store and UI for list, filter, search, detail, manual create, and archive
+- [x] Safe detail viewer for markdown, text, JSON, logs, HTML source, and file references without script execution
+- [x] Run Ledger can create run summary, markdown report, and log snapshot artifacts
+- [x] Sessions can create linked session summary artifacts
+- [x] Board cards can create linked card summary artifacts
+- [x] No Hermes core changes, no Hermes `state.db` writes, no cloud sync, and no animated concept-pack work
+
 ## Next Core Layers
 
 - [x] Persist Run Ledger history in Studio-owned `studio.db`
-- [ ] Artifact Shelf capture and preview pipeline
+- [x] Artifact Shelf v1 with persistent metadata and safe text/reference viewer
+- [ ] Artifact extraction from real run outputs and sanitized Preview Canvas
 - [ ] Context Stack Inspector backed by safe local reads
 - [ ] Approval Center with real pending approval flows
 - [ ] Checkpoint Timeline

@@ -1,6 +1,8 @@
 import React from "react";
 import type { StudioEvent } from "../../api/studioClient";
+import { useArtifactStore } from "../../stores/artifactStore";
 import { useLayoutStore } from "../../stores/layoutStore";
+import { useLogStore } from "../../stores/logStore";
 import { useRunLedgerStore, type RunRecord } from "../../stores/runLedgerStore";
 import { useSessionStore } from "../../stores/sessionStore";
 
@@ -172,6 +174,41 @@ function copySummary(run: RunRecord) {
   return navigator.clipboard?.writeText(lines.join("\n"));
 }
 
+function runMarkdownReport(run: RunRecord) {
+  const timeline = buildTimeline(run.events);
+  const toolEvents = timeline.filter((entry) => entry.type === "tool.call");
+  const warnings = timeline.filter((entry) => entry.tone === "warning" || entry.tone === "error");
+  return [
+    "# Run Summary",
+    "",
+    `- Run ID: ${run.runId}`,
+    `- Status: ${run.status}`,
+    `- Session: ${run.sessionId ?? "none"}`,
+    `- Workspace: ${run.workspacePath ?? "none"}`,
+    `- Backend: ${run.backend ?? "unknown"}`,
+    `- Model: ${run.model ?? "unknown"}`,
+    `- Started: ${run.startedAt}`,
+    `- Completed: ${run.completedAt ?? "n/a"}`,
+    `- Duration: ${duration(run)}`,
+    "",
+    "## Prompt Preview",
+    "",
+    run.prompt || "(not captured)",
+    "",
+    "## Tool Events",
+    "",
+    ...(toolEvents.length ? toolEvents.map((entry) => `- ${entry.summary}`) : ["- No tool events captured"]),
+    "",
+    "## Warnings and Errors",
+    "",
+    ...(warnings.length ? warnings.map((entry) => `- ${entry.type}: ${entry.summary}`) : ["- None captured"]),
+    "",
+    "## Timeline",
+    "",
+    ...timeline.map((entry) => `- ${entry.type}: ${entry.summary}`),
+  ].join("\n");
+}
+
 export function RunLedger() {
   const runs = useRunLedgerStore((s) => s.runs);
   const selectedRunId = useRunLedgerStore((s) => s.selectedRunId);
@@ -188,6 +225,12 @@ export function RunLedger() {
   const loadRunLedger = useRunLedgerStore((s) => s.loadRunLedger);
   const createCardFromRun = useRunLedgerStore((s) => s.createCardFromRun);
   const clearActionMessage = useRunLedgerStore((s) => s.clearActionMessage);
+  const createArtifact = useArtifactStore((s) => s.createArtifact);
+  const artifactSaving = useArtifactStore((s) => s.saving);
+  const artifactMessage = useArtifactStore((s) => s.actionMessage);
+  const artifactError = useArtifactStore((s) => s.error);
+  const logLines = useLogStore((s) => s.lines);
+  const loadRecentLogs = useLogStore((s) => s.loadRecent);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const setActiveSession = useSessionStore((s) => s.setActiveSession);
   const run = runs.find((item) => item.runId === selectedRunId)
@@ -224,6 +267,38 @@ export function RunLedger() {
     setActiveTab("sessions");
   }
 
+  async function createRunSummaryArtifact(kind: "summary" | "report") {
+    if (!run) return;
+    const content = runMarkdownReport(run);
+    const artifact = await createArtifact({
+      title: `${kind === "report" ? "Markdown report" : "Run summary"}: ${runTitle(run).slice(0, 80)}`,
+      type: kind === "report" ? "report" : "markdown",
+      description: `Created from run ${run.runId}`,
+      content_text: content,
+      run_id: run.runId,
+      session_id: run.sessionId,
+      source: "run",
+    });
+    if (artifact) setActiveTab("artifacts");
+  }
+
+  async function createLogSnapshotArtifact() {
+    if (!run) return;
+    if (logLines.length === 0) await loadRecentLogs();
+    const lines = useLogStore.getState().lines;
+    const content = lines.slice(-100).map((line) => line.message).join("\n");
+    const artifact = await createArtifact({
+      title: `Log snapshot: ${runTitle(run).slice(0, 80)}`,
+      type: "log_snapshot",
+      description: `Recent adapter/Hermes log lines captured from run ${run.runId}`,
+      content_text: content || "No log lines available when snapshot was created.",
+      run_id: run.runId,
+      session_id: run.sessionId,
+      source: "run",
+    });
+    if (artifact) setActiveTab("artifacts");
+  }
+
   if (!run && !loading) {
     return (
       <div className="workbench-empty">
@@ -246,6 +321,9 @@ export function RunLedger() {
         </div>
         <div className="run-ledger-actions">
           {run && <button className="tool-button" onClick={() => void createCardFromRun(run.runId)} disabled={savingRunCard}>Create Card from Run</button>}
+          {run && <button className="tool-button" onClick={() => void createRunSummaryArtifact("summary")} disabled={artifactSaving}>Create Artifact from Run</button>}
+          {run && <button className="tool-button" onClick={() => void createRunSummaryArtifact("report")} disabled={artifactSaving}>Create Markdown Report</button>}
+          {run && <button className="tool-button" onClick={() => void createLogSnapshotArtifact()} disabled={artifactSaving}>Create Log Snapshot</button>}
           {run && <button className="tool-button" onClick={() => void handleCopySummary()}>Copy Run Summary</button>}
           {run?.sessionId && <button className="tool-button" onClick={openSession}>Open Related Session</button>}
           <button className="tool-button" onClick={() => void loadRecentRuns()}>{loading ? "Refreshing" : "Refresh"}</button>
@@ -272,6 +350,12 @@ export function RunLedger() {
           {error && <span>Run history unavailable: {error}</span>}
           {!error && !historyAvailable && <span>Run history is unavailable; live runs can still stream.</span>}
           {actionMessage && <span>{actionMessage}</span>}
+        </div>
+      )}
+
+      {(artifactMessage || artifactError) && (
+        <div className={`run-ledger-notice ${artifactError ? "warning" : ""}`}>
+          {artifactError ? `Artifact unavailable: ${artifactError}` : artifactMessage}
         </div>
       )}
 

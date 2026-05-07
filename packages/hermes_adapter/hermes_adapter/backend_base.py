@@ -186,3 +186,51 @@ class StudioBackend(ABC):
         from hermes_adapter.kanban_repository import KanbanRepository
 
         return KanbanRepository().link_card_to_run(card_id, run_id)
+
+    async def list_artifacts(self, filters: dict[str, Any]) -> dict[str, Any]:
+        """Return persistent Studio-owned artifact summaries."""
+        from hermes_adapter.artifact_repository import ArtifactRepository
+
+        return ArtifactRepository().list_artifacts(**filters)
+
+    async def get_artifact(self, artifact_id: str) -> dict[str, Any]:
+        """Return a persistent Studio-owned artifact detail."""
+        from hermes_adapter.artifact_repository import ArtifactRepository
+
+        return ArtifactRepository().get_artifact(artifact_id)
+
+    async def create_artifact(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """Create a persistent Studio-owned artifact."""
+        from hermes_adapter.artifact_repository import ArtifactRepository
+
+        return ArtifactRepository().create_artifact(input_data)
+
+    async def update_artifact(self, artifact_id: str, input_data: dict[str, Any]) -> dict[str, Any]:
+        """Update a persistent Studio-owned artifact."""
+        from hermes_adapter.artifact_repository import ArtifactRepository
+
+        return ArtifactRepository().update_artifact(artifact_id, input_data)
+
+    async def archive_artifact(self, artifact_id: str) -> dict[str, Any]:
+        """Archive a persistent Studio-owned artifact."""
+        from hermes_adapter.artifact_repository import ArtifactRepository
+
+        return ArtifactRepository().archive_artifact(artifact_id)
+
+    async def link_artifact_to_run(self, artifact_id: str, run_id: str) -> dict[str, Any]:
+        """Link a persistent Studio-owned artifact to a Hermes run ID."""
+        from hermes_adapter.artifact_repository import ArtifactRepository
+
+        return ArtifactRepository().link_artifact_to_run(artifact_id, run_id)
+
+    async def link_artifact_to_session(self, artifact_id: str, session_id: str) -> dict[str, Any]:
+        """Link a persistent Studio-owned artifact to a Hermes session ID."""
+        from hermes_adapter.artifact_repository import ArtifactRepository
+
+        return ArtifactRepository().link_artifact_to_session(artifact_id, session_id)
+
+    async def link_artifact_to_card(self, artifact_id: str, card_id: str) -> dict[str, Any]:
+        """Link a persistent Studio-owned artifact to a Studio Kanban card ID."""
+        from hermes_adapter.artifact_repository import ArtifactRepository
+
+        return ArtifactRepository().link_artifact_to_card(artifact_id, card_id)

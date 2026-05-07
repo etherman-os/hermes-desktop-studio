@@ -4,6 +4,7 @@ import { useThemeStore } from "../../stores/themeStore";
 import { useRunLedgerStore } from "../../stores/runLedgerStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useKanbanStore } from "../../stores/kanbanStore";
+import { useArtifactStore } from "../../stores/artifactStore";
 import * as api from "../../api/studioClient";
 
 interface SessionDetailData {
@@ -60,6 +61,10 @@ export function SessionsPanel() {
   const kanbanSaving = useKanbanStore((s) => s.saving);
   const kanbanMessage = useKanbanStore((s) => s.actionMessage);
   const kanbanError = useKanbanStore((s) => s.error);
+  const createArtifact = useArtifactStore((s) => s.createArtifact);
+  const artifactSaving = useArtifactStore((s) => s.saving);
+  const artifactMessage = useArtifactStore((s) => s.actionMessage);
+  const artifactError = useArtifactStore((s) => s.error);
 
   async function createCardFromSession() {
     if (!detail) return;
@@ -69,6 +74,33 @@ export function SessionsPanel() {
       priority: "medium",
       session_id: detail.id,
     });
+  }
+
+  async function createArtifactFromSession() {
+    if (!detail) return;
+    const preview = detail.transcript_preview?.map((message) => `- ${message.role}: ${message.content}`).join("\n") || "- No transcript preview available";
+    const artifact = await createArtifact({
+      title: `Session summary: ${detail.title}`,
+      type: "markdown",
+      description: `Created from Hermes session ${detail.id}`,
+      content_text: [
+        "# Session Summary",
+        "",
+        `- Session ID: ${detail.id}`,
+        `- Title: ${detail.title}`,
+        `- Messages: ${detail.message_count}`,
+        `- Profile: ${detail.profile ?? "unknown"}`,
+        `- Created: ${detail.created_at}`,
+        `- Updated: ${detail.updated_at}`,
+        "",
+        "## Transcript Preview",
+        "",
+        preview,
+      ].join("\n"),
+      session_id: detail.id,
+      source: "session",
+    });
+    if (artifact) setActiveTab("artifacts");
   }
 
   if (!loaded) {
@@ -172,6 +204,9 @@ export function SessionsPanel() {
                 <button className="tool-button" disabled={kanbanSaving} onClick={() => void createCardFromSession()}>
                   {kanbanSaving ? "Creating Card" : "Create Card from Session"}
                 </button>
+                <button className="tool-button" disabled={artifactSaving} onClick={() => void createArtifactFromSession()}>
+                  {artifactSaving ? "Creating Artifact" : "Create Artifact from Session"}
+                </button>
                 <button
                   className="tool-button"
                   disabled={!relatedRun}
@@ -187,6 +222,11 @@ export function SessionsPanel() {
               {(kanbanMessage || kanbanError) && (
                 <div className={`run-ledger-notice ${kanbanError ? "warning" : ""}`}>
                   {kanbanError ? `Kanban unavailable: ${kanbanError}` : kanbanMessage}
+                </div>
+              )}
+              {(artifactMessage || artifactError) && (
+                <div className={`run-ledger-notice ${artifactError ? "warning" : ""}`}>
+                  {artifactError ? `Artifacts unavailable: ${artifactError}` : artifactMessage}
                 </div>
               )}
               <dl className="right-panel-info" style={{ display: "flex", flexWrap: "wrap", gap: "var(--app-spacing-md)" }}>

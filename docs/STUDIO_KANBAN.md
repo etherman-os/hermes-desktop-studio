@@ -18,6 +18,8 @@ Phase Product-1 adds one narrow workflow action from the Run Ledger: "Create Car
 
 Phase Product-2 connects the desktop Board surface to the persistent backend. The Board can load the default board, create cards, edit title/description/priority/status, move cards through explicit controls, archive cards, and show linked run/session indicators. It remains a Studio workflow surface, not a generic toy todo board.
 
+Phase Product-3 lets Board cards create linked artifact summaries. Artifact metadata is stored in Studio-owned `studio.db` and links back with `kanban_card_id`.
+
 ## Storage
 
 Kanban tables are created by Studio storage migration `2: persistent_kanban`:
@@ -80,6 +82,7 @@ The desktop Board uses a Zustand Kanban store backed only by `/studio/kanban/*`.
 - Archive cards out of the active board.
 - Create linked cards from Run Ledger runs.
 - Create linked cards from Hermes sessions.
+- Create linked artifacts from cards.
 
 ## Future Work
 

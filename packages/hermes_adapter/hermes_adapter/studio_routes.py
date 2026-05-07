@@ -519,6 +519,129 @@ async def link_kanban_card_to_run(
 
 
 # ---------------------------------------------------------------------------
+# Artifacts
+# ---------------------------------------------------------------------------
+
+
+def _artifact_http_error(error: ValueError | RuntimeError) -> HTTPException:
+    message = str(error)
+    status_code = 404 if "not found" in message.lower() else 400
+    return HTTPException(
+        status_code=status_code,
+        detail=_error_detail("artifact_error", message, source="studio"),
+    )
+
+
+@router.get("/artifacts")
+async def list_artifacts(
+    type: str | None = Query(None, description="Artifact type filter"),
+    source: str | None = Query(None, description="Artifact source filter"),
+    run_id: str | None = Query(None, description="Linked run id"),
+    session_id: str | None = Query(None, description="Linked session id"),
+    card_id: str | None = Query(None, description="Linked Kanban card id"),
+    search: str | None = Query(None, description="Search title and description"),
+    include_archived: bool = Query(False, description="Include archived artifacts"),
+    limit: int = Query(100, ge=1, le=250),
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.list_artifacts(
+            {
+                "artifact_type": type,
+                "source": source,
+                "run_id": run_id,
+                "session_id": session_id,
+                "card_id": card_id,
+                "search": search,
+                "include_archived": include_archived,
+                "limit": limit,
+            }
+        )
+    except (RuntimeError, ValueError) as e:
+        raise _artifact_http_error(e) from e
+
+
+@router.get("/artifacts/{artifact_id}")
+async def get_artifact(artifact_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.get_artifact(artifact_id)
+    except (RuntimeError, ValueError) as e:
+        raise _artifact_http_error(e) from e
+
+
+@router.post("/artifacts")
+async def create_artifact(body: dict[str, Any], _token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.create_artifact(body)
+    except (RuntimeError, ValueError) as e:
+        raise _artifact_http_error(e) from e
+
+
+@router.patch("/artifacts/{artifact_id}")
+async def update_artifact(
+    artifact_id: str,
+    body: dict[str, Any],
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.update_artifact(artifact_id, body)
+    except (RuntimeError, ValueError) as e:
+        raise _artifact_http_error(e) from e
+
+
+@router.post("/artifacts/{artifact_id}/archive")
+async def archive_artifact(artifact_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.archive_artifact(artifact_id)
+    except (RuntimeError, ValueError) as e:
+        raise _artifact_http_error(e) from e
+
+
+@router.post("/artifacts/{artifact_id}/link-run")
+async def link_artifact_to_run(
+    artifact_id: str,
+    body: dict[str, Any],
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.link_artifact_to_run(artifact_id, body.get("run_id", ""))
+    except (RuntimeError, ValueError) as e:
+        raise _artifact_http_error(e) from e
+
+
+@router.post("/artifacts/{artifact_id}/link-session")
+async def link_artifact_to_session(
+    artifact_id: str,
+    body: dict[str, Any],
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.link_artifact_to_session(artifact_id, body.get("session_id", ""))
+    except (RuntimeError, ValueError) as e:
+        raise _artifact_http_error(e) from e
+
+
+@router.post("/artifacts/{artifact_id}/link-card")
+async def link_artifact_to_card(
+    artifact_id: str,
+    body: dict[str, Any],
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.link_artifact_to_card(artifact_id, body.get("kanban_card_id", body.get("card_id", "")))
+    except (RuntimeError, ValueError) as e:
+        raise _artifact_http_error(e) from e
+
+
+# ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 
