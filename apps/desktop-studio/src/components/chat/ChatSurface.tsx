@@ -16,6 +16,9 @@ export function ChatSurface() {
   const lastRunId = useRunStore((s) => s.lastRunId);
   const runs = useRunLedgerStore((s) => s.runs);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
+  const selectLedgerRun = useRunLedgerStore((s) => s.selectRun);
+  const createCardFromRun = useRunLedgerStore((s) => s.createCardFromRun);
+  const savingRunCard = useRunLedgerStore((s) => s.savingRunCard);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const connected = useAdapterStore((s) => s.connected);
   const [input, setInput] = React.useState("");
@@ -49,6 +52,11 @@ export function ChatSurface() {
   const ledgerRun = runs.find((run) => run.runId === activeRunId) ?? runs.find((run) => run.runId === lastRunId) ?? runs[0];
   const toolEvents = ledgerRun?.events.filter((event) => event.type === "tool.started" || event.type === "tool.completed").slice(-4) ?? [];
 
+  function openLedger() {
+    if (ledgerRun) selectLedgerRun(ledgerRun.runId);
+    setActiveTab("runs");
+  }
+
   return (
     <div className="chat-container">
       <div className="chat-run-strip">
@@ -61,8 +69,12 @@ export function ChatSurface() {
           </div>
         </div>
         <div className="chat-run-actions">
-          <button className="tool-button" onClick={() => setActiveTab("runs")}>Open in Run Ledger</button>
-          <button className="tool-button" disabled title="Backend link action is intentionally later">
+          <button className="tool-button" onClick={openLedger}>Open in Run Ledger</button>
+          <button
+            className="tool-button"
+            disabled={!ledgerRun || savingRunCard}
+            onClick={() => ledgerRun && void createCardFromRun(ledgerRun.runId)}
+          >
             Create Card from Run
           </button>
         </div>

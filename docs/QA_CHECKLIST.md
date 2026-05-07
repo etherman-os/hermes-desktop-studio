@@ -45,8 +45,16 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] App opens with Run Ledger as the primary center tab
 - [ ] Activity rail includes Runs, Chat, Board, Sessions, Artifacts, Context, Logs, Themes, and Settings
 - [ ] Starting a prompt creates a current run in the Run Ledger
+- [ ] Recent runs persist in Studio-owned `studio.db` and reappear after adapter restart
+- [ ] Selecting a recent run loads its persisted timeline from `/studio/runs/{run_id}/ledger`
 - [ ] Run Ledger timeline shows `run.started`, assistant stream, tool events, warnings, and terminal events when present
+- [ ] Assistant deltas are grouped into a readable assistant message entry
+- [ ] Tool started/progress/completed events are grouped by tool call when possible
 - [ ] Selecting a timeline entry shows event payload detail
+- [ ] Run Ledger shows status, duration, backend/model, linked session id, warnings, and errors when available
+- [ ] "Create Card from Run" creates a Studio-owned Kanban card linked to `run_id`
+- [ ] "Copy Run Summary" copies prompt, status, session, backend/model, duration, and timeline summary
+- [ ] "Open Related Session" switches to the Sessions tab when `session_id` exists
 - [ ] Right inspector shows selected run, model, tools, memory, context, approvals, and diagnostics
 - [ ] Bottom panel Activity and Tool Events reflect current run events
 - [ ] Artifact Shelf placeholder renders categories for files, markdown, screenshots, tests, log snapshots, HTML previews, and reports
@@ -72,7 +80,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Sending message when adapter offline shows local fallback message
 - [ ] Chat header shows current/last run id and status
 - [ ] "Open in Run Ledger" switches to the Run Ledger tab
-- [ ] Create-card-from-run action is visibly deferred until board wiring resumes
+- [ ] Create-card-from-run action creates a linked Studio-owned Kanban card when a run exists
 
 ## Tabs
 
@@ -147,6 +155,9 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] `HERMES_STUDIO_DB_PATH=~/.hermes/state.db` is rejected
 - [ ] Hermes `~/.hermes/state.db` is not modified by Studio startup
 - [ ] Storage metadata contains diagnostics only; no secrets are stored in `studio_meta`
+- [ ] `runs` and `run_events` tables are created by migration 3
+- [ ] Run Ledger payloads and prompt previews are redacted before persistence
+- [ ] Persistence errors emit a warning or UI notice without breaking live run streaming
 
 ## Studio Kanban Backend
 

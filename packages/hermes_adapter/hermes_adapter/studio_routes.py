@@ -6,6 +6,7 @@ Supports mock and Hermes backends. Frontend always talks to /studio/* endpoints.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -13,10 +14,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from hermes_adapter.backend_base import StudioBackend
+from hermes_adapter.run_ledger_repository import RunLedgerRepository
 from hermes_adapter.security import require_token
+from hermes_adapter.studio_events import make_studio_event
 from hermes_adapter.studio_storage import get_studio_storage_status
 
 router = APIRouter(prefix="/studio")
+logger = logging.getLogger(__name__)
 
 # Backend instance — initialized on first request
 _backend: StudioBackend | None = None
@@ -54,6 +58,76 @@ def _error_detail(
             "hint": hint,
         }
     }
+
+
+def _backend_name() -> str:
+    active = _backend_status.get("active_backend")
+    mode = _backend_status.get("backend_mode")
+    return str(active or mode or "unknown")
+
+
+async def _model_name(backend: StudioBackend) -> str | None:
+    try:
+        model_config = await backend.get_model_config()
+    except Exception:
+        return None
+    model = model_config.get("model")
+    return str(model) if model else None
+
+
+def _event_with_run_id(event: dict[str, Any], run_id: str) -> dict[str, Any]:
+    if event.get("run_id"):
+        return event
+    return {**event, "run_id": run_id}
+
+
+def _persist_started_run(
+    *,
+    run_id: str,
+    session_id: str | None,
+    status: str,
+    prompt: str,
+    backend: str,
+    model: str | None,
+) -> None:
+    try:
+        RunLedgerRepository().create_run(
+            run_id=run_id,
+            session_id=session_id,
+            status=status,
+            prompt=prompt,
+            backend=backend,
+            model=model,
+        )
+    except Exception as exc:
+        logger.warning("Run ledger create failed for %s: %s", run_id, exc)
+
+
+def _persist_run_event(run_id: str, event: dict[str, Any]) -> dict[str, Any] | None:
+    try:
+        RunLedgerRepository().append_event(run_id, event)
+    except Exception as exc:
+        logger.warning("Run ledger event persistence failed for %s: %s", run_id, exc)
+        return make_studio_event(
+            "adapter.warning",
+            {
+                "code": "run_ledger_persistence_unavailable",
+                "message": "Run history is unavailable; live stream continues.",
+            },
+            source="adapter",
+            run_id=run_id,
+        )
+    return None
+
+
+def _run_ledger_http_error(error: ValueError | RuntimeError) -> HTTPException:
+    message = str(error)
+    status_code = 404 if "not found" in message.lower() else 503
+    code = "not_found" if status_code == 404 else "run_ledger_unavailable"
+    return HTTPException(
+        status_code=status_code,
+        detail=_error_detail(code, message, source="studio", retryable=status_code != 404),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +246,47 @@ async def start_run(body: dict[str, Any], _token: None = Depends(require_token))
                 source="hermes",
             ),
         )
+    run_id = result.get("run_id")
+    if run_id:
+        _persist_started_run(
+            run_id=str(run_id),
+            session_id=str(session_id) if session_id else None,
+            status=str(result.get("status", "started")),
+            prompt=str(prompt),
+            backend=_backend_name(),
+            model=await _model_name(backend),
+        )
     return result
+
+
+@router.get("/runs/recent")
+async def get_recent_runs(
+    limit: int = Query(50, ge=1, le=100),
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.get_recent_runs(limit=limit)
+    except (RuntimeError, ValueError) as e:
+        raise _run_ledger_http_error(e) from e
+
+
+@router.get("/runs/{run_id}")
+async def get_run(run_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.get_run(run_id)
+    except (RuntimeError, ValueError) as e:
+        raise _run_ledger_http_error(e) from e
+
+
+@router.get("/runs/{run_id}/ledger")
+async def get_run_ledger(run_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        return await backend.get_run_ledger(run_id)
+    except (RuntimeError, ValueError) as e:
+        raise _run_ledger_http_error(e) from e
 
 
 @router.get("/runs/{run_id}/events")
@@ -180,8 +294,14 @@ async def stream_run_events(run_id: str, _token: None = Depends(require_token)) 
     backend = await _get_backend()
 
     async def event_generator() -> AsyncIterator[str]:
+        warned_about_persistence = False
         async for event in backend.stream_run_events(run_id):
-            yield _sse(event)
+            enriched = _event_with_run_id(event, run_id)
+            warning = _persist_run_event(run_id, enriched)
+            yield _sse(enriched)
+            if warning and not warned_about_persistence:
+                warned_about_persistence = True
+                yield _sse(warning)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

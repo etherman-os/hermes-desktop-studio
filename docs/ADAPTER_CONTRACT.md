@@ -52,6 +52,9 @@ Both include `storage` diagnostics for Studio-owned `studio.db`:
 - `GET /studio/sessions`
 - `GET /studio/sessions/{session_id}`
 - `POST /studio/runs`
+- `GET /studio/runs/recent`
+- `GET /studio/runs/{run_id}`
+- `GET /studio/runs/{run_id}/ledger`
 - `GET /studio/runs/{run_id}/events`
 - `POST /studio/runs/{run_id}/stop`
 - `GET /studio/logs`
@@ -103,6 +106,8 @@ All Studio SSE events must match `packages/protocol/events.schema.json` and incl
 `run_id` and `session_id` are optional top-level fields when applicable. Unknown upstream events are normalized to `adapter.warning` or ignored safely; malformed upstream events must not weaken the Studio schema.
 
 `kanban.updated` events must include structured payloads with at least `board_id` and `action`. Malformed upstream Kanban notifications are normalized to `adapter.warning`; persistent Kanban writes only happen through `/studio/kanban/*`.
+
+Run Ledger persistence stores normalized Studio event envelopes in Studio-owned `studio.db`. Persistence failure may emit `adapter.warning`, but it must not break live SSE streaming. Hermes `state.db` remains read-only.
 
 ## Error Envelope
 

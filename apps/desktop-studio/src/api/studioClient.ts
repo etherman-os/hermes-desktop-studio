@@ -1,4 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { RunLedgerRecentResponse, RunLedgerResponse, RunLedgerRun } from "@hermes-studio/shared-types";
+
+export type { RunLedgerRecentResponse, RunLedgerResponse, RunLedgerRun } from "@hermes-studio/shared-types";
 
 const ADAPTER_URL = "http://127.0.0.1:39191";
 const TOKEN_UNAVAILABLE_MESSAGE =
@@ -222,6 +225,19 @@ export async function stopRun(runId: string) {
   return request<RunResponse>(`/studio/runs/${runId}/stop`, {
     method: "POST",
   });
+}
+
+export async function getRecentRuns(limit = 50) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return request<RunLedgerRecentResponse>(`/studio/runs/recent?${params.toString()}`);
+}
+
+export async function getRun(runId: string) {
+  return request<RunLedgerRun>(`/studio/runs/${runId}`);
+}
+
+export async function getRunLedger(runId: string) {
+  return request<RunLedgerResponse>(`/studio/runs/${runId}/ledger`);
 }
 
 export async function getLogs(source?: string, tail?: number) {

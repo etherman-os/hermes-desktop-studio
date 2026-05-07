@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -38,7 +40,7 @@ class TestHealthEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "healthy"
-        assert data["storage"]["schema_version"] == 2
+        assert data["storage"]["schema_version"] == 3
 
     def test_health_no_auth_required(self, client: TestClient) -> None:
         resp = client.get("/studio/health")
@@ -167,6 +169,65 @@ class TestRuns:
         assert "tool.started" in events
         assert "tool.completed" in events
         assert "run.completed" in events
+
+    def test_recent_runs_route_is_not_captured_by_dynamic_run_route(self, client: TestClient) -> None:
+        resp = client.get("/studio/runs/recent", headers=HEADERS)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "runs" in data
+        assert data["history_available"] is True
+
+    def test_run_persists_after_streaming(self, client: TestClient) -> None:
+        resp = client.post(
+            "/studio/runs",
+            headers=HEADERS,
+            json={"session_id": "s-1", "prompt": "persist me"},
+        )
+        run_id = resp.json()["run_id"]
+
+        with client.stream("GET", f"/studio/runs/{run_id}/events", headers=HEADERS) as stream:
+            for _line in stream.iter_lines():
+                pass
+
+        recent = client.get("/studio/runs/recent", headers=HEADERS)
+        ledger = client.get(f"/studio/runs/{run_id}/ledger", headers=HEADERS)
+
+        assert recent.status_code == 200
+        assert run_id in {run["id"] for run in recent.json()["runs"]}
+        assert ledger.status_code == 200
+        data = ledger.json()
+        assert data["run"]["id"] == run_id
+        assert data["run"]["status"] == "completed"
+        assert "assistant.delta" in {event["type"] for event in data["events"]}
+
+    def test_streaming_continues_when_run_persistence_unavailable(
+        self,
+        client: TestClient,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        hermes_home = tmp_path / ".hermes"
+        hermes_home.mkdir()
+        monkeypatch.setenv("HERMES_STUDIO_DB_PATH", str(hermes_home / "state.db"))
+
+        resp = client.post(
+            "/studio/runs",
+            headers=HEADERS,
+            json={"session_id": "s-1", "prompt": "history unavailable"},
+        )
+        run_id = resp.json()["run_id"]
+
+        with client.stream("GET", f"/studio/runs/{run_id}/events", headers=HEADERS) as stream:
+            events = [
+                line.split("event: ", 1)[1]
+                for line in stream.iter_lines()
+                if line.startswith("event: ")
+            ]
+
+        assert "assistant.delta" in events
+        assert "run.completed" in events
+        assert "adapter.warning" in events
 
 
 class TestThemes:

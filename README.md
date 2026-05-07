@@ -190,7 +190,7 @@ Persistent Kanban data uses the same Studio-owned `studio.db`, never Hermes `sta
 
 ### Run-Centered Workbench
 
-Phase UX-1 makes the Run Ledger the default desktop surface. It tracks current-session run events from the existing Studio SSE stream and positions Chat, Board, Sessions, Artifacts, Context, Logs, and Diagnostics around the run lifecycle. Historical run persistence, checkpoints, and artifact capture are future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
+The Run Ledger is the default desktop surface. It tracks live runs from the Studio SSE stream and persists recent run metadata/events in Studio-owned `studio.db`. Selecting a run shows the prompt preview, status, backend/model, duration, grouped assistant/tool events, warnings/errors, and selected event payloads. Runs can create linked Kanban cards in the Studio-owned default Inbox. Checkpoints, artifacts, and diffs remain future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
 
 ### Backend Modes
 

@@ -6,6 +6,7 @@ import { useAdapterStore } from "../../stores/adapterStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { useProfileStore } from "../../stores/profileStore";
 import { useLogStore } from "../../stores/logStore";
+import { useRunLedgerStore } from "../../stores/runLedgerStore";
 import { LeftRail } from "./LeftRail";
 import { LeftSidebar } from "./LeftSidebar";
 import { CenterArea } from "./CenterArea";
@@ -22,6 +23,7 @@ export function AppFrame() {
   const loadSessions = useSessionStore((s) => s.loadFromAdapter);
   const loadProfiles = useProfileStore((s) => s.loadProfiles);
   const loadLogs = useLogStore((s) => s.loadRecent);
+  const loadRecentRuns = useRunLedgerStore((s) => s.loadRecentRuns);
   const initTheme = useThemeStore((s) => s.initTheme);
   const loadThemes = useThemeStore((s) => s.loadThemes);
 
@@ -33,9 +35,10 @@ export function AppFrame() {
         loadProfiles();
         loadLogs();
         loadThemes();
+        loadRecentRuns();
       }
     });
-  }, [initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes]);
+  }, [initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes, loadRecentRuns]);
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

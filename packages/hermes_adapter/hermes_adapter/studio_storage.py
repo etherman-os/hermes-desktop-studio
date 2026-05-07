@@ -135,6 +135,41 @@ _MIGRATIONS: tuple[_Migration, ...] = (
             "CREATE INDEX IF NOT EXISTS idx_card_events_card_created ON card_events(card_id, created_at)",
         ),
     ),
+    _Migration(
+        version=3,
+        name="persistent_run_ledger",
+        statements=(
+            """
+            CREATE TABLE IF NOT EXISTS runs (
+              id TEXT PRIMARY KEY,
+              session_id TEXT,
+              status TEXT NOT NULL,
+              title TEXT,
+              prompt_preview TEXT,
+              started_at TEXT NOT NULL,
+              completed_at TEXT,
+              duration_ms INTEGER,
+              backend TEXT NOT NULL,
+              model TEXT,
+              error TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS run_events (
+              id TEXT PRIMARY KEY,
+              run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+              type TEXT NOT NULL,
+              source TEXT NOT NULL,
+              payload_json TEXT NOT NULL,
+              timestamp TEXT NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_runs_started_at ON runs(started_at)",
+            "CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status)",
+            "CREATE INDEX IF NOT EXISTS idx_run_events_run_timestamp ON run_events(run_id, timestamp, id)",
+            "CREATE INDEX IF NOT EXISTS idx_run_events_type ON run_events(type)",
+        ),
+    ),
 )
 
 

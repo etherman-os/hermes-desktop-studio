@@ -63,6 +63,24 @@ class StudioBackend(ABC):
         """Stop an active run. Returns {run_id, status}."""
         ...
 
+    async def get_recent_runs(self, limit: int = 50) -> dict[str, Any]:
+        """Return recent Studio-owned run ledger records."""
+        from hermes_adapter.run_ledger_repository import RunLedgerRepository
+
+        return RunLedgerRepository().get_recent_runs(limit=limit)
+
+    async def get_run(self, run_id: str) -> dict[str, Any]:
+        """Return a Studio-owned run ledger record."""
+        from hermes_adapter.run_ledger_repository import RunLedgerRepository
+
+        return RunLedgerRepository().get_run(run_id)
+
+    async def get_run_ledger(self, run_id: str) -> dict[str, Any]:
+        """Return a Studio-owned run ledger record and its persisted event timeline."""
+        from hermes_adapter.run_ledger_repository import RunLedgerRepository
+
+        return RunLedgerRepository().get_ledger(run_id)
+
     @abstractmethod
     async def get_logs(self, source: str | None = None, tail: int = 100) -> dict[str, Any]:
         """Return recent log lines."""

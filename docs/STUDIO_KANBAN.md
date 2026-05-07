@@ -14,6 +14,8 @@ Phase 6C adds backend protocol and persistence only:
 
 It does not add full Kanban UI, drag-and-drop, custom provider runtime, or Hermes Agent core changes.
 
+Phase Product-1 adds one narrow workflow action from the Run Ledger: "Create Card from Run" creates a card in the default Inbox and sets `run_id` plus `session_id` when available. This still goes through `/studio/kanban/cards` and writes only to Studio-owned `studio.db`.
+
 ## Storage
 
 Kanban tables are created by Studio storage migration `2: persistent_kanban`:

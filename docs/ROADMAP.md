@@ -11,12 +11,12 @@
 
 ## Phase 1 — Protocol and Schemas (Done)
 
-- [x] `packages/protocol/openapi.yaml` — Adapter API specification (16 `/studio/*` endpoints)
+- [x] `packages/protocol/openapi.yaml` — Adapter API specification with `/studio/*` route parity tests
 - [x] `packages/protocol/events.schema.json` — Normalized event types (15 events)
 - [x] `packages/protocol/theme.schema.json` — Theme pack TOML schema
 - [x] `packages/protocol/layout.schema.json` — Layout pack TOML schema
 - [x] `packages/protocol/plugin.schema.json` — Plugin manifest schema
-- [x] `packages/shared-types/src/` — TypeScript type definitions (events, theme, layout, plugin)
+- [x] `packages/shared-types/src/` — TypeScript type definitions (events, theme, layout, Kanban, runs, plugin)
 
 ## Phase 2 — Desktop Studio Skeleton (Done)
 
@@ -230,9 +230,21 @@
 - [x] Bottom panel realigned around Activity, Tool Events, Logs, Adapter Diagnostics
 - [x] No Kanban drag-and-drop, animated concept runtime, Hermes core changes, or Hermes state writes
 
+## Phase Product-1 — Run Ledger v1 and Useful Workflow Actions (Done)
+
+- [x] Studio-owned Run Ledger migration: `runs` and `run_events` in `studio.db`
+- [x] `/studio/runs/recent`, `/studio/runs/{run_id}`, and `/studio/runs/{run_id}/ledger`
+- [x] Streaming persistence wrapper stores normalized Studio event envelopes without breaking SSE
+- [x] Secret redaction for prompt previews and persisted event payloads
+- [x] Frontend Run Ledger loads recent runs, selects persisted ledgers, and merges live SSE events
+- [x] Timeline grouping for assistant messages and tool call event sequences
+- [x] Run detail shows status, duration, backend/model, linked session, warnings, and errors
+- [x] Workflow actions: create Kanban card from run, copy run summary, open related session
+- [x] Tests for migrations, persistence, route ordering, streaming fallback, frontend store behavior, and no Hermes `state.db` writes
+
 ## Next Core Layers
 
-- [ ] Persist Run Ledger history in Studio-owned `studio.db`
+- [x] Persist Run Ledger history in Studio-owned `studio.db`
 - [ ] Artifact Shelf capture and preview pipeline
 - [ ] Context Stack Inspector backed by safe local reads
 - [ ] Approval Center with real pending approval flows

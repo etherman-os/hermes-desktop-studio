@@ -219,6 +219,89 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /studio/runs/recent:
+    get:
+      summary: Recent persisted run ledger records
+      description: Recent Studio-owned run records from studio.db.
+      operationId: getRecentRuns
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Recent runs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunLedgerRecentResponse"
+        "401":
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Studio run history is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/runs/{run_id}:
+    get:
+      summary: Persisted run ledger record
+      description: Studio-owned run metadata by run id.
+      operationId: getRun
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunLedgerRun"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/runs/{run_id}/ledger:
+    get:
+      summary: Persisted run event ledger
+      description: Studio-owned run metadata and normalized Studio event envelopes.
+      operationId: getRunLedger
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run ledger
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunLedgerResponse"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /studio/runs/{run_id}/events:
     get:
       summary: SSE event stream for a run
@@ -968,6 +1051,119 @@ components:
       required:
         - run_id
         - status
+
+    RunLedgerRun:
+      type: object
+      properties:
+        id:
+          type: string
+        session_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - queued
+            - running
+            - completed
+            - failed
+            - cancelled
+            - stopping
+            - idle
+        title:
+          type: string
+          nullable: true
+        prompt_preview:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_ms:
+          type: integer
+          nullable: true
+        backend:
+          type: string
+        model:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+      required:
+        - id
+        - status
+        - started_at
+        - backend
+
+    RunLedgerEvent:
+      type: object
+      description: Persisted Studio event envelope for a run.
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum:
+            - adapter
+            - hermes
+            - studio
+        payload:
+          type: object
+          additionalProperties: true
+        run_id:
+          type: string
+        session_id:
+          type: string
+          nullable: true
+      required:
+        - id
+        - type
+        - timestamp
+        - source
+        - payload
+        - run_id
+
+    RunLedgerRecentResponse:
+      type: object
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: "#/components/schemas/RunLedgerRun"
+        total:
+          type: integer
+        history_available:
+          type: boolean
+      required:
+        - runs
+        - total
+        - history_available
+
+    RunLedgerResponse:
+      type: object
+      properties:
+        run:
+          $ref: "#/components/schemas/RunLedgerRun"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/RunLedgerEvent"
+        history_available:
+          type: boolean
+      required:
+        - run
+        - events
+        - history_available
 
     ModelConfig:
       type: object

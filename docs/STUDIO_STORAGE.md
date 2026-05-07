@@ -2,7 +2,7 @@
 
 Hermes Desktop Studio owns a local SQLite database named `studio.db`.
 
-This database is for Studio-only state such as preferences, Kanban workflow metadata, and local-only features. It is not Hermes Agent state, and it must never replace or mutate Hermes `state.db`.
+This database is for Studio-only state such as preferences, Kanban workflow metadata, run ledger history, and local-only features. It is not Hermes Agent state, and it must never replace or mutate Hermes `state.db`.
 
 ## Location
 
@@ -34,6 +34,11 @@ Migration `2: persistent_kanban` creates Studio-owned Kanban tables:
 - `cards`
 - `card_events`
 
+Migration `3: persistent_run_ledger` creates Studio-owned Run Ledger tables:
+
+- `runs`
+- `run_events`
+
 The migrations write metadata such as `schema_version`, `initialized_at`, and `storage_owner`.
 
 Migrations are idempotent. Reopening `studio.db` does not duplicate migration records.
@@ -54,7 +59,7 @@ Migrations are idempotent. Reopening `studio.db` does not duplicate migration re
 {
   "storage": {
     "available": true,
-    "schema_version": 2,
+    "schema_version": 3,
     "data_dir": "/home/user/.local/share/hermes-desktop-studio",
     "db_path": "/home/user/.local/share/hermes-desktop-studio/studio.db",
     "last_error": null
@@ -67,6 +72,12 @@ If the database is corrupt or cannot be opened, `storage.available` is `false` a
 ## Kanban Use
 
 Phase 6C Kanban persistence uses this storage foundation. Kanban tables remain Studio-owned unless Hermes exposes an official workflow persistence API later. See [STUDIO_KANBAN.md](STUDIO_KANBAN.md).
+
+## Run Ledger Use
+
+Phase Product-1 stores recent run metadata and normalized Studio event envelopes in `studio.db`. Prompt previews and event payloads are redacted before storage. Run history remains Studio-owned and must not write to Hermes `state.db`.
+
+Run Ledger tables support current local workflow actions and future artifacts, checkpoints, diffs, and result summaries.
 
 ## Troubleshooting
 

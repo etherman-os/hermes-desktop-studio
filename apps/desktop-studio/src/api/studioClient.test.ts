@@ -138,4 +138,36 @@ describe("studioClient protocol surface", () => {
       }),
     );
   });
+
+  it("uses /studio/runs/* for persisted run ledger calls", async () => {
+    vi.stubEnv("VITE_HERMES_STUDIO_ADAPTER_TOKEN", "dev-token");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ runs: [], total: 0, history_available: true }))
+      .mockResolvedValueOnce(jsonResponse({
+        run: {
+          id: "run-1",
+          session_id: null,
+          status: "completed",
+          title: "Run",
+          prompt_preview: "Run",
+          started_at: "2026-05-07T00:00:00Z",
+          completed_at: null,
+          duration_ms: null,
+          backend: "mock",
+          model: null,
+          error: null,
+        },
+        events: [],
+        history_available: true,
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = await loadClient();
+    await api.initializeAdapterAuth();
+    await api.getRecentRuns();
+    await api.getRunLedger("run-1");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:39191/studio/runs/recent?limit=50");
+    expect(fetchMock.mock.calls[1][0]).toBe("http://127.0.0.1:39191/studio/runs/run-1/ledger");
+  });
 });
