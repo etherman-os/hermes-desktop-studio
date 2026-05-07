@@ -20,7 +20,7 @@ Chat remains important, but it is one surface inside the workbench. It submits p
 | Sessions | Read-only view into Hermes session history. |
 | Artifact Shelf | Persistent Studio-owned landing zone for files, reports, previews, screenshots, test results, and log snapshots. |
 | Context Inspector | Read-only explanation surface for profile, model/provider config, workspace files, runtime state, run/session metadata, and related Studio work. |
-| Approval Center | Future risk gate for tool approvals and policy decisions. |
+| Approval Center | Read-only audit and visibility surface for tool approval requests, risk, decisions, and run/session links. |
 | Logs and Diagnostics | Adapter/Hermes observability without exposing Hermes internals to the frontend. |
 
 ## Kanban Positioning
@@ -45,12 +45,20 @@ Context Inspector explains why a run or session may have behaved the way it did.
 
 Phase Product-4 keeps this read-only. Workspace files are previewed with length limits and secret redaction. Missing files, unavailable Hermes sources, memory, and skills are shown as explicit unavailable states instead of silent blanks. No Hermes `state.db`, profile, config, memory, or skill file is written.
 
+## Approval Positioning
+
+Approval Center makes tool approval requests visible as part of the run record. It persists normalized `approval.requested` and `approval.resolved` Studio events into Studio-owned `studio.db`, shows pending/history, and links approvals back to runs and sessions.
+
+Phase Product-5 is intentionally read-only. It does not answer approvals, auto-approve tools, bypass Hermes approval mechanisms, or write Hermes state/config. Approve/deny routes return `501 Not Implemented` until an official verified Hermes approval response API is wired.
+
 ## Run Ledger Persistence
 
 Run Ledger history is Studio-owned. Recent run metadata and normalized Studio event envelopes are persisted in `studio.db` through:
 
 - `runs`: run id, linked session id, status, prompt preview, workspace path, start/end time, duration, backend, model, and redacted error text.
 - `run_events`: normalized Studio event envelope fields for each event.
+- `approvals`: redacted approval request/decision metadata linked to runs or sessions.
+- `approval_events`: normalized approval audit events.
 
 The adapter stores only Studio event envelopes after normalization. Payloads and prompt previews are redacted before persistence. Tokens, API keys, auth headers, and secret-like values must not be stored.
 
@@ -73,7 +81,7 @@ Hermes Desktop Studio should not copy the Hermes web dashboard feature-for-featu
 - Run Ledger history, workflow actions, and summary export
 - Artifact Shelf
 - Context Inspector with safe local reads
-- Approval Center
+- Approval Center read-only visibility and audit
 - Checkpoint Timeline
 - Preview Canvas
 - Process Cockpit

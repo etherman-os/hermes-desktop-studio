@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as api from "../api/studioClient";
+import { useApprovalStore } from "./approvalStore";
 import { useKanbanStore } from "./kanbanStore";
 import { useRunLedgerStore } from "./runLedgerStore";
 
@@ -86,7 +87,10 @@ export const useRunStore = create<RunState>((set, get) => ({
       set({ activeRunId: run.run_id, lastRunId: run.run_id });
 
       const ac = api.streamRunEvents(run.run_id, {
-        onEvent: (event) => useRunLedgerStore.getState().recordEvent(event),
+        onEvent: (event) => {
+          useRunLedgerStore.getState().recordEvent(event);
+          useApprovalStore.getState().recordEvent(event);
+        },
         onAssistantDelta: (p) => get().appendAssistantChunk(p.text),
         onToolStarted: (p) => get().addToolEvent(p.tool, "running"),
         onToolCompleted: (p) => get().addToolEvent(p.tool, "completed", p.duration_ms),

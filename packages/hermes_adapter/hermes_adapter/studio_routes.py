@@ -13,6 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from hermes_adapter.approval_repository import ApprovalRepository
 from hermes_adapter.backend_base import StudioBackend
 from hermes_adapter.context_repository import ContextRepository
 from hermes_adapter.run_ledger_repository import RunLedgerRepository
@@ -123,6 +124,31 @@ def _persist_run_event(run_id: str, event: dict[str, Any]) -> dict[str, Any] | N
     return None
 
 
+def _persist_approval_event(event: dict[str, Any]) -> dict[str, Any] | None:
+    event_type = event.get("type")
+    if event_type not in {"approval.requested", "approval.resolved"}:
+        return None
+    try:
+        repo = ApprovalRepository()
+        if event_type == "approval.requested":
+            repo.record_approval_requested(event)
+        else:
+            repo.record_approval_resolved(event)
+    except Exception as exc:
+        logger.warning("Approval persistence failed for %s: %s", event.get("id"), exc)
+        return make_studio_event(
+            "adapter.warning",
+            {
+                "code": "approval_persistence_unavailable",
+                "message": "Approval history is unavailable; live stream continues.",
+            },
+            source="adapter",
+            run_id=str(event.get("run_id")) if event.get("run_id") else None,
+            session_id=str(event.get("session_id")) if event.get("session_id") else None,
+        )
+    return None
+
+
 def _run_ledger_http_error(error: ValueError | RuntimeError) -> HTTPException:
     message = str(error)
     status_code = 404 if "not found" in message.lower() else 503
@@ -130,6 +156,16 @@ def _run_ledger_http_error(error: ValueError | RuntimeError) -> HTTPException:
     return HTTPException(
         status_code=status_code,
         detail=_error_detail(code, message, source="studio", retryable=status_code != 404),
+    )
+
+
+def _approval_http_error(error: ValueError | RuntimeError) -> HTTPException:
+    message = str(error)
+    status_code = 404 if "not found" in message.lower() else 400
+    code = "not_found" if status_code == 404 else "approval_error"
+    return HTTPException(
+        status_code=status_code,
+        detail=_error_detail(code, message, source="studio"),
     )
 
 
@@ -228,6 +264,82 @@ async def get_session(session_id: str, _token: None = Depends(require_token)) ->
 
 
 # ---------------------------------------------------------------------------
+# Approvals
+# ---------------------------------------------------------------------------
+
+
+@router.get("/approvals")
+async def list_approvals(
+    status: str | None = Query(None, description="Approval status filter"),
+    risk_level: str | None = Query(None, description="Risk level filter"),
+    run_id: str | None = Query(None, description="Run id filter"),
+    session_id: str | None = Query(None, description="Session id filter"),
+    limit: int = Query(100, ge=1, le=250),
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    try:
+        return ApprovalRepository().list_approvals(
+            status=status,
+            risk_level=risk_level,
+            run_id=run_id,
+            session_id=session_id,
+            limit=limit,
+        )
+    except (RuntimeError, ValueError) as e:
+        raise _approval_http_error(e) from e
+
+
+@router.get("/approvals/pending")
+async def list_pending_approvals(_token: None = Depends(require_token)) -> dict[str, Any]:
+    try:
+        return ApprovalRepository().list_pending_approvals()
+    except (RuntimeError, ValueError) as e:
+        raise _approval_http_error(e) from e
+
+
+@router.get("/approvals/{approval_id}")
+async def get_approval(approval_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    try:
+        return ApprovalRepository().get_approval(approval_id)
+    except (RuntimeError, ValueError) as e:
+        raise _approval_http_error(e) from e
+
+
+@router.post("/approvals/{approval_id}/approve")
+async def approve_approval(approval_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    raise HTTPException(
+        status_code=501,
+        detail=_error_detail(
+            "approval_response_unavailable",
+            f"Approval response is not wired yet for '{approval_id}'. This view is read-only.",
+            source="studio",
+            hint="Respond through the verified Hermes approval surface until adapter approval mutation is implemented.",
+        ),
+    )
+
+
+@router.post("/approvals/{approval_id}/deny")
+async def deny_approval(approval_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    raise HTTPException(
+        status_code=501,
+        detail=_error_detail(
+            "approval_response_unavailable",
+            f"Approval response is not wired yet for '{approval_id}'. This view is read-only.",
+            source="studio",
+            hint="Respond through the verified Hermes approval surface until adapter approval mutation is implemented.",
+        ),
+    )
+
+
+@router.get("/sessions/{session_id}/approvals")
+async def list_session_approvals(session_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    try:
+        return ApprovalRepository().list_approvals_for_session(session_id)
+    except (RuntimeError, ValueError) as e:
+        raise _approval_http_error(e) from e
+
+
+# ---------------------------------------------------------------------------
 # Runs
 # ---------------------------------------------------------------------------
 
@@ -297,19 +409,32 @@ async def get_run_ledger(run_id: str, _token: None = Depends(require_token)) -> 
         raise _run_ledger_http_error(e) from e
 
 
+@router.get("/runs/{run_id}/approvals")
+async def list_run_approvals(run_id: str, _token: None = Depends(require_token)) -> dict[str, Any]:
+    try:
+        return ApprovalRepository().list_approvals_for_run(run_id)
+    except (RuntimeError, ValueError) as e:
+        raise _approval_http_error(e) from e
+
+
 @router.get("/runs/{run_id}/events")
 async def stream_run_events(run_id: str, _token: None = Depends(require_token)) -> StreamingResponse:
     backend = await _get_backend()
 
     async def event_generator() -> AsyncIterator[str]:
-        warned_about_persistence = False
+        warned_about_run_persistence = False
+        warned_about_approval_persistence = False
         async for event in backend.stream_run_events(run_id):
             enriched = _event_with_run_id(event, run_id)
             warning = _persist_run_event(run_id, enriched)
+            approval_warning = _persist_approval_event(enriched)
             yield _sse(enriched)
-            if warning and not warned_about_persistence:
-                warned_about_persistence = True
+            if warning and not warned_about_run_persistence:
+                warned_about_run_persistence = True
                 yield _sse(warning)
+            if approval_warning and not warned_about_approval_persistence:
+                warned_about_approval_persistence = True
+                yield _sse(approval_warning)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

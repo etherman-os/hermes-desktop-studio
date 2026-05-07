@@ -1,5 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  Approval,
+  ApprovalDetail,
+  ApprovalListResponse,
+  ApprovalRiskLevel,
+  ApprovalStatus,
   Artifact,
   ArtifactCreateRequest,
   ArtifactDetail,
@@ -13,6 +18,11 @@ import type {
 } from "@hermes-studio/shared-types";
 
 export type {
+  Approval,
+  ApprovalDetail,
+  ApprovalListResponse,
+  ApprovalRiskLevel,
+  ApprovalStatus,
   Artifact,
   ArtifactCreateRequest,
   ArtifactDetail,
@@ -261,6 +271,53 @@ export async function getRun(runId: string) {
 
 export async function getRunLedger(runId: string) {
   return request<RunLedgerResponse>(`/studio/runs/${runId}/ledger`);
+}
+
+export interface ApprovalListParams {
+  status?: ApprovalStatus | string;
+  risk_level?: ApprovalRiskLevel | string;
+  run_id?: string;
+  session_id?: string;
+  limit?: number;
+}
+
+function approvalQuery(params?: ApprovalListParams) {
+  if (!params) return "";
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    searchParams.set(key, String(value));
+  }
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+}
+
+export async function listApprovals(params?: ApprovalListParams) {
+  return request<ApprovalListResponse>(`/studio/approvals${approvalQuery(params)}`);
+}
+
+export async function listPendingApprovals() {
+  return request<ApprovalListResponse>("/studio/approvals/pending");
+}
+
+export async function getApproval(approvalId: string) {
+  return request<ApprovalDetail>(`/studio/approvals/${approvalId}`);
+}
+
+export async function getRunApprovals(runId: string) {
+  return request<ApprovalListResponse>(`/studio/runs/${runId}/approvals`);
+}
+
+export async function getSessionApprovals(sessionId: string) {
+  return request<ApprovalListResponse>(`/studio/sessions/${sessionId}/approvals`);
+}
+
+export async function approveApproval(approvalId: string) {
+  return request<ApprovalDetail>(`/studio/approvals/${approvalId}/approve`, { method: "POST" });
+}
+
+export async function denyApproval(approvalId: string) {
+  return request<ApprovalDetail>(`/studio/approvals/${approvalId}/deny`, { method: "POST" });
 }
 
 export async function getLogs(source?: string, tail?: number) {
@@ -683,6 +740,7 @@ export interface RunEventHandlers {
   onToolProgress?: (payload: { tool: string; progress?: number; message?: string }) => void;
   onToolCompleted?: (payload: { tool: string; success: boolean; duration_ms?: number }) => void;
   onApprovalRequested?: (payload: { approval_id: string; tool: string; action: string }) => void;
+  onApprovalResolved?: (payload: { approval_id: string; decision: string }) => void;
   onRunCompleted?: (payload: { run_id: string; total_tokens?: number; duration_ms?: number }) => void;
   onRunFailed?: (payload: { run_id: string; message: string }) => void;
   onRunCancelled?: (payload: { run_id: string; reason?: string }) => void;
@@ -761,6 +819,9 @@ export function streamRunEvents(runId: string, handlers: RunEventHandlers): Abor
                 break;
               case "approval.requested":
                 handlers.onApprovalRequested?.(event.payload as { approval_id: string; tool: string; action: string });
+                break;
+              case "approval.resolved":
+                handlers.onApprovalResolved?.(event.payload as { approval_id: string; decision: string });
                 break;
               case "run.completed":
                 handlers.onRunCompleted?.(event.payload as { run_id: string; total_tokens?: number; duration_ms?: number });

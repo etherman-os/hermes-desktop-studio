@@ -218,6 +218,43 @@ _MIGRATIONS: tuple[_Migration, ...] = (
             "CREATE INDEX IF NOT EXISTS idx_artifact_events_artifact_created ON artifact_events(artifact_id, created_at)",
         ),
     ),
+    _Migration(
+        version=6,
+        name="persistent_approvals",
+        statements=(
+            """
+            CREATE TABLE IF NOT EXISTS approvals (
+              id TEXT PRIMARY KEY,
+              run_id TEXT,
+              session_id TEXT,
+              tool_name TEXT,
+              command TEXT,
+              risk_level TEXT NOT NULL,
+              status TEXT NOT NULL,
+              reason TEXT,
+              request_payload_json TEXT,
+              decision TEXT,
+              decided_at TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS approval_events (
+              id TEXT PRIMARY KEY,
+              approval_id TEXT NOT NULL REFERENCES approvals(id) ON DELETE CASCADE,
+              type TEXT NOT NULL,
+              payload_json TEXT NOT NULL,
+              created_at TEXT NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_approvals_status ON approvals(status)",
+            "CREATE INDEX IF NOT EXISTS idx_approvals_risk_level ON approvals(risk_level)",
+            "CREATE INDEX IF NOT EXISTS idx_approvals_run_id ON approvals(run_id)",
+            "CREATE INDEX IF NOT EXISTS idx_approvals_session_id ON approvals(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_approval_events_approval_created ON approval_events(approval_id, created_at)",
+        ),
+    ),
 )
 
 

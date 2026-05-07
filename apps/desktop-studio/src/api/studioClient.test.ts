@@ -234,7 +234,7 @@ describe("studioClient protocol surface", () => {
       memory: { available: false, items: [], warnings: [] },
       skills: { available: false, items: [], warnings: [] },
       context_files: { items: [], warnings: [] },
-      related: { artifacts: [], kanban_cards: [], sessions: [], runs: [] },
+      related: { artifacts: [], kanban_cards: [], approvals: [], sessions: [], runs: [] },
       warnings: [],
     };
     const fetchMock = vi.fn()
@@ -260,5 +260,45 @@ describe("studioClient protocol surface", () => {
     expect(fetchMock.mock.calls[1][0]).toBe("http://127.0.0.1:39191/studio/context/runs/run-1");
     expect(fetchMock.mock.calls[2][0]).toBe("http://127.0.0.1:39191/studio/context/sessions/s-1");
     expect(fetchMock.mock.calls[3][0]).toBe("http://127.0.0.1:39191/studio/context/workspaces/current?workspace_path=%2Fwork%2Frepo");
+  });
+
+  it("uses /studio/approvals/* for Approval Center calls", async () => {
+    vi.stubEnv("VITE_HERMES_STUDIO_ADAPTER_TOKEN", "dev-token");
+    const approval = {
+      id: "approval-1",
+      run_id: "run-1",
+      session_id: "s-1",
+      tool_name: "shell",
+      command: "pytest",
+      risk_level: "high",
+      status: "pending",
+      reason: "Runs tests",
+      decision: null,
+      decided_at: null,
+      created_at: "2026-05-07T00:00:00Z",
+      updated_at: "2026-05-07T00:00:00Z",
+    };
+    const detail = { ...approval, request_payload: { tool: "shell" }, events: [] };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ approvals: [approval], total: 1 }))
+      .mockResolvedValueOnce(jsonResponse({ approvals: [approval], total: 1 }))
+      .mockResolvedValueOnce(jsonResponse(detail))
+      .mockResolvedValueOnce(jsonResponse({ approvals: [approval], total: 1 }))
+      .mockResolvedValueOnce(jsonResponse({ approvals: [approval], total: 1 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = await loadClient();
+    await api.initializeAdapterAuth();
+    await api.listApprovals({ status: "pending", risk_level: "high" });
+    await api.listPendingApprovals();
+    await api.getApproval("approval-1");
+    await api.getRunApprovals("run-1");
+    await api.getSessionApprovals("s-1");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:39191/studio/approvals?status=pending&risk_level=high");
+    expect(fetchMock.mock.calls[1][0]).toBe("http://127.0.0.1:39191/studio/approvals/pending");
+    expect(fetchMock.mock.calls[2][0]).toBe("http://127.0.0.1:39191/studio/approvals/approval-1");
+    expect(fetchMock.mock.calls[3][0]).toBe("http://127.0.0.1:39191/studio/runs/run-1/approvals");
+    expect(fetchMock.mock.calls[4][0]).toBe("http://127.0.0.1:39191/studio/sessions/s-1/approvals");
   });
 });

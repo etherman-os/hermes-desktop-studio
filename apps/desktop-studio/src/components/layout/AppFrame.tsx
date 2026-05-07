@@ -3,6 +3,7 @@ import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { useUiStore } from "../../stores/uiStore";
 import { useAdapterStore } from "../../stores/adapterStore";
+import { useApprovalStore } from "../../stores/approvalStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { useProfileStore } from "../../stores/profileStore";
 import { useLogStore } from "../../stores/logStore";
@@ -29,6 +30,7 @@ export function AppFrame() {
   const loadProfiles = useProfileStore((s) => s.loadProfiles);
   const loadLogs = useLogStore((s) => s.loadRecent);
   const loadRecentRuns = useRunLedgerStore((s) => s.loadRecentRuns);
+  const loadPendingApprovals = useApprovalStore((s) => s.loadPendingApprovals);
   const initTheme = useThemeStore((s) => s.initTheme);
   const loadThemes = useThemeStore((s) => s.loadThemes);
   const loadWorkspace = useWorkspaceStore((s) => s.load);
@@ -43,9 +45,10 @@ export function AppFrame() {
         loadLogs();
         loadThemes();
         loadRecentRuns();
+        loadPendingApprovals();
       }
     });
-  }, [loadWorkspace, initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes, loadRecentRuns]);
+  }, [loadWorkspace, initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes, loadRecentRuns, loadPendingApprovals]);
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

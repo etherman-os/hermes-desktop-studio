@@ -23,7 +23,7 @@ export function RightPanel() {
       <ToolsSection run={run} />
       <div className="right-section">
         <div className="right-section-title">{label("approvals")}</div>
-        <ApprovalCenter />
+        <ApprovalCenter compact />
       </div>
       <div className="right-section">
         <div className="right-section-title">{label("memory")} {icon("memory")}</div>

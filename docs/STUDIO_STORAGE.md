@@ -2,7 +2,7 @@
 
 Hermes Desktop Studio owns a local SQLite database named `studio.db`.
 
-This database is for Studio-only state such as preferences, Kanban workflow metadata, run ledger history, artifact metadata, and local-only features. It is not Hermes Agent state, and it must never replace or mutate Hermes `state.db`.
+This database is for Studio-only state such as preferences, Kanban workflow metadata, run ledger history, artifact metadata, approval history, and local-only features. It is not Hermes Agent state, and it must never replace or mutate Hermes `state.db`.
 
 ## Location
 
@@ -48,6 +48,11 @@ Migration `5: persistent_artifacts` creates Studio-owned Artifact Shelf tables:
 - `artifacts`
 - `artifact_events`
 
+Migration `6: persistent_approvals` creates Studio-owned Approval Center tables:
+
+- `approvals`
+- `approval_events`
+
 The migrations write metadata such as `schema_version`, `initialized_at`, and `storage_owner`.
 
 Migrations are idempotent. Reopening `studio.db` does not duplicate migration records.
@@ -68,7 +73,7 @@ Migrations are idempotent. Reopening `studio.db` does not duplicate migration re
 {
   "storage": {
     "available": true,
-    "schema_version": 5,
+    "schema_version": 6,
     "data_dir": "/home/user/.local/share/hermes-desktop-studio",
     "db_path": "/home/user/.local/share/hermes-desktop-studio/studio.db",
     "last_error": null
@@ -95,6 +100,10 @@ Phase Product-3 stores artifact metadata and small text outputs in `studio.db`. 
 ## Context Inspector Use
 
 Phase Product-4 reads Studio-owned run, artifact, and Kanban metadata from `studio.db` to build context snapshots. It does not add write tables of its own in v1 and does not mutate Hermes `state.db`, Hermes config, memory, or skills. Workspace file previews are read directly from the selected workspace with strict allowlists, length limits, and redaction. See [CONTEXT_INSPECTOR.md](CONTEXT_INSPECTOR.md).
+
+## Approval Center Use
+
+Phase Product-5 stores redacted approval request/decision metadata in `studio.db` when normalized run stream events include `approval.requested` or `approval.resolved`. Approval Center is read-only in v1 and does not answer approvals, bypass Hermes approval mechanisms, or write Hermes `state.db`. See [APPROVAL_CENTER.md](APPROVAL_CENTER.md).
 
 ## Troubleshooting
 

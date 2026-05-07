@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from hermes_adapter.approval_repository import ApprovalRepository
 from hermes_adapter.artifact_repository import ArtifactRepository
 from hermes_adapter.backend_base import StudioBackend
 from hermes_adapter.kanban_repository import KanbanRepository
@@ -51,6 +52,7 @@ class ContextRepository:
         self._runs = RunLedgerRepository(self._storage)
         self._artifacts = ArtifactRepository(self._storage)
         self._kanban = KanbanRepository(self._storage)
+        self._approvals = ApprovalRepository(self._storage)
 
     async def current(
         self,
@@ -232,19 +234,23 @@ class ContextRepository:
         session_id = str(session["id"]) if session and session.get("id") else None
         artifacts: list[dict[str, Any]] = []
         cards: list[dict[str, Any]] = []
+        approvals: list[dict[str, Any]] = []
         try:
             if run_id:
                 artifacts.extend(self._artifacts.list_artifacts(run_id=run_id, limit=50)["artifacts"])
                 cards.extend(self._kanban.find_cards(run_id=run_id, limit=50))
+                approvals.extend(self._approvals.list_approvals_for_run(run_id)["approvals"])
             if session_id:
                 artifacts.extend(self._artifacts.list_artifacts(session_id=session_id, limit=50)["artifacts"])
                 cards.extend(self._kanban.find_cards(session_id=session_id, limit=50))
+                approvals.extend(self._approvals.list_approvals_for_session(session_id)["approvals"])
         except Exception as exc:
             warnings.append(f"Related workflow context unavailable: {exc}")
 
         return {
             "artifacts": self._dedupe_by_id(artifacts),
             "kanban_cards": self._dedupe_by_id(cards),
+            "approvals": self._dedupe_by_id(approvals),
             "sessions": [session] if session else [],
             "runs": self._dedupe_by_id(related_runs),
         }

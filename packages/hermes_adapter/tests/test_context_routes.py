@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from hermes_adapter import studio_routes
+from hermes_adapter.approval_repository import ApprovalRepository
 from hermes_adapter.artifact_repository import ArtifactRepository
 from hermes_adapter.kanban_repository import KanbanRepository
 from hermes_adapter.run_ledger_repository import RunLedgerRepository
@@ -70,6 +71,17 @@ def test_run_context_route_includes_run_metadata_and_related_work(client: TestCl
     )
     ArtifactRepository(storage).create_artifact({"title": "Route artifact", "type": "markdown", "run_id": "route-run"})
     KanbanRepository(storage).create_card({"title": "Route card", "run_id": "route-run"})
+    ApprovalRepository(storage).record_approval_requested(
+        {
+            "id": "evt-route-approval",
+            "type": "approval.requested",
+            "run_id": "route-run",
+            "session_id": "s-1",
+            "timestamp": "2026-05-07T00:00:00Z",
+            "source": "adapter",
+            "payload": {"approval_id": "route-approval", "tool": "shell", "action": "pytest", "risk_level": "high"},
+        }
+    )
 
     resp = client.get("/studio/context/runs/route-run", headers=HEADERS)
 
@@ -81,6 +93,7 @@ def test_run_context_route_includes_run_metadata_and_related_work(client: TestCl
     assert data["session"]["id"] == "s-1"
     assert data["related"]["artifacts"][0]["title"] == "Route artifact"
     assert data["related"]["kanban_cards"][0]["title"] == "Route card"
+    assert data["related"]["approvals"][0]["id"] == "route-approval"
 
 
 def test_session_context_route_includes_session_and_related_runs(client: TestClient) -> None:

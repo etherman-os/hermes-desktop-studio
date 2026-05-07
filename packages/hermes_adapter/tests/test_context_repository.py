@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from hermes_adapter.approval_repository import ApprovalRepository
 from hermes_adapter.artifact_repository import ArtifactRepository
 from hermes_adapter.context_repository import ContextRepository
 from hermes_adapter.kanban_repository import KanbanRepository
@@ -46,6 +47,17 @@ async def test_run_context_includes_run_related_artifacts_and_cards(tmp_path: Pa
     )
     ArtifactRepository(storage).create_artifact({"title": "Run report", "type": "markdown", "run_id": "run-1"})
     KanbanRepository(storage).create_card({"title": "Follow up", "run_id": "run-1"})
+    ApprovalRepository(storage).record_approval_requested(
+        {
+            "id": "evt-approval",
+            "type": "approval.requested",
+            "run_id": "run-1",
+            "session_id": "s-1",
+            "timestamp": "2026-05-07T00:00:00Z",
+            "source": "adapter",
+            "payload": {"approval_id": "approval-1", "tool": "shell", "action": "pytest", "risk_level": "medium"},
+        }
+    )
 
     snapshot = await ContextRepository(storage).for_run(MockBackend(), {"backend_mode": "mock"}, "run-1")
 
@@ -54,6 +66,7 @@ async def test_run_context_includes_run_related_artifacts_and_cards(tmp_path: Pa
     assert snapshot["workspace"]["name"] == "workspace"
     assert snapshot["related"]["artifacts"][0]["title"] == "Run report"
     assert snapshot["related"]["kanban_cards"][0]["title"] == "Follow up"
+    assert snapshot["related"]["approvals"][0]["id"] == "approval-1"
 
 
 @pytest.mark.asyncio

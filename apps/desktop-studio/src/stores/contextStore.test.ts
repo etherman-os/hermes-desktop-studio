@@ -37,7 +37,7 @@ const snapshot: ContextSnapshot = {
     ],
     warnings: [],
   },
-  related: { artifacts: [], kanban_cards: [], sessions: [], runs: [] },
+  related: { artifacts: [], kanban_cards: [], approvals: [], sessions: [], runs: [] },
   warnings: [],
 };
 

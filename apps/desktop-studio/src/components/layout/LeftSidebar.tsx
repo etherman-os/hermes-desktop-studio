@@ -6,6 +6,7 @@ import { useAdapterStore } from "../../stores/adapterStore";
 import { useRunLedgerStore } from "../../stores/runLedgerStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useUiStore } from "../../stores/uiStore";
+import { ApprovalCenter } from "../approvals/ApprovalCenter";
 import { ContextInspector } from "../context/ContextInspector";
 import { RuntimeStatus } from "../runtime/RuntimeStatus";
 
@@ -24,12 +25,13 @@ export function LeftSidebar() {
         {section === "sessions" && <SessionsList />}
         {section === "artifacts" && <ArtifactsSection />}
         {section === "context" && <ContextSection />}
+        {section === "approvals" && <ApprovalsSection />}
         {section === "logs" && <LogsSection />}
         {section === "profiles" && <ProfilesList />}
         {section === "search" && <SearchSection />}
         {section === "theme_gallery" && <ThemeGallerySection />}
         {section === "settings" && <SettingsSection />}
-        {!["runs", "chat", "board", "sessions", "artifacts", "context", "logs", "profiles", "search", "theme_gallery", "settings"].includes(section) && (
+        {!["runs", "chat", "board", "sessions", "artifacts", "context", "approvals", "logs", "profiles", "search", "theme_gallery", "settings"].includes(section) && (
           <div className="empty-state">
             <div className="empty-state-icon">{icon(section)}</div>
             <div className="empty-state-text">{label(section)}</div>
@@ -116,6 +118,14 @@ function ContextSection() {
   return (
     <div className="sidebar-embedded">
       <ContextInspector />
+    </div>
+  );
+}
+
+function ApprovalsSection() {
+  return (
+    <div className="sidebar-embedded">
+      <ApprovalCenter />
     </div>
   );
 }

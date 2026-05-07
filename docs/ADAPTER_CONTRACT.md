@@ -35,7 +35,7 @@ Both include `storage` diagnostics for Studio-owned `studio.db`:
 {
   "storage": {
     "available": true,
-    "schema_version": 5,
+    "schema_version": 6,
     "data_dir": "/home/user/.local/share/hermes-desktop-studio",
     "db_path": "/home/user/.local/share/hermes-desktop-studio/studio.db",
     "last_error": null
@@ -51,10 +51,17 @@ Both include `storage` diagnostics for Studio-owned `studio.db`:
 - `POST /studio/profiles/activate`
 - `GET /studio/sessions`
 - `GET /studio/sessions/{session_id}`
+- `GET /studio/sessions/{session_id}/approvals`
+- `GET /studio/approvals`
+- `GET /studio/approvals/pending`
+- `GET /studio/approvals/{approval_id}`
+- `POST /studio/approvals/{approval_id}/approve`
+- `POST /studio/approvals/{approval_id}/deny`
 - `POST /studio/runs`
 - `GET /studio/runs/recent`
 - `GET /studio/runs/{run_id}`
 - `GET /studio/runs/{run_id}/ledger`
+- `GET /studio/runs/{run_id}/approvals`
 - `GET /studio/runs/{run_id}/events`
 - `POST /studio/runs/{run_id}/stop`
 - `GET /studio/logs`
@@ -125,6 +132,8 @@ Artifact persistence stores Studio-owned metadata and bounded text outputs in `s
 
 Context Inspector responses aggregate read-only Studio and Hermes-adjacent metadata under `/studio/context/*`. Workspace file discovery is allowlist-based, length-limited, redacted, and does not follow symlinks or path traversal. The context surface must not write Hermes state, profiles, config, memory, or skills.
 
+Approval Center responses expose Studio-owned approval visibility under `/studio/approvals/*` and scoped run/session routes. The approve/deny paths return `501 Not Implemented` until a verified Hermes approval response API is wired. Approval Center must not answer approvals, auto-approve tools, bypass Hermes approval mechanisms, or write Hermes state/config.
+
 ## Error Envelope
 
 All protected endpoint errors use:
@@ -153,3 +162,4 @@ All protected endpoint errors use:
 - Studio-owned Kanban writes go only to `studio.db`; session/run links store IDs only.
 - Studio-owned Artifact writes go only to `studio.db`; file artifacts store references only.
 - Context Inspector reads Studio-owned metadata and allowlisted workspace files only; it does not mutate Hermes or Studio workflow records.
+- Approval Center writes go only to `studio.db`; approval response actions remain disabled until a safe official Hermes API is verified.

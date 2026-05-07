@@ -178,7 +178,7 @@ Desktop frontend code must not call `/shell/*`.
 
 ### Studio-owned Storage
 
-Hermes Desktop Studio owns a local SQLite database named `studio.db` for Studio preferences, Kanban workflow metadata, Run Ledger history, Artifact Shelf metadata, and local-only features. It is separate from Hermes Agent `state.db` and must not store secrets.
+Hermes Desktop Studio owns a local SQLite database named `studio.db` for Studio preferences, Kanban workflow metadata, Run Ledger history, Artifact Shelf metadata, Approval Center history, and local-only features. It is separate from Hermes Agent `state.db` and must not store secrets.
 
 Path priority:
 - `HERMES_STUDIO_HOME`
@@ -197,11 +197,15 @@ Artifact Shelf data uses Studio-owned `studio.db`, never Hermes `state.db`. Arti
 
 ### Context Inspector
 
-Context Inspector is a read-only aggregation surface for active profile, model/provider config, workspace files, run/session metadata, related artifacts, related Kanban cards, and runtime status. It reads only a small allowlist of workspace files, redacts obvious secrets, skips unsafe paths/symlinks, and never writes Hermes `state.db` or Hermes config files. See [docs/CONTEXT_INSPECTOR.md](docs/CONTEXT_INSPECTOR.md).
+Context Inspector is a read-only aggregation surface for active profile, model/provider config, workspace files, run/session metadata, related artifacts, related Kanban cards, related approvals, and runtime status. It reads only a small allowlist of workspace files, redacts obvious secrets, skips unsafe paths/symlinks, and never writes Hermes `state.db` or Hermes config files. See [docs/CONTEXT_INSPECTOR.md](docs/CONTEXT_INSPECTOR.md).
+
+### Approval Center
+
+Approval Center stores redacted Studio-owned approval visibility and history in `studio.db` when run streams emit `approval.requested` or `approval.resolved`. It shows pending/history, risk/status, run/session links, and request payload previews. It is read-only in v1: approve/deny routes return `501` until a verified Hermes approval response API is wired. See [docs/APPROVAL_CENTER.md](docs/APPROVAL_CENTER.md).
 
 ### Run-Centered Workbench
 
-The Run Ledger is the default desktop surface. It tracks live runs from the Studio SSE stream and persists recent run metadata/events in Studio-owned `studio.db`. Selecting a run shows the prompt preview, status, backend/model, duration, grouped assistant/tool events, warnings/errors, and selected event payloads. Runs can create linked Kanban cards and persistent artifacts. Checkpoints and diffs remain future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
+The Run Ledger is the default desktop surface. It tracks live runs from the Studio SSE stream and persists recent run metadata/events in Studio-owned `studio.db`. Selecting a run shows the prompt preview, status, backend/model, duration, grouped assistant/tool/approval events, warnings/errors, and selected event payloads. Runs can create linked Kanban cards and persistent artifacts, and open run-scoped approvals. Checkpoints and diffs remain future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
 
 ### Backend Modes
 

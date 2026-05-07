@@ -137,8 +137,15 @@ export function ContextInspector() {
               <RelatedCount label="Sessions" count={snapshot.related.sessions.length} />
               <RelatedCount label="Cards" count={snapshot.related.kanban_cards.length} />
               <RelatedCount label="Artifacts" count={snapshot.related.artifacts.length} />
+              <RelatedCount label="Approvals" count={snapshot.related.approvals.length} />
             </div>
             <div className="context-link-list">
+              {snapshot.related.approvals.slice(0, 4).map((approval) => (
+                <div key={approval.id} className="context-link-row">
+                  <span>{approval.tool_name ?? approval.command ?? approval.id}</span>
+                  <span>{approval.status}</span>
+                </div>
+              ))}
               {snapshot.related.artifacts.slice(0, 4).map((artifact) => (
                 <div key={artifact.id} className="context-link-row">
                   <span>{artifact.title}</span>

@@ -1,5 +1,6 @@
 import { useThemeStore } from "../../stores/themeStore";
 import { useAdapterStore } from "../../stores/adapterStore";
+import { useApprovalStore } from "../../stores/approvalStore";
 import { useProfileStore } from "../../stores/profileStore";
 import { useRunLedgerStore } from "../../stores/runLedgerStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
@@ -16,6 +17,7 @@ export function StatusBar() {
   const runs = useRunLedgerStore((s) => s.runs);
   const currentRunId = useRunLedgerStore((s) => s.currentRunId);
   const selectedWorkspace = useWorkspaceStore((s) => s.selectedWorkspace);
+  const pendingApprovals = useApprovalStore((s) => s.pending.length);
 
   const statusColor = connected ? "var(--app-ok)" : checking ? "var(--app-warn)" : "var(--app-danger)";
   const statusText = connected ? "Connected" : checking ? "Checking..." : authError ? "Auth token missing" : "Disconnected";
@@ -45,6 +47,11 @@ export function StatusBar() {
       <div className="status-item">
         <span>{run ? `Run: ${run.status}` : "Run: idle"}</span>
       </div>
+      {pendingApprovals > 0 && (
+        <div className="status-item status-attention">
+          <span>Approvals: {pendingApprovals} pending</span>
+        </div>
+      )}
       <div style={{ flex: 1 }} />
       <div className="status-item">
         <span className="status-dot" style={{ background: statusColor }} />

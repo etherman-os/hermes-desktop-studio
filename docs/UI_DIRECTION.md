@@ -16,7 +16,7 @@ The desktop UI should feel like a compact operations workbench.
 - Run Ledger: current/last run, event timeline, selected event payload.
 - Artifact Shelf: categories for files, markdown, screenshots, tests, log snapshots, HTML previews, and reports.
 - Context Inspector: read-only active profile, model/provider, workspace files, memory/skills availability, runtime warnings, and related runs/sessions/cards/artifacts.
-- Approval Center: pending and recent approval events.
+- Approval Center: pending/history, risk/status, run/session links, and read-only audit of approval events.
 - Checkpoint Timeline and Preview Canvas come later.
 
 ## Guardrails
@@ -32,7 +32,7 @@ The desktop UI should feel like a compact operations workbench.
 The shell should read as a desktop workbench:
 
 - Top bar: app identity, current workspace, New Run, runtime chips, command palette.
-- Activity rail: stable activities for Runs, Chat, Board, Sessions, Artifacts, Context, Logs, Themes, Settings.
+- Activity rail: stable activities for Runs, Chat, Board, Sessions, Artifacts, Context, Approvals, Logs, Themes, Settings.
 - Contextual sidebar: activity-specific navigation and actions.
 - Center workbench: Run Ledger remains primary, Chat is one surface.
 - Right inspector: runtime, selected run, model, tools, approvals, memory, context.

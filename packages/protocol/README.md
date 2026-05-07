@@ -30,7 +30,7 @@ The theme system is generic and semantic-slot-based. No concept (Minecraft, Mini
 
 ## Studio Storage
 
-Health and bootstrap responses include Studio-owned storage status for `studio.db`. This database is separate from Hermes Agent `state.db` and is intended for Studio preferences, workflow metadata, Kanban, Artifact Shelf metadata, and local-only features. It must not store secrets.
+Health and bootstrap responses include Studio-owned storage status for `studio.db`. This database is separate from Hermes Agent `state.db` and is intended for Studio preferences, workflow metadata, Kanban, Artifact Shelf metadata, Approval Center metadata, and local-only features. It must not store secrets.
 
 ## Kanban Protocol
 
@@ -42,7 +42,11 @@ Persistent Artifact Shelf calls live under `/studio/artifacts/*` and use Studio-
 
 ## Context Protocol
 
-Read-only Context Inspector calls live under `/studio/context/*`. Context snapshots aggregate active profile, model/provider config, runtime/storage status, workspace metadata, run/session metadata, related Studio artifacts/cards/runs/sessions, and small allowlisted workspace file previews. Context routes must not mutate Hermes `state.db`, Hermes config/profile files, Studio workflow records, memory, or skills.
+Read-only Context Inspector calls live under `/studio/context/*`. Context snapshots aggregate active profile, model/provider config, runtime/storage status, workspace metadata, run/session metadata, related Studio artifacts/cards/approvals/runs/sessions, and small allowlisted workspace file previews. Context routes must not mutate Hermes `state.db`, Hermes config/profile files, Studio workflow records, memory, or skills.
+
+## Approval Protocol
+
+Approval Center calls live under `/studio/approvals/*` plus run/session scoped routes. Approval records are Studio-owned visibility/audit metadata captured from `approval.requested` and `approval.resolved` Studio events. Approve/deny response routes return `501 Not Implemented` until a verified official Hermes approval response API is wired.
 
 ## Plugin Types
 

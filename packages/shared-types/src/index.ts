@@ -97,6 +97,15 @@ export type {
 } from "./artifacts";
 
 export type {
+  ApprovalStatus,
+  ApprovalRiskLevel,
+  Approval,
+  ApprovalEvent,
+  ApprovalDetail,
+  ApprovalListResponse,
+} from "./approvals";
+
+export type {
   ContextScope,
   ContextWorkspace,
   ContextCollection,

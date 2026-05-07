@@ -1,5 +1,6 @@
 import React from "react";
 import type { StudioEvent } from "../../api/studioClient";
+import { useApprovalStore } from "../../stores/approvalStore";
 import { useArtifactStore } from "../../stores/artifactStore";
 import { useContextStore } from "../../stores/contextStore";
 import { useLayoutStore } from "../../stores/layoutStore";
@@ -56,6 +57,11 @@ function summarizeEvent(event: StudioEvent) {
 function eventTone(event: StudioEvent): TimelineEntry["tone"] {
   if (event.type === "run.failed") return "error";
   if (event.type === "adapter.warning" || event.type === "run.cancelled") return "warning";
+  if (event.type === "approval.requested") return "warning";
+  if (event.type === "approval.resolved") {
+    const decision = String(event.payload.decision ?? "");
+    return decision === "approved" ? "success" : "warning";
+  }
   if (event.type === "run.completed" || (event.type === "tool.completed" && event.payload.success !== false)) return "success";
   if (event.type === "tool.completed" && event.payload.success === false) return "error";
   return "normal";
@@ -231,6 +237,9 @@ export function RunLedger() {
   const artifactMessage = useArtifactStore((s) => s.actionMessage);
   const artifactError = useArtifactStore((s) => s.error);
   const loadRunContext = useContextStore((s) => s.loadRunContext);
+  const approvals = useApprovalStore((s) => s.approvals);
+  const pendingApprovals = useApprovalStore((s) => s.pending);
+  const loadApprovalsForRun = useApprovalStore((s) => s.loadApprovalsForRun);
   const logLines = useLogStore((s) => s.lines);
   const loadRecentLogs = useLogStore((s) => s.loadRecent);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
@@ -243,6 +252,17 @@ export function RunLedger() {
     ?? null;
   const requestedLedgerIds = React.useRef(new Set<string>());
   const timeline = React.useMemo(() => buildTimeline(run?.events ?? []), [run?.events]);
+  const approvalEvents = React.useMemo(
+    () => (run?.events ?? []).filter((event) => event.type === "approval.requested" || event.type === "approval.resolved"),
+    [run?.events],
+  );
+  const runApprovals = React.useMemo(() => {
+    if (!run) return [];
+    const stored = approvals.filter((approval) => approval.run_id === run.runId);
+    const pending = pendingApprovals.filter((approval) => approval.run_id === run.runId);
+    const byId = new Map([...stored, ...pending].map((approval) => [approval.id, approval]));
+    return Array.from(byId.values());
+  }, [approvals, pendingApprovals, run]);
   const selected = timeline.find((entry) => entry.id === selectedEventId)
     ?? timeline.find((entry) => entry.events.some((event) => event.id === selectedEventId))
     ?? timeline[0]
@@ -310,6 +330,13 @@ export function RunLedger() {
     await loadRunContext(run.runId);
   }
 
+  async function openRunApprovals() {
+    if (!run) return;
+    setSidebarSection("approvals");
+    showSidebar();
+    await loadApprovalsForRun(run.runId);
+  }
+
   if (!run && !loading) {
     return (
       <div className="workbench-empty">
@@ -335,6 +362,7 @@ export function RunLedger() {
           {run && <button className="tool-button" onClick={() => void createRunSummaryArtifact("summary")} disabled={artifactSaving}>Create Artifact from Run</button>}
           {run && <button className="tool-button" onClick={() => void createRunSummaryArtifact("report")} disabled={artifactSaving}>Create Markdown Report</button>}
           {run && <button className="tool-button" onClick={() => void createLogSnapshotArtifact()} disabled={artifactSaving}>Create Log Snapshot</button>}
+          {run && <button className="tool-button" onClick={() => void openRunApprovals()}>Open Approvals</button>}
           {run && <button className="tool-button" onClick={() => void inspectRunContext()}>Inspect Context</button>}
           {run && <button className="tool-button" onClick={() => void handleCopySummary()}>Copy Run Summary</button>}
           {run?.sessionId && <button className="tool-button" onClick={openSession}>Open Related Session</button>}
@@ -351,6 +379,7 @@ export function RunLedger() {
           <span>Model {run.model ?? "unknown"}</span>
           <span>Workspace {run.workspacePath ?? "none"}</span>
           <span>{run.events.length} events</span>
+          <span>{Math.max(runApprovals.length, approvalEvents.length)} approvals</span>
           <span>{duration(run)}</span>
           <span>Started {formatTime(run.startedAt)}</span>
           {run.completedAt && <span>Ended {formatTime(run.completedAt)}</span>}

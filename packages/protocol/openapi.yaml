@@ -189,6 +189,154 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /studio/sessions/{session_id}/approvals:
+    get:
+      summary: List approvals for a session
+      description: Studio-owned approval history filtered by session id.
+      operationId: getSessionApprovals
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session approvals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalListResponse"
+        "401":
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/approvals:
+    get:
+      summary: List Studio-owned approval records
+      description: Approval visibility and history stored in studio.db.
+      operationId: listApprovals
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ApprovalStatus"
+        - name: risk_level
+          in: query
+          schema:
+            $ref: "#/components/schemas/ApprovalRiskLevel"
+        - name: run_id
+          in: query
+          schema:
+            type: string
+        - name: session_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 100
+      responses:
+        "200":
+          description: Approval records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalListResponse"
+        "401":
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/approvals/pending:
+    get:
+      summary: List pending approvals
+      operationId: listPendingApprovals
+      responses:
+        "200":
+          description: Pending approval records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalListResponse"
+        "401":
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/approvals/{approval_id}:
+    get:
+      summary: Approval detail
+      operationId: getApproval
+      parameters:
+        - name: approval_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approval detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalDetail"
+        "404":
+          description: Approval not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/approvals/{approval_id}/approve:
+    post:
+      summary: Attempt to approve an approval request
+      description: Returns 501 until a verified Hermes approval response API is wired.
+      operationId: approveApproval
+      parameters:
+        - name: approval_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "501":
+          description: Approval response not implemented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/approvals/{approval_id}/deny:
+    post:
+      summary: Attempt to deny an approval request
+      description: Returns 501 until a verified Hermes approval response API is wired.
+      operationId: denyApproval
+      parameters:
+        - name: approval_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "501":
+          description: Approval response not implemented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /studio/runs:
     post:
       summary: Start a new run
@@ -297,6 +445,31 @@ paths:
                 $ref: "#/components/schemas/RunLedgerResponse"
         "404":
           description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/runs/{run_id}/approvals:
+    get:
+      summary: List approvals for a run
+      description: Studio-owned approval history filtered by run id.
+      operationId: getRunApprovals
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run approvals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalListResponse"
+        "401":
+          description: Invalid or missing token
           content:
             application/json:
               schema:
@@ -1537,6 +1710,118 @@ components:
         - events
         - history_available
 
+    ApprovalStatus:
+      type: string
+      enum:
+        - pending
+        - approved
+        - denied
+        - expired
+        - cancelled
+        - unknown
+
+    ApprovalRiskLevel:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+        - unknown
+
+    Approval:
+      type: object
+      properties:
+        id:
+          type: string
+        run_id:
+          type: string
+          nullable: true
+        session_id:
+          type: string
+          nullable: true
+        tool_name:
+          type: string
+          nullable: true
+        command:
+          type: string
+          nullable: true
+        risk_level:
+          $ref: "#/components/schemas/ApprovalRiskLevel"
+        status:
+          $ref: "#/components/schemas/ApprovalStatus"
+        reason:
+          type: string
+          nullable: true
+        decision:
+          type: string
+          nullable: true
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - risk_level
+        - status
+        - created_at
+        - updated_at
+
+    ApprovalEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        approval_id:
+          type: string
+        type:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - approval_id
+        - type
+        - payload
+        - created_at
+
+    ApprovalDetail:
+      allOf:
+        - $ref: "#/components/schemas/Approval"
+        - type: object
+          properties:
+            request_payload:
+              type: object
+              nullable: true
+              additionalProperties: true
+            events:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApprovalEvent"
+
+    ApprovalListResponse:
+      type: object
+      properties:
+        approvals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Approval"
+        total:
+          type: integer
+      required:
+        - approvals
+        - total
+
     ModelConfig:
       type: object
       properties:
@@ -2147,6 +2432,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/KanbanCard"
+        approvals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Approval"
         sessions:
           type: array
           items:
@@ -2159,6 +2448,7 @@ components:
       required:
         - artifacts
         - kanban_cards
+        - approvals
         - sessions
         - runs
 

@@ -1,3 +1,4 @@
+import type { Approval } from "./approvals";
 import type { Artifact } from "./artifacts";
 import type { KanbanCard } from "./kanban";
 import type { RunLedgerRun } from "./runs";
@@ -33,6 +34,7 @@ export interface ContextFiles {
 export interface ContextRelated {
   artifacts: Artifact[];
   kanban_cards: KanbanCard[];
+  approvals: Approval[];
   sessions: Record<string, unknown>[];
   runs: RunLedgerRun[];
 }

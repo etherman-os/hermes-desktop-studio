@@ -19,6 +19,7 @@ The normalized context snapshot includes:
 - read-only memory and skills availability states
 - related artifacts
 - related Kanban cards
+- related approvals
 - related runs and sessions
 - warnings for unavailable sources, missing workspace data, redaction, or skipped unsafe files
 
@@ -64,6 +65,7 @@ Context snapshots use Studio-owned stores to show related work:
 - Run metadata and recent runs come from the Run Ledger tables in `studio.db`.
 - Artifacts come from the Artifact Shelf tables in `studio.db`.
 - Kanban cards come from the Board tables in `studio.db`.
+- Approvals come from the Approval Center tables in `studio.db`.
 - Sessions come from the existing adapter session surface, which observes Hermes state read-only when real Hermes is available.
 
 ## Security
@@ -84,12 +86,12 @@ The Context activity opens the Context Inspector in the left sidebar. It can loa
 - selected run context from Run Ledger
 - selected session context from Sessions
 
-Run Ledger, Sessions, Artifact Shelf, and linked Board cards can open the inspector scoped to related run/session context.
+Run Ledger, Sessions, Artifact Shelf, linked Board cards, and Approval Center entries can open or contribute to run/session scoped context.
 
 ## Future Work
 
 - durable context snapshots captured at run start
 - Memory Lab read-only drilldown, then editor only through safe official Hermes APIs
 - Skill Forge read-only discovery, then editor only through safe official Hermes APIs
-- richer relationship graph for runs, sessions, artifacts, and cards
+- richer relationship graph for runs, sessions, artifacts, cards, and approvals
 - checkpoint/diff context once those surfaces exist

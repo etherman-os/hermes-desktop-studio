@@ -289,13 +289,27 @@
 - [x] Run Ledger, Sessions, Artifact Shelf, and linked Board cards can open scoped context
 - [x] No Hermes core changes, no Hermes `state.db` writes, no Hermes config writes, and no memory/skill editor work
 
+## Phase Product-5 — Approval Center v1 (Done)
+
+- [x] Studio-owned Approval Center migration: `approvals` and `approval_events` in `studio.db`
+- [x] `/studio/approvals/*`, `/studio/runs/{run_id}/approvals`, and `/studio/sessions/{session_id}/approvals` protocol paths with OpenAPI route parity coverage
+- [x] Approval repository with list/detail/pending/run/session filters and redacted request payload storage
+- [x] Run stream capture for `approval.requested` and `approval.resolved` without breaking SSE on persistence failure
+- [x] Approval response routes return `501 Not Implemented` until a verified Hermes approval response API is wired
+- [x] Approval Center frontend store and UI for pending/history, filters, risk/status, detail payload preview, and run/session links
+- [x] Run Ledger highlights approval events and can open approvals for the selected run
+- [x] Context Inspector includes related approvals for selected run/session context
+- [x] Activity rail and status bar show pending approval counts without noisy prompts
+- [x] No Hermes core changes, no Hermes `state.db` writes, no Hermes config writes, and no approval bypass
+
 ## Next Core Layers
 
 - [x] Persist Run Ledger history in Studio-owned `studio.db`
 - [x] Artifact Shelf v1 with persistent metadata and safe text/reference viewer
 - [x] Context Inspector v1 with safe read-only local aggregation
+- [x] Approval Center v1 read-only visibility and audit
 - [ ] Artifact extraction from real run outputs and sanitized Preview Canvas
-- [ ] Approval Center with real pending approval flows
+- [ ] Real approval response wiring after verified Hermes API support
 - [ ] Checkpoint Timeline
 - [ ] Preview Canvas
 - [ ] Process Cockpit

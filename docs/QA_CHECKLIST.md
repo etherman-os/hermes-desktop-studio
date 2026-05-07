@@ -60,7 +60,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 ## Run-Centered Workbench
 
 - [ ] App opens with Run Ledger as the primary center tab
-- [ ] Activity rail includes Runs, Chat, Board, Sessions, Artifacts, Context, Logs, Themes, and Settings
+- [ ] Activity rail includes Runs, Chat, Board, Sessions, Artifacts, Context, Approvals, Logs, Themes, and Settings
 - [ ] Starting a prompt creates a current run in the Run Ledger
 - [ ] Recent runs persist in Studio-owned `studio.db` and reappear after adapter restart
 - [ ] Selecting a recent run loads its persisted timeline from `/studio/runs/{run_id}/ledger`
@@ -77,7 +77,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Bottom panel Activity and Tool Events reflect current run events
 - [ ] Artifact Shelf renders persisted artifacts, filters, search, and selected artifact details
 - [ ] Context Inspector renders active profile, model/provider, workspace files, runtime status, memory/skills availability, warnings, and related Studio work
-- [ ] Approval Center shows no pending approvals and recent approval events when present
+- [ ] Approval Center shows pending approvals, history, risk/status, run/session links, and read-only wording when present
 - [ ] Themes still switch after the UX-1 shell realignment
 - [ ] Logs, profiles, sessions, and model viewer still load from the adapter when available
 
@@ -117,6 +117,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Clicking a session sets it as active
 - [ ] Profiles section shows profile list
 - [ ] Context section shows the read-only Context Inspector
+- [ ] Approvals section opens the Approval Center
 - [ ] Logs section can switch bottom panel tabs
 - [ ] Theme Gallery shows 5 theme cards
 - [ ] Clicking a theme card switches theme
@@ -147,6 +148,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Escape closes palette
 - [ ] "Open Run Ledger" command switches to Run Ledger
 - [ ] "New Run", "New Chat", "Select Workspace", "Open Runtime Status", and "Refresh Adapter Status" commands are available
+- [ ] "Open Approval Center" command opens the approvals sidebar
 - [ ] "Switch Theme" command opens theme gallery
 - [ ] "Toggle Right Panel" hides/shows right panel
 - [ ] "Toggle Bottom Panel" hides/shows bottom panel
@@ -181,6 +183,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Persistence errors emit a warning or UI notice without breaking live run streaming
 - [ ] `artifacts` and `artifact_events` tables are created by migration 5
 - [ ] Artifact content is redacted and bounded before persistence
+- [ ] `approvals` and `approval_events` tables are created by migration 6
+- [ ] Approval payloads are redacted before persistence
 
 ## Studio Kanban Backend
 
@@ -238,8 +242,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 ## Context Inspector
 
 - [ ] `GET /studio/context/current` returns active profile, model/provider, runtime, storage, workspace, context files, related work, and warnings
-- [ ] `GET /studio/context/runs/{run_id}` returns selected run metadata and related artifacts/cards/sessions
-- [ ] `GET /studio/context/sessions/{session_id}` returns selected session metadata and related runs/artifacts/cards
+- [ ] `GET /studio/context/runs/{run_id}` returns selected run metadata and related artifacts/cards/approvals/sessions
+- [ ] `GET /studio/context/sessions/{session_id}` returns selected session metadata and related runs/artifacts/cards/approvals
 - [ ] `GET /studio/context/workspaces/current` accepts a selected workspace path and discovers allowlisted project files read-only
 - [ ] Context routes require adapter auth and return standard error envelopes
 - [ ] OpenAPI route parity includes all `/studio/context/*` routes
@@ -257,11 +261,34 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Context Inspector remains useful when Hermes runtime is unavailable by showing Studio-owned context and warnings
 - [ ] Context tests verify no writes to Hermes `state.db`
 
+## Approval Center
+
+- [ ] `GET /studio/approvals` lists Studio-owned approval history
+- [ ] `GET /studio/approvals/pending` lists pending approvals
+- [ ] `GET /studio/approvals/{approval_id}` returns detail with redacted request payload and events
+- [ ] `GET /studio/runs/{run_id}/approvals` filters approvals by run id
+- [ ] `GET /studio/sessions/{session_id}/approvals` filters approvals by session id
+- [ ] `POST /studio/approvals/{approval_id}/approve` returns `501` until verified Hermes response wiring exists
+- [ ] `POST /studio/approvals/{approval_id}/deny` returns `501` until verified Hermes response wiring exists
+- [ ] Approval routes require adapter auth and return standard error envelopes
+- [ ] OpenAPI route parity includes all `/studio/approvals/*` and scoped approval routes
+- [ ] `approval.requested` run stream events persist without breaking SSE
+- [ ] `approval.resolved` run stream events persist and update status/decision
+- [ ] Malformed approval payloads are stored with unknown fields and do not crash
+- [ ] Secret-like approval payload values are redacted
+- [ ] Approval Center shows pending/history/filters/detail/empty/error states
+- [ ] Run Ledger highlights approval events and "Open Approvals" scopes the center to the selected run
+- [ ] Context Inspector shows related approvals for selected run/session context
+- [ ] Activity rail or status bar shows pending approval count
+- [ ] UI clearly states approval response is read-only when not wired
+- [ ] Approval tests verify no writes to Hermes `state.db`
+
 ## Status Bar
 
 - [ ] Shows active profile name
 - [ ] Shows working directory path
 - [ ] Shows model name
+- [ ] Shows pending approval count when approvals are pending
 - [ ] Shows adapter connection status (green/red dot)
 - [ ] Shows active theme name
 - [ ] Shows version number

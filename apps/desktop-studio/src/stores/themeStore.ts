@@ -46,7 +46,7 @@ const DEFAULT_ICONS: Record<string, string> = {
   command_palette: ">",
   settings: "*",
   theme_gallery: "#",
-  approvals: "?",
+  approvals: "!",
   model: "M",
 };
 
@@ -93,6 +93,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
   icon: (slot: string) => {
     const theme = get().activeTheme();
+    if (slot === "approvals" && theme.icons?.approval) return theme.icons.approval;
     return theme.icons?.[slot as keyof typeof theme.icons] ?? DEFAULT_ICONS[slot] ?? "•";
   },
 

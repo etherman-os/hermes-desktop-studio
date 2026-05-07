@@ -55,6 +55,7 @@ export function CommandPalette() {
     { id: "open-board", label: "Open Board", icon: "B", shortcut: "Ctrl+3", action: () => { setActiveTab("board"); setSidebar("board"); close(); } },
     { id: "open-sessions", label: "Open Sessions", icon: "S", action: () => { setActiveTab("sessions"); setSidebar("sessions"); close(); } },
     { id: "open-artifacts", label: "Open Artifacts", icon: "A", action: () => { setActiveTab("artifacts"); setSidebar("artifacts"); close(); } },
+    { id: "open-approvals", label: "Open Approval Center", icon: "!", action: () => { setSidebar("approvals"); close(); } },
     { id: "show-logs", label: "Show Logs", icon: "L", action: () => { setBottomTab("logs"); setSidebar("logs"); close(); } },
     { id: "show-diagnostics", label: "Show Adapter Diagnostics", icon: "D", action: () => { setBottomTab("adapter_diagnostics"); close(); } },
     { id: "refresh-runtime", label: "Refresh Adapter Status", icon: "R", action: () => { void refreshRuntime(); close(); } },
