@@ -79,6 +79,8 @@ hermes-local-studio/
     ADAPTER_CONTRACT.md
     THEME_SYSTEM.md
     RUN_CENTERED_WORKBENCH.md
+    RUNTIME_STATUS.md
+    WORKSPACES.md
     UI_DIRECTION.md
     ROADMAP.md
     PRODUCT_DIRECTION.md
@@ -215,6 +217,20 @@ The adapter supports three backend modes:
 | `HERMES_STUDIO_DB_PATH` | *(none)* | Optional direct path to a file named `studio.db`; guarded against Hermes `state.db` |
 
 The local Hermes runtime contract has been validated against Hermes Agent v0.12.0. See [docs/HERMES_RUNTIME_COMPATIBILITY.md](docs/HERMES_RUNTIME_COMPATIBILITY.md) for the discovered API server command, endpoint shapes, SSE event shapes, and read-only local storage audit.
+
+### Runtime Status and Workspaces
+
+The app now surfaces runtime state directly in the desktop shell: adapter auth, backend mode, active backend, Hermes reachability, Hermes API URL, profile, model/provider, and Studio storage. Mock mode is labeled as mock and Auto fallback shows the reason.
+
+To run against real Hermes:
+
+```bash
+API_SERVER_ENABLED=true hermes gateway --accept-hooks run
+HERMES_STUDIO_BACKEND=hermes HERMES_API_BASE_URL=http://127.0.0.1:8642 pnpm run dev:adapter
+pnpm run tauri dev
+```
+
+Studio workspaces are local project paths used as run metadata. They are shown in the top/status bars and persisted with Run Ledger records in `studio.db`. Workspace paths are not forwarded to Hermes until an official Hermes cwd/workspace field is verified. See [docs/RUNTIME_STATUS.md](docs/RUNTIME_STATUS.md) and [docs/WORKSPACES.md](docs/WORKSPACES.md).
 
 ## Development Status
 

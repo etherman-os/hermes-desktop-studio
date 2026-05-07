@@ -156,6 +156,7 @@ describe("studioClient protocol surface", () => {
           backend: "mock",
           model: null,
           error: null,
+          workspace_path: null,
         },
         events: [],
         history_available: true,

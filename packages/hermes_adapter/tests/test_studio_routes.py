@@ -40,7 +40,7 @@ class TestHealthEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "healthy"
-        assert data["storage"]["schema_version"] == 3
+        assert data["storage"]["schema_version"] == 4
 
     def test_health_no_auth_required(self, client: TestClient) -> None:
         resp = client.get("/studio/health")
@@ -182,7 +182,7 @@ class TestRuns:
         resp = client.post(
             "/studio/runs",
             headers=HEADERS,
-            json={"session_id": "s-1", "prompt": "persist me"},
+            json={"session_id": "s-1", "prompt": "persist me", "workspace_path": "/tmp/project"},
         )
         run_id = resp.json()["run_id"]
 
@@ -199,6 +199,7 @@ class TestRuns:
         data = ledger.json()
         assert data["run"]["id"] == run_id
         assert data["run"]["status"] == "completed"
+        assert data["run"]["workspace_path"] == "/tmp/project"
         assert "assistant.delta" in {event["type"] for event in data["events"]}
 
     def test_streaming_continues_when_run_persistence_unavailable(

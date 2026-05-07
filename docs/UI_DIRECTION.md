@@ -27,6 +27,19 @@ The desktop UI should feel like a compact operations workbench.
 - Do not start animated concept-pack runtime before the workbench structure is stable.
 - Do not hardcode example theme concepts in core components.
 
+## Phase UX-2 Shell Direction
+
+The shell should read as a desktop workbench:
+
+- Top bar: app identity, current workspace, New Run, runtime chips, command palette.
+- Activity rail: stable activities for Runs, Chat, Board, Sessions, Artifacts, Context, Logs, Themes, Settings.
+- Contextual sidebar: activity-specific navigation and actions.
+- Center workbench: Run Ledger remains primary, Chat is one surface.
+- Right inspector: runtime, selected run, model, tools, approvals, memory, context.
+- Bottom panel: activity, tools, logs, adapter diagnostics.
+
+Runtime state must be explicit. MockBackend should never look like real Hermes. Auto fallback should show why it fell back. Workspace paths are Studio-side run metadata until Hermes exposes a verified cwd/workspace field.
+
 ## QA Runtime Boundary
 
 The real product runtime is the Tauri desktop app. Browser/Vite rendering is useful for fast frontend QA, but it is not the shipping runtime and should not drive product architecture.

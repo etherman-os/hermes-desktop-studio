@@ -4,7 +4,10 @@ import { useSessionStore } from "../../stores/sessionStore";
 import { useProfileStore } from "../../stores/profileStore";
 import { useAdapterStore } from "../../stores/adapterStore";
 import { useRunLedgerStore } from "../../stores/runLedgerStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
+import { useUiStore } from "../../stores/uiStore";
 import { ContextInspector } from "../context/ContextInspector";
+import { RuntimeStatus } from "../runtime/RuntimeStatus";
 
 export function LeftSidebar() {
   const section = useLayoutStore((s) => s.sidebarSection);
@@ -41,13 +44,20 @@ function RunsList() {
   const runs = useRunLedgerStore((s) => s.runs);
   const currentRunId = useRunLedgerStore((s) => s.currentRunId);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
+  const openNewRun = useUiStore((s) => s.openNewRun);
 
   if (runs.length === 0) {
-    return <div className="sidebar-note">No runs captured in this Studio session.</div>;
+    return (
+      <div className="sidebar-stack">
+        <button className="primary-button" onClick={openNewRun}>New Run</button>
+        <div className="sidebar-note">No runs captured in this Studio session.</div>
+      </div>
+    );
   }
 
   return (
     <>
+      <button className="primary-button sidebar-primary" onClick={openNewRun}>New Run</button>
       <div className="sidebar-note">{runs.length} recent run{runs.length !== 1 ? "s" : ""}</div>
       {runs.map((run) => (
         <button
@@ -69,8 +79,10 @@ function RunsList() {
 
 function ChatSection() {
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
+  const openNewRun = useUiStore((s) => s.openNewRun);
   return (
     <div className="sidebar-stack">
+      <button className="primary-button" onClick={openNewRun}>New Chat / Run</button>
       <button className="sidebar-item active" onClick={() => setActiveTab("chat")}>Composer</button>
       <button className="sidebar-item" onClick={() => setActiveTab("runs")}>Run Ledger</button>
       <div className="sidebar-note">Chat is a prompt surface. Run state, tools, warnings, and outcomes are tracked in the ledger.</div>
@@ -322,10 +334,13 @@ function ThemeGallerySection() {
 }
 
 function SettingsSection() {
-  const label = useThemeStore((s) => s.label);
+  const openWorkspacePicker = useUiStore((s) => s.openWorkspacePicker);
+  const selectedWorkspace = useWorkspaceStore((s) => s.selectedWorkspace);
   return (
-    <div style={{ padding: "var(--app-spacing-sm)", color: "var(--app-text-muted)" }}>
-      <p>{label("settings")} — placeholder</p>
+    <div className="sidebar-stack">
+      <button className="primary-button" onClick={openWorkspacePicker}>Select Workspace</button>
+      <div className="sidebar-note">Workspace: {selectedWorkspace ?? "none selected"}</div>
+      <RuntimeStatus />
     </div>
   );
 }

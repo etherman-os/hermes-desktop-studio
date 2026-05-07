@@ -242,6 +242,18 @@
 - [x] Workflow actions: create Kanban card from run, copy run summary, open related session
 - [x] Tests for migrations, persistence, route ordering, streaming fallback, frontend store behavior, and no Hermes `state.db` writes
 
+## Phase UX-2 — Professional Desktop Studio Shell and Runtime UX (Done)
+
+- [x] Top desktop workbench bar with app identity, workspace, New Run, runtime chips, command palette, and panel toggles
+- [x] Runtime status surface shows adapter, auth, backend mode, active backend, Hermes reachability, Hermes URL, profile, model/provider, and storage
+- [x] MockBackend and Auto fallback are clearly labeled with warnings and fallback reasons
+- [x] Manual workspace picker, recent workspaces, status/top bar display, and New Run workspace field
+- [x] Workspace path persists as Studio-owned run metadata without forwarding invented Hermes fields
+- [x] New Run modal submits through `/studio/runs` with prompt, workspace, profile/model context, session, linked card placeholder, and run mode
+- [x] Collapsible left sidebar, right inspector, and bottom panel with responsive workbench layout
+- [x] Command palette commands for New Run, New Chat, Select Workspace, Runtime Status, Run Ledger, Board, Sessions, Refresh Adapter Status, Theme, and Settings
+- [x] Board placeholder now uses Studio-owned Kanban backend data instead of pretending mock cards are real
+
 ## Next Core Layers
 
 - [x] Persist Run Ledger history in Studio-owned `studio.db`

@@ -7,15 +7,20 @@ import { useSessionStore } from "../../stores/sessionStore";
 import { useProfileStore } from "../../stores/profileStore";
 import { useLogStore } from "../../stores/logStore";
 import { useRunLedgerStore } from "../../stores/runLedgerStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { LeftRail } from "./LeftRail";
 import { LeftSidebar } from "./LeftSidebar";
 import { CenterArea } from "./CenterArea";
 import { RightPanel } from "./RightPanel";
 import { BottomPanel } from "./BottomPanel";
 import { StatusBar } from "./StatusBar";
+import { TopBar } from "./TopBar";
 import { CommandPalette } from "../command-palette/CommandPalette";
+import { NewRunModal } from "../runs/NewRunModal";
+import { WorkspacePicker } from "../workspace/WorkspacePicker";
 
 export function AppFrame() {
+  const sidebarCollapsed = useLayoutStore((s) => s.sidebarCollapsed);
   const showRight = useLayoutStore((s) => s.showRightPanel);
   const showBottom = useLayoutStore((s) => s.showBottomPanel);
   const openPalette = useUiStore((s) => s.openCommandPalette);
@@ -26,8 +31,10 @@ export function AppFrame() {
   const loadRecentRuns = useRunLedgerStore((s) => s.loadRecentRuns);
   const initTheme = useThemeStore((s) => s.initTheme);
   const loadThemes = useThemeStore((s) => s.loadThemes);
+  const loadWorkspace = useWorkspaceStore((s) => s.load);
 
   React.useEffect(() => {
+    loadWorkspace();
     initTheme();
     checkConnection().then((ok) => {
       if (ok) {
@@ -38,7 +45,7 @@ export function AppFrame() {
         loadRecentRuns();
       }
     });
-  }, [initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes, loadRecentRuns]);
+  }, [loadWorkspace, initTheme, checkConnection, loadSessions, loadProfiles, loadLogs, loadThemes, loadRecentRuns]);
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -53,15 +60,18 @@ export function AppFrame() {
 
   return (
     <>
-      <div className={`app-frame ${showBottom ? "bottom-open" : ""}`}>
+      <div className={`app-frame ${showBottom ? "bottom-open" : "bottom-collapsed"} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${showRight ? "" : "right-collapsed"}`}>
+        <TopBar />
         <LeftRail />
-        <LeftSidebar />
+        {!sidebarCollapsed && <LeftSidebar />}
         <CenterArea />
         {showRight && <RightPanel />}
         {showBottom && <BottomPanel />}
         <StatusBar />
       </div>
       <CommandPalette />
+      <NewRunModal />
+      <WorkspacePicker />
     </>
   );
 }

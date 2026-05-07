@@ -15,6 +15,7 @@ export interface RunRecord {
   backend?: string;
   model?: string;
   error?: string;
+  workspacePath?: string | null;
   events: StudioEvent[];
 }
 
@@ -30,8 +31,8 @@ interface RunLedgerState {
   actionMessage: string | null;
   loadRecentRuns: () => Promise<void>;
   loadRunLedger: (runId: string) => Promise<void>;
-  beginPrompt: (prompt: string, sessionId: string) => void;
-  startRun: (runId: string, prompt: string, sessionId: string, status?: string) => void;
+  beginPrompt: (prompt: string, sessionId: string, options?: { workspacePath?: string | null }) => void;
+  startRun: (runId: string, prompt: string, sessionId: string, status?: string, options?: { workspacePath?: string | null }) => void;
   recordEvent: (event: StudioEvent) => void;
   recordLocalWarning: (message: string, runId?: string | null, sessionId?: string | null) => void;
   finishRun: (runId: string, status: Exclude<RunLedgerStatus, "idle" | "queued" | "starting" | "running" | "stopping">, error?: string) => void;
@@ -94,6 +95,7 @@ function fromPersistedRun(run: RunLedgerRun, events: StudioEvent[] = []): RunRec
     backend: run.backend,
     model: run.model ?? undefined,
     error: run.error ?? undefined,
+    workspacePath: run.workspace_path ?? null,
     events,
   };
 }
@@ -123,9 +125,10 @@ function runSummary(run: RunRecord) {
       .map((event) => String(event.payload.tool ?? "tool")),
   ));
   const error = run.error ? `\nError: ${run.error}` : "";
+  const workspace = run.workspacePath ? `\nWorkspace: ${run.workspacePath}` : "";
   const tools = toolNames.length ? `\nTools: ${toolNames.join(", ")}` : "";
   const result = assistantText ? `\nAssistant: ${assistantText.slice(0, 700)}` : "";
-  return `Run ${run.runId}\nStatus: ${run.status}\nSession: ${run.sessionId ?? "none"}${tools}${error}${result}`;
+  return `Run ${run.runId}\nStatus: ${run.status}\nSession: ${run.sessionId ?? "none"}${workspace}${tools}${error}${result}`;
 }
 
 export const useRunLedgerStore = create<RunLedgerState>((set, get) => ({
@@ -191,7 +194,7 @@ export const useRunLedgerStore = create<RunLedgerState>((set, get) => ({
     }
   },
 
-  beginPrompt: (prompt, sessionId) => {
+  beginPrompt: (prompt, sessionId, options) => {
     const pendingId = `pending_${Date.now()}`;
     const startedAt = isoNow();
     const pending: RunRecord = {
@@ -200,6 +203,7 @@ export const useRunLedgerStore = create<RunLedgerState>((set, get) => ({
       prompt,
       status: "starting",
       startedAt,
+      workspacePath: options?.workspacePath ?? null,
       events: [
         makeEvent("adapter.warning", {
           code: "run_starting",
@@ -215,7 +219,7 @@ export const useRunLedgerStore = create<RunLedgerState>((set, get) => ({
     }));
   },
 
-  startRun: (runId, prompt, sessionId, status) => {
+  startRun: (runId, prompt, sessionId, status, options) => {
     const startedAt = isoNow();
     const startEvent = makeEvent("run.started", { run_id: runId, session_id: sessionId }, runId, sessionId);
     const run: RunRecord = {
@@ -224,6 +228,7 @@ export const useRunLedgerStore = create<RunLedgerState>((set, get) => ({
       prompt,
       status: normalizeStatus(status),
       startedAt,
+      workspacePath: options?.workspacePath ?? null,
       events: [startEvent],
     };
     set((state) => ({

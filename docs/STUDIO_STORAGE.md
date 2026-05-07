@@ -39,6 +39,10 @@ Migration `3: persistent_run_ledger` creates Studio-owned Run Ledger tables:
 - `runs`
 - `run_events`
 
+Migration `4: run_workspace_metadata` adds:
+
+- `runs.workspace_path`
+
 The migrations write metadata such as `schema_version`, `initialized_at`, and `storage_owner`.
 
 Migrations are idempotent. Reopening `studio.db` does not duplicate migration records.
@@ -59,7 +63,7 @@ Migrations are idempotent. Reopening `studio.db` does not duplicate migration re
 {
   "storage": {
     "available": true,
-    "schema_version": 3,
+    "schema_version": 4,
     "data_dir": "/home/user/.local/share/hermes-desktop-studio",
     "db_path": "/home/user/.local/share/hermes-desktop-studio/studio.db",
     "last_error": null
@@ -77,7 +81,7 @@ Phase 6C Kanban persistence uses this storage foundation. Kanban tables remain S
 
 Phase Product-1 stores recent run metadata and normalized Studio event envelopes in `studio.db`. Prompt previews and event payloads are redacted before storage. Run history remains Studio-owned and must not write to Hermes `state.db`.
 
-Run Ledger tables support current local workflow actions and future artifacts, checkpoints, diffs, and result summaries.
+Run Ledger tables support current local workflow actions and future artifacts, checkpoints, diffs, and result summaries. Phase UX-2 adds `workspace_path` as Studio-side run metadata for project-folder orientation. It is not forwarded to Hermes unless an official Hermes runtime field is verified.
 
 ## Troubleshooting
 

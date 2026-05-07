@@ -1,6 +1,8 @@
 import React from "react";
 import { useSessionStore } from "../../stores/sessionStore";
 import { useThemeStore } from "../../stores/themeStore";
+import { useRunLedgerStore } from "../../stores/runLedgerStore";
+import { useLayoutStore } from "../../stores/layoutStore";
 import * as api from "../../api/studioClient";
 
 interface SessionDetailData {
@@ -21,6 +23,9 @@ export function SessionsPanel() {
   const loaded = useSessionStore((s) => s.loaded);
   const label = useThemeStore((s) => s.label);
   const icon = useThemeStore((s) => s.icon);
+  const runs = useRunLedgerStore((s) => s.runs);
+  const selectRun = useRunLedgerStore((s) => s.selectRun);
+  const setActiveTab = useLayoutStore((s) => s.setActiveTab);
 
   const [detail, setDetail] = React.useState<SessionDetailData | null>(null);
   const [detailLoading, setDetailLoading] = React.useState(false);
@@ -49,6 +54,17 @@ export function SessionsPanel() {
   const filtered = search
     ? sessions.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()))
     : sessions;
+  const relatedRun = detail ? runs.find((run) => run.sessionId === detail.id) : null;
+
+  async function createCardFromSession() {
+    if (!detail) return;
+    await api.createKanbanCard({
+      title: detail.title,
+      description: `Created from Hermes session ${detail.id}`,
+      priority: "medium",
+      session_id: detail.id,
+    });
+  }
 
   if (!loaded) {
     return (
@@ -147,6 +163,20 @@ export function SessionsPanel() {
               <h3 style={{ fontSize: "var(--app-font-size-lg)", fontWeight: 600, marginBottom: "var(--app-spacing-xs)" }}>
                 {detail.title}
               </h3>
+              <div className="session-actions">
+                <button className="tool-button" onClick={() => void createCardFromSession()}>Create Card from Session</button>
+                <button
+                  className="tool-button"
+                  disabled={!relatedRun}
+                  onClick={() => {
+                    if (!relatedRun) return;
+                    selectRun(relatedRun.runId);
+                    setActiveTab("runs");
+                  }}
+                >
+                  Open Related Run
+                </button>
+              </div>
               <dl className="right-panel-info" style={{ display: "flex", flexWrap: "wrap", gap: "var(--app-spacing-md)" }}>
                 <div>
                   <dt>ID</dt>

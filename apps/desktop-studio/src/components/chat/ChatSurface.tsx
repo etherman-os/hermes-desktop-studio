@@ -4,6 +4,8 @@ import { useRunLedgerStore } from "../../stores/runLedgerStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { useAdapterStore } from "../../stores/adapterStore";
 import { useLayoutStore } from "../../stores/layoutStore";
+import { useUiStore } from "../../stores/uiStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 import React from "react";
 
 export function ChatSurface() {
@@ -21,6 +23,10 @@ export function ChatSurface() {
   const savingRunCard = useRunLedgerStore((s) => s.savingRunCard);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const connected = useAdapterStore((s) => s.connected);
+  const activeBackend = useAdapterStore((s) => s.activeBackend);
+  const backendMode = useAdapterStore((s) => s.backendMode);
+  const openNewRun = useUiStore((s) => s.openNewRun);
+  const selectedWorkspace = useWorkspaceStore((s) => s.selectedWorkspace);
   const [input, setInput] = React.useState("");
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -33,7 +39,7 @@ export function ChatSurface() {
     if (!text) return;
     setInput("");
     if (connected) {
-      sendPrompt(text, activeSessionId ?? "s-1");
+      sendPrompt(text, activeSessionId ?? "s-1", { workspacePath: selectedWorkspace, mode: "chat" });
     } else {
       // Fallback: show user message locally with adapter warning
       useRunStore.getState().appendUserMessage(text);
@@ -51,6 +57,7 @@ export function ChatSurface() {
 
   const ledgerRun = runs.find((run) => run.runId === activeRunId) ?? runs.find((run) => run.runId === lastRunId) ?? runs[0];
   const toolEvents = ledgerRun?.events.filter((event) => event.type === "tool.started" || event.type === "tool.completed").slice(-4) ?? [];
+  const mockActive = backendMode === "mock" || activeBackend === "mock";
 
   function openLedger() {
     if (ledgerRun) selectLedgerRun(ledgerRun.runId);
@@ -66,9 +73,12 @@ export function ChatSurface() {
             <span>Run {ledgerRun?.runId ?? "none"}</span>
             <span>Status {ledgerRun?.status ?? (isStreaming ? "running" : "idle")}</span>
             <span>Session {activeSessionId ?? "none"}</span>
+            <span>Workspace {selectedWorkspace ?? "none"}</span>
+            {mockActive && <span className="runtime-chip warn">Mock data</span>}
           </div>
         </div>
         <div className="chat-run-actions">
+          <button className="tool-button" onClick={openNewRun}>New Chat</button>
           <button className="tool-button" onClick={openLedger}>Open in Run Ledger</button>
           <button
             className="tool-button"
@@ -121,7 +131,7 @@ export function ChatSurface() {
       <div className="composer-bar">
         <input
           className="composer-input"
-          placeholder={connected ? `${label("composer")}...` : `${label("composer")} (adapter offline — messages saved locally)`}
+          placeholder={connected ? `${label("composer")} in ${selectedWorkspace ?? "no workspace"}...` : `${label("composer")} (adapter offline - messages saved locally)`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

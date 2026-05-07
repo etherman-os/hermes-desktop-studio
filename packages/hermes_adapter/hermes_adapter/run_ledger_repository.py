@@ -80,6 +80,13 @@ def _safe_status(value: Any) -> str:
     return "running"
 
 
+def _safe_workspace_path(value: Any) -> str | None:
+    text = _safe_text(value, max_length=1000)
+    if not text:
+        return None
+    return text
+
+
 def _redact_json(value: Any, *, key: str = "") -> Any:
     if _SECRET_KEY_RE.search(key):
         return "[redacted]"
@@ -145,12 +152,14 @@ class RunLedgerRepository:
         prompt: str,
         backend: str,
         model: str | None = None,
+        workspace_path: str | None = None,
     ) -> dict[str, Any]:
         clean_run_id = _clean_id(run_id, "run_id")
         if clean_run_id is None:
             raise ValueError("run_id is required")
         clean_session_id = _clean_id(session_id, "session_id", required=False)
         prompt_preview = _safe_text(prompt, max_length=500)
+        clean_workspace_path = _safe_workspace_path(workspace_path)
         title = self._title_from_prompt(prompt_preview)
         now = _now_iso()
         with self._storage.connect() as conn:
@@ -158,16 +167,17 @@ class RunLedgerRepository:
                 """
                 INSERT INTO runs (
                   id, session_id, status, title, prompt_preview, started_at,
-                  completed_at, duration_ms, backend, model, error
+                  completed_at, duration_ms, backend, model, error, workspace_path
                 )
-                VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, NULL)
+                VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, NULL, ?)
                 ON CONFLICT(id) DO UPDATE SET
                   session_id = COALESCE(excluded.session_id, runs.session_id),
                   status = excluded.status,
                   title = COALESCE(excluded.title, runs.title),
                   prompt_preview = COALESCE(excluded.prompt_preview, runs.prompt_preview),
                   backend = excluded.backend,
-                  model = COALESCE(excluded.model, runs.model)
+                  model = COALESCE(excluded.model, runs.model),
+                  workspace_path = COALESCE(excluded.workspace_path, runs.workspace_path)
                 """,
                 (
                     clean_run_id,
@@ -178,6 +188,7 @@ class RunLedgerRepository:
                     now,
                     _safe_text(backend, max_length=64, fallback="unknown") or "unknown",
                     _safe_text(model, max_length=160) if model else None,
+                    clean_workspace_path,
                 ),
             )
             self._prune_old_runs(conn)
@@ -282,9 +293,9 @@ class RunLedgerRepository:
             """
             INSERT INTO runs (
               id, session_id, status, title, prompt_preview, started_at,
-              completed_at, duration_ms, backend, model, error
+              completed_at, duration_ms, backend, model, error, workspace_path
             )
-            VALUES (?, ?, ?, NULL, NULL, ?, ?, NULL, ?, NULL, ?)
+            VALUES (?, ?, ?, NULL, NULL, ?, ?, NULL, ?, NULL, ?, NULL)
             """,
             (
                 run_id,
@@ -385,18 +396,20 @@ class RunLedgerRepository:
 
     @staticmethod
     def _run_dict(row: sqlite3.Row) -> dict[str, Any]:
+        values = dict(row)
         return {
-            "id": row["id"],
-            "session_id": row["session_id"],
-            "status": row["status"],
-            "title": row["title"],
-            "prompt_preview": row["prompt_preview"],
-            "started_at": row["started_at"],
-            "completed_at": row["completed_at"],
-            "duration_ms": row["duration_ms"],
-            "backend": row["backend"],
-            "model": row["model"],
-            "error": row["error"],
+            "id": values["id"],
+            "session_id": values["session_id"],
+            "status": values["status"],
+            "title": values["title"],
+            "prompt_preview": values["prompt_preview"],
+            "started_at": values["started_at"],
+            "completed_at": values["completed_at"],
+            "duration_ms": values["duration_ms"],
+            "backend": values["backend"],
+            "model": values["model"],
+            "error": values["error"],
+            "workspace_path": values.get("workspace_path"),
         }
 
     @staticmethod

@@ -2,6 +2,7 @@ import { useThemeStore } from "../../stores/themeStore";
 import { useAdapterStore } from "../../stores/adapterStore";
 import { useProfileStore } from "../../stores/profileStore";
 import { useRunLedgerStore } from "../../stores/runLedgerStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 
 export function StatusBar() {
   const activeTheme = useThemeStore((s) => s.activeTheme);
@@ -14,6 +15,7 @@ export function StatusBar() {
   const activeProfile = useProfileStore((s) => s.activeProfile);
   const runs = useRunLedgerStore((s) => s.runs);
   const currentRunId = useRunLedgerStore((s) => s.currentRunId);
+  const selectedWorkspace = useWorkspaceStore((s) => s.selectedWorkspace);
 
   const statusColor = connected ? "var(--app-ok)" : checking ? "var(--app-warn)" : "var(--app-danger)";
   const statusText = connected ? "Connected" : checking ? "Checking..." : authError ? "Auth token missing" : "Disconnected";
@@ -36,6 +38,9 @@ export function StatusBar() {
       <div className="status-item">
         <span className="status-dot" />
         <span>{profileName}</span>
+      </div>
+      <div className="status-item workspace-status" title={selectedWorkspace ?? "No workspace selected"}>
+        <span>{selectedWorkspace ?? "No workspace"}</span>
       </div>
       <div className="status-item">
         <span>{run ? `Run: ${run.status}` : "Run: idle"}</span>

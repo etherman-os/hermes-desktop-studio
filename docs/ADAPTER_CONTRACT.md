@@ -35,7 +35,7 @@ Both include `storage` diagnostics for Studio-owned `studio.db`:
 {
   "storage": {
     "available": true,
-    "schema_version": 2,
+    "schema_version": 4,
     "data_dir": "/home/user/.local/share/hermes-desktop-studio",
     "db_path": "/home/user/.local/share/hermes-desktop-studio/studio.db",
     "last_error": null
@@ -107,7 +107,7 @@ All Studio SSE events must match `packages/protocol/events.schema.json` and incl
 
 `kanban.updated` events must include structured payloads with at least `board_id` and `action`. Malformed upstream Kanban notifications are normalized to `adapter.warning`; persistent Kanban writes only happen through `/studio/kanban/*`.
 
-Run Ledger persistence stores normalized Studio event envelopes in Studio-owned `studio.db`. Persistence failure may emit `adapter.warning`, but it must not break live SSE streaming. Hermes `state.db` remains read-only.
+Run Ledger persistence stores normalized Studio event envelopes in Studio-owned `studio.db`. Workspace paths are Studio-side run metadata and are not forwarded to Hermes unless an official Hermes runtime field is verified. Persistence failure may emit `adapter.warning`, but it must not break live SSE streaming. Hermes `state.db` remains read-only.
 
 ## Error Envelope
 

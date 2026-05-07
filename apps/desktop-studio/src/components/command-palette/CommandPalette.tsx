@@ -2,6 +2,7 @@ import React from "react";
 import { useUiStore } from "../../stores/uiStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
+import { useAdapterStore } from "../../stores/adapterStore";
 
 interface PaletteCommand {
   id: string;
@@ -24,6 +25,9 @@ export function CommandPalette() {
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const setSidebar = useLayoutStore((s) => s.setSidebarSection);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
+  const openNewRun = useUiStore((s) => s.openNewRun);
+  const openWorkspacePicker = useUiStore((s) => s.openWorkspacePicker);
+  const refreshRuntime = useAdapterStore((s) => s.checkConnection);
   const setTheme = useThemeStore((s) => s.setTheme);
   const installedThemes = useThemeStore((s) => s.installedThemes);
   const themes = useThemeStore((s) => s.themes);
@@ -42,6 +46,10 @@ export function CommandPalette() {
   }));
 
   const commands: PaletteCommand[] = [
+    { id: "new-run", label: "New Run", icon: "+", shortcut: "Ctrl+N", action: () => { openNewRun(); close(); } },
+    { id: "new-chat", label: "New Chat", icon: "+", action: () => { openNewRun(); setActiveTab("chat"); setSidebar("chat"); close(); } },
+    { id: "select-workspace", label: "Select Workspace", icon: "W", action: () => { openWorkspacePicker(); close(); } },
+    { id: "runtime-status", label: "Open Runtime Status", icon: "!", action: () => { setSidebar("settings"); setBottomTab("adapter_diagnostics"); close(); } },
     { id: "open-runs", label: "Open Run Ledger", icon: "R", shortcut: "Ctrl+1", action: () => { setActiveTab("runs"); setSidebar("runs"); close(); } },
     { id: "open-chat", label: "Open Chat", icon: "C", shortcut: "Ctrl+2", action: () => { setActiveTab("chat"); setSidebar("chat"); close(); } },
     { id: "open-board", label: "Open Board", icon: "B", shortcut: "Ctrl+3", action: () => { setActiveTab("board"); setSidebar("board"); close(); } },
@@ -49,6 +57,7 @@ export function CommandPalette() {
     { id: "open-artifacts", label: "Open Artifacts", icon: "A", action: () => { setActiveTab("artifacts"); setSidebar("artifacts"); close(); } },
     { id: "show-logs", label: "Show Logs", icon: "L", action: () => { setBottomTab("logs"); setSidebar("logs"); close(); } },
     { id: "show-diagnostics", label: "Show Adapter Diagnostics", icon: "D", action: () => { setBottomTab("adapter_diagnostics"); close(); } },
+    { id: "refresh-runtime", label: "Refresh Adapter Status", icon: "R", action: () => { void refreshRuntime(); close(); } },
     { id: "switch-theme", label: "Switch Theme", icon: "#", action: () => { setSidebar("theme_gallery"); close(); } },
     { id: "open-settings", label: "Open Settings", icon: "*", action: () => { setSidebar("settings"); close(); } },
     { id: "toggle-right", label: "Toggle Right Panel", icon: "I", action: () => { toggleRight(); close(); } },

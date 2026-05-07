@@ -9,6 +9,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] No browser tab is required for the real desktop runtime
 - [ ] Window title is Hermes Desktop Studio
 - [ ] Protected `/studio/*` calls work through the Tauri token bridge
+- [ ] Top bar shows Hermes Desktop Studio, New Run, current workspace, runtime chips, and command palette trigger
+- [ ] Left sidebar, right inspector, and bottom panel can be collapsed
 
 ## Optional Browser Visual Smoke
 
@@ -28,6 +30,21 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Desktop app shows green "Adapter: Connected" in status bar
 - [ ] Killing adapter shows red "Adapter: Disconnected" in status bar
 - [ ] App does not crash when adapter is unavailable
+- [ ] Runtime status distinguishes Mock, Hermes, and Auto fallback
+- [ ] Mock backend shows a clear warning and never appears as real Hermes
+- [ ] Real Hermes instructions are visible in Runtime Status / Settings
+- [ ] Refresh runtime status calls `/studio/health` and updates the UI
+
+## Workspace and New Run
+
+- [ ] Select Workspace opens the workspace picker
+- [ ] Manual workspace path appears in the top bar and status bar
+- [ ] Recent workspaces are listed after selecting a path
+- [ ] New Run modal includes prompt, workspace path, profile, model/provider, session, linked card, and run mode
+- [ ] Starting a run from New Run sends through `/studio/runs`
+- [ ] Workspace path appears in Chat header and Run Ledger
+- [ ] Workspace path persists in Studio-owned run metadata after adapter restart
+- [ ] No workspace path is written to Hermes `state.db`
 
 ## Auth and Protocol
 
@@ -52,6 +69,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Tool started/progress/completed events are grouped by tool call when possible
 - [ ] Selecting a timeline entry shows event payload detail
 - [ ] Run Ledger shows status, duration, backend/model, linked session id, warnings, and errors when available
+- [ ] Run Ledger shows workspace path when selected
 - [ ] "Create Card from Run" creates a Studio-owned Kanban card linked to `run_id`
 - [ ] "Copy Run Summary" copies prompt, status, session, backend/model, duration, and timeline summary
 - [ ] "Open Related Session" switches to the Sessions tab when `session_id` exists
@@ -79,6 +97,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Composer shows warning border when adapter is disconnected
 - [ ] Sending message when adapter offline shows local fallback message
 - [ ] Chat header shows current/last run id and status
+- [ ] Chat header shows session, workspace, model/runtime state, and mock-data warning when applicable
 - [ ] "Open in Run Ledger" switches to the Run Ledger tab
 - [ ] Create-card-from-run action creates a linked Studio-owned Kanban card when a run exists
 
@@ -87,6 +106,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Run Ledger tab renders the run timeline surface
 - [ ] Chat tab renders prompt/chat surface
 - [ ] Board tab renders the paused board control surface
+- [ ] Board uses Studio-owned Kanban data or clearly reports adapter/backend unavailability
 - [ ] Artifacts tab renders Artifact Shelf placeholder
 - [ ] Sessions tab renders sessions surface
 - [ ] Switching tabs during streaming does not break the stream
@@ -126,6 +146,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Enter executes selected command
 - [ ] Escape closes palette
 - [ ] "Open Run Ledger" command switches to Run Ledger
+- [ ] "New Run", "New Chat", "Select Workspace", "Open Runtime Status", and "Refresh Adapter Status" commands are available
 - [ ] "Switch Theme" command opens theme gallery
 - [ ] "Toggle Right Panel" hides/shows right panel
 - [ ] "Toggle Bottom Panel" hides/shows bottom panel

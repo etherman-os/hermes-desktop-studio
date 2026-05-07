@@ -170,6 +170,13 @@ _MIGRATIONS: tuple[_Migration, ...] = (
             "CREATE INDEX IF NOT EXISTS idx_run_events_type ON run_events(type)",
         ),
     ),
+    _Migration(
+        version=4,
+        name="run_workspace_metadata",
+        statements=(
+            "ALTER TABLE runs ADD COLUMN workspace_path TEXT",
+        ),
+    ),
 )
 
 

@@ -21,6 +21,7 @@ export interface RunLedgerRun {
   backend: string;
   model: string | null;
   error: string | null;
+  workspace_path: string | null;
 }
 
 export type RunLedgerEvent = StudioEvent;

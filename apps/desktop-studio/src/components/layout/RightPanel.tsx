@@ -3,6 +3,7 @@ import { useThemeStore } from "../../stores/themeStore";
 import { useAdapterStore } from "../../stores/adapterStore";
 import { useRunLedgerStore, type RunRecord } from "../../stores/runLedgerStore";
 import { ApprovalCenter } from "../approvals/ApprovalCenter";
+import { RuntimeStatus } from "../runtime/RuntimeStatus";
 import { mockMemory } from "../../fixtures/mockData";
 import * as api from "../../api/studioClient";
 
@@ -11,9 +12,6 @@ export function RightPanel() {
   const icon = useThemeStore((s) => s.icon);
   const connected = useAdapterStore((s) => s.connected);
   const backendMode = useAdapterStore((s) => s.backendMode);
-  const hermesConnected = useAdapterStore((s) => s.hermesConnected);
-  const fallbackReason = useAdapterStore((s) => s.fallbackReason);
-  const authError = useAdapterStore((s) => s.authError);
   const runs = useRunLedgerStore((s) => s.runs);
   const currentRunId = useRunLedgerStore((s) => s.currentRunId);
   const run = runs.find((item) => item.runId === currentRunId) ?? runs[0] ?? null;
@@ -39,13 +37,9 @@ export function RightPanel() {
         </div>
       </div>
       <ContextSection />
-      <DiagnosticsSection
-        connected={connected}
-        backendMode={backendMode}
-        hermesConnected={hermesConnected}
-        authError={authError}
-        fallbackReason={fallbackReason}
-      />
+      <div className="right-section runtime-right-section">
+        <RuntimeStatus compact />
+      </div>
     </div>
   );
 }
@@ -64,6 +58,8 @@ function SelectedRunSection({ run, label }: { run: RunRecord | null; label: (s: 
           <dd>{run.prompt || "local event"}</dd>
           <dt>Events</dt>
           <dd>{run.events.length}</dd>
+          <dt>Workspace</dt>
+          <dd>{run.workspacePath ?? "not selected"}</dd>
         </dl>
       ) : (
         <div className="panel-note">No run selected</div>
@@ -106,40 +102,6 @@ function ContextSection() {
         <div className="inspector-row"><span>AGENTS.md</span><span>not indexed</span></div>
         <div className="inspector-row"><span>@ references</span><span>future</span></div>
       </div>
-    </div>
-  );
-}
-
-function DiagnosticsSection({
-  connected,
-  backendMode,
-  hermesConnected,
-  authError,
-  fallbackReason,
-}: {
-  connected: boolean;
-  backendMode: string;
-  hermesConnected: boolean;
-  authError: string | null;
-  fallbackReason: string | null;
-}) {
-  return (
-    <div className="right-section">
-      <div className="right-section-title">Diagnostics</div>
-      <dl className="right-panel-info">
-        <dt>Adapter</dt>
-        <dd>{connected ? "connected" : "disconnected"}</dd>
-        <dt>Backend</dt>
-        <dd>{backendMode}</dd>
-        <dt>Hermes</dt>
-        <dd>{hermesConnected ? "reachable" : "not reachable"}</dd>
-        {(authError || fallbackReason) && (
-          <>
-            <dt>Notice</dt>
-            <dd>{authError ?? fallbackReason}</dd>
-          </>
-        )}
-      </dl>
     </div>
   );
 }

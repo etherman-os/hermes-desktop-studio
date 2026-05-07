@@ -16,8 +16,9 @@ interface RunState {
   lastRunId: string | null;
   messages: ChatMessage[];
   abortController: AbortController | null;
-  sendPrompt: (prompt: string, sessionId: string) => Promise<void>;
+  sendPrompt: (prompt: string, sessionId: string, options?: { workspacePath?: string | null; mode?: string }) => Promise<void>;
   stopRun: () => Promise<void>;
+  newChat: () => void;
   appendUserMessage: (content: string) => void;
   appendAssistantChunk: (text: string) => void;
   addToolEvent: (tool: string, status: "running" | "completed" | "failed", duration?: number) => void;
@@ -60,17 +61,27 @@ export const useRunStore = create<RunState>((set, get) => ({
     }));
   },
 
-  sendPrompt: async (prompt, sessionId) => {
+  sendPrompt: async (prompt, sessionId, options) => {
     const state = get();
     if (state.isStreaming) return;
 
     state.appendUserMessage(prompt);
-    useRunLedgerStore.getState().beginPrompt(prompt, sessionId);
+    useRunLedgerStore.getState().beginPrompt(prompt, sessionId, { workspacePath: options?.workspacePath ?? null });
     set({ isStreaming: true });
 
     try {
-      const run = await api.startRun({ session_id: sessionId, prompt });
-      useRunLedgerStore.getState().startRun(run.run_id, prompt, sessionId, run.status);
+      const run = await api.startRun({
+        session_id: sessionId,
+        prompt,
+        workspace_path: options?.workspacePath ?? null,
+        context: {
+          workspace_path: options?.workspacePath ?? null,
+          run_mode: options?.mode ?? "chat",
+        },
+      });
+      useRunLedgerStore.getState().startRun(run.run_id, prompt, sessionId, run.status, {
+        workspacePath: options?.workspacePath ?? null,
+      });
       set({ activeRunId: run.run_id, lastRunId: run.run_id });
 
       const ac = api.streamRunEvents(run.run_id, {
@@ -124,6 +135,18 @@ export const useRunStore = create<RunState>((set, get) => ({
 
   finalizeRun: () => {
     set({ isStreaming: false, activeRunId: null, abortController: null });
+  },
+
+  newChat: () => {
+    set({
+      messages: [
+        { role: "assistant" as const, content: "New chat ready. Start a run to send work to Hermes through the Studio adapter." },
+      ],
+      activeRunId: null,
+      lastRunId: null,
+      abortController: null,
+      isStreaming: false,
+    });
   },
 
   setStreaming: (v) => set({ isStreaming: v }),

@@ -89,6 +89,7 @@ def _persist_started_run(
     prompt: str,
     backend: str,
     model: str | None,
+    workspace_path: str | None,
 ) -> None:
     try:
         RunLedgerRepository().create_run(
@@ -98,6 +99,7 @@ def _persist_started_run(
             prompt=prompt,
             backend=backend,
             model=model,
+            workspace_path=workspace_path,
         )
     except Exception as exc:
         logger.warning("Run ledger create failed for %s: %s", run_id, exc)
@@ -235,6 +237,10 @@ async def start_run(body: dict[str, Any], _token: None = Depends(require_token))
     session_id = body.get("session_id", "default")
     prompt = body.get("prompt", "")
     profile = body.get("profile")
+    context = body.get("context", {})
+    workspace_path = body.get("workspace_path")
+    if not workspace_path and isinstance(context, dict):
+        workspace_path = context.get("workspace_path")
     result = await backend.start_run(session_id, prompt, profile)
     if result.get("status") == "failed":
         raise HTTPException(
@@ -255,6 +261,7 @@ async def start_run(body: dict[str, Any], _token: None = Depends(require_token))
             prompt=str(prompt),
             backend=_backend_name(),
             model=await _model_name(backend),
+            workspace_path=str(workspace_path) if workspace_path else None,
         )
     return result
 

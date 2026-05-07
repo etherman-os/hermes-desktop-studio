@@ -3,7 +3,7 @@ import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { useLogStore } from "../../stores/logStore";
 import { useRunLedgerStore } from "../../stores/runLedgerStore";
-import { useAdapterStore } from "../../stores/adapterStore";
+import { RuntimeStatus } from "../runtime/RuntimeStatus";
 
 export function BottomPanel() {
   const bottomTab = useLayoutStore((s) => s.bottomTab);
@@ -169,22 +169,8 @@ function ToolEventsContent() {
 }
 
 function AdapterDiagnosticsContent() {
-  const connected = useAdapterStore((s) => s.connected);
-  const checking = useAdapterStore((s) => s.checking);
-  const backendMode = useAdapterStore((s) => s.backendMode);
-  const activeBackend = useAdapterStore((s) => s.activeBackend);
-  const hermesConnected = useAdapterStore((s) => s.hermesConnected);
-  const authError = useAdapterStore((s) => s.authError);
-  const fallbackReason = useAdapterStore((s) => s.fallbackReason);
-
   return (
-    <div className="diagnostics-grid">
-      <div><span>Adapter</span><strong>{checking ? "checking" : connected ? "connected" : "disconnected"}</strong></div>
-      <div><span>Backend mode</span><strong>{backendMode}</strong></div>
-      <div><span>Active backend</span><strong>{activeBackend}</strong></div>
-      <div><span>Hermes</span><strong>{hermesConnected ? "reachable" : "not reachable"}</strong></div>
-      {(authError || fallbackReason) && <div className="diagnostics-wide"><span>Notice</span><strong>{authError ?? fallbackReason}</strong></div>}
-    </div>
+    <RuntimeStatus />
   );
 }
 

@@ -159,6 +159,7 @@ function copySummary(run: RunRecord) {
     `Run: ${run.runId}`,
     `Status: ${run.status}`,
     `Session: ${run.sessionId ?? "none"}`,
+    `Workspace: ${run.workspacePath ?? "none"}`,
     `Backend: ${run.backend ?? "unknown"}`,
     `Model: ${run.model ?? "unknown"}`,
     `Duration: ${duration(run)}`,
@@ -258,6 +259,7 @@ export function RunLedger() {
           <span>Session {run.sessionId ?? "none"}</span>
           <span>Backend {run.backend ?? "live"}</span>
           <span>Model {run.model ?? "unknown"}</span>
+          <span>Workspace {run.workspacePath ?? "none"}</span>
           <span>{run.events.length} events</span>
           <span>{duration(run)}</span>
           <span>Started {formatTime(run.startedAt)}</span>

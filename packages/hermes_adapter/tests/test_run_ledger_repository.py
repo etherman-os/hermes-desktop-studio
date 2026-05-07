@@ -27,6 +27,7 @@ def test_create_run_record(tmp_path: Path) -> None:
         prompt="Map the repository structure",
         backend="mock",
         model="mock-model",
+        workspace_path="/work/project",
     )
 
     assert run["id"] == "run-1"
@@ -35,6 +36,7 @@ def test_create_run_record(tmp_path: Path) -> None:
     assert run["title"] == "Map the repository structure"
     assert run["backend"] == "mock"
     assert run["model"] == "mock-model"
+    assert run["workspace_path"] == "/work/project"
 
 
 def test_append_run_events_and_load_ledger(tmp_path: Path) -> None:

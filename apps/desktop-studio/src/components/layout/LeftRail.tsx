@@ -15,6 +15,7 @@ const RAIL_ITEMS = [
 
 export function LeftRail() {
   const setSidebar = useLayoutStore((s) => s.setSidebarSection);
+  const showSidebar = useLayoutStore((s) => s.showSidebar);
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const setBottomTab = useLayoutStore((s) => s.setBottomTab);
   const sidebarSection = useLayoutStore((s) => s.sidebarSection);
@@ -30,6 +31,7 @@ export function LeftRail() {
       setBottomTab("logs");
     }
     setSidebar(id);
+    showSidebar();
   }
 
   return (

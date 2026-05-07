@@ -214,7 +214,7 @@ export async function getSession(sessionId: string) {
   return request<SessionDetail>(`/studio/sessions/${sessionId}`);
 }
 
-export async function startRun(input: { session_id: string; prompt: string; profile?: string }) {
+export async function startRun(input: { session_id: string; prompt: string; profile?: string; workspace_path?: string | null; context?: Record<string, unknown> }) {
   return request<RunResponse>("/studio/runs", {
     method: "POST",
     body: JSON.stringify(input),

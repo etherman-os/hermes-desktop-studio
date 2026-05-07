@@ -35,7 +35,7 @@ Phase Product-1 adds a small workflow bridge: a run can create a Kanban card in 
 
 Run Ledger history is Studio-owned. Recent run metadata and normalized Studio event envelopes are persisted in `studio.db` through:
 
-- `runs`: run id, linked session id, status, prompt preview, start/end time, duration, backend, model, and redacted error text.
+- `runs`: run id, linked session id, status, prompt preview, workspace path, start/end time, duration, backend, model, and redacted error text.
 - `run_events`: normalized Studio event envelope fields for each event.
 
 The adapter stores only Studio event envelopes after normalization. Payloads and prompt previews are redacted before persistence. Tokens, API keys, auth headers, and secret-like values must not be stored.

@@ -10,11 +10,17 @@ interface CommandItem {
 
 interface UiState {
   commandPaletteOpen: boolean;
+  newRunOpen: boolean;
+  workspacePickerOpen: boolean;
   commandPaletteQuery: string;
   commands: CommandItem[];
   selectedCommandIndex: number;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
+  openNewRun: () => void;
+  closeNewRun: () => void;
+  openWorkspacePicker: () => void;
+  closeWorkspacePicker: () => void;
   setCommandPaletteQuery: (q: string) => void;
   setSelectedCommandIndex: (i: number) => void;
   registerCommands: (cmds: CommandItem[]) => void;
@@ -22,12 +28,18 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   commandPaletteOpen: false,
+  newRunOpen: false,
+  workspacePickerOpen: false,
   commandPaletteQuery: "",
   commands: [],
   selectedCommandIndex: 0,
 
   openCommandPalette: () => set({ commandPaletteOpen: true, commandPaletteQuery: "", selectedCommandIndex: 0 }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  openNewRun: () => set({ newRunOpen: true }),
+  closeNewRun: () => set({ newRunOpen: false }),
+  openWorkspacePicker: () => set({ workspacePickerOpen: true }),
+  closeWorkspacePicker: () => set({ workspacePickerOpen: false }),
   setCommandPaletteQuery: (q) => set({ commandPaletteQuery: q, selectedCommandIndex: 0 }),
   setSelectedCommandIndex: (i) => set({ selectedCommandIndex: i }),
   registerCommands: (cmds) => set({ commands: cmds }),

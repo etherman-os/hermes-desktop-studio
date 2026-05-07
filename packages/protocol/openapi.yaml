@@ -1027,6 +1027,10 @@ components:
         profile:
           type: string
           nullable: true
+        workspace_path:
+          type: string
+          nullable: true
+          description: Studio-side workspace/project path metadata. Not forwarded to Hermes unless officially supported.
         context:
           type: object
           description: Optional additional context (files, artifacts)
@@ -1092,6 +1096,9 @@ components:
           type: string
           nullable: true
         error:
+          type: string
+          nullable: true
+        workspace_path:
           type: string
           nullable: true
       required:

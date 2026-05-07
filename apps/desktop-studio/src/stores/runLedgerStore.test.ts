@@ -91,6 +91,7 @@ describe("runLedgerStore", () => {
           backend: "mock",
           model: "mock-model",
           error: null,
+          workspace_path: "/work/project",
         },
       ],
       total: 1,
@@ -102,6 +103,7 @@ describe("runLedgerStore", () => {
     const state = useRunLedgerStore.getState();
     expect(state.runs[0].runId).toBe("run-1");
     expect(state.runs[0].status).toBe("completed");
+    expect(state.runs[0].workspacePath).toBe("/work/project");
     expect(state.selectedRunId).toBe("run-1");
     expect(state.error).toBeNull();
   });
