@@ -24,6 +24,7 @@ interface ArtifactState {
   createArtifact: (input: ArtifactCreateRequest) => Promise<ArtifactDetail | null>;
   updateArtifact: (artifactId: string, input: ArtifactUpdateRequest) => Promise<ArtifactDetail | null>;
   archiveArtifact: (artifactId: string) => Promise<ArtifactDetail | null>;
+  runBrowserEvidence: (artifactId: string) => Promise<ArtifactDetail | null>;
   linkArtifactToRun: (artifactId: string, runId: string) => Promise<ArtifactDetail | null>;
   linkArtifactToSession: (artifactId: string, sessionId: string) => Promise<ArtifactDetail | null>;
   linkArtifactToCard: (artifactId: string, cardId: string) => Promise<ArtifactDetail | null>;
@@ -160,6 +161,24 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
       return artifact;
     } catch (err) {
       set({ saving: false, error: messageFromError(err, "Failed to archive artifact") });
+      return null;
+    }
+  },
+
+  runBrowserEvidence: async (artifactId) => {
+    set({ saving: true, error: null, actionMessage: null });
+    try {
+      const artifact = await api.runArtifactBrowserEvidence(artifactId);
+      set((state) => ({
+        artifacts: replaceArtifact(state.artifacts, artifact),
+        selectedArtifact: artifact,
+        selectedArtifactId: artifact.id,
+        saving: false,
+        actionMessage: "Browser evidence captured",
+      }));
+      return artifact;
+    } catch (err) {
+      set({ saving: false, error: messageFromError(err, "Failed to capture browser evidence") });
       return null;
     }
   },

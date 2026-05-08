@@ -14,7 +14,7 @@ test.describe("user flows", () => {
 
   test("rail icon switches sidebar section", async ({ studioPage: page }) => {
     const icons = page.locator(".rail-icon");
-    await expect(icons).toHaveCount(15);
+    await expect(icons).toHaveCount(17);
 
     for (let i = 0; i < 3; i++) {
       await icons.nth(i).click();
@@ -74,8 +74,7 @@ test.describe("user flows", () => {
   });
 
   test("sessions sidebar shows loaded sessions", async ({ studioPage: page }) => {
-    const sessionsIcon = page.locator(".rail-icon").nth(3);
-    await sessionsIcon.click();
+    await page.getByRole("button", { name: "Sessions" }).click();
 
     const sidebar = page.locator(".sidebar-content");
     await expect(sidebar).toContainText("Map src directory structure");
@@ -83,8 +82,7 @@ test.describe("user flows", () => {
   });
 
   test("run ledger shows runs when connected", async ({ studioPage: page }) => {
-    const runsIcon = page.locator(".rail-icon").first();
-    await runsIcon.click();
+    await page.getByRole("button", { name: "Runs & History" }).click();
 
     await expect(page.locator(".run-ledger")).toBeVisible();
     await expect(page.locator(".run-ledger-title")).toBeVisible();

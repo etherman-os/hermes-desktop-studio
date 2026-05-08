@@ -4,6 +4,7 @@ import {
   CalendarClock,
   Columns3,
   Cpu,
+  DraftingCompass,
   FileText,
   GitBranch,
   History,
@@ -14,6 +15,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { type CenterTab, type SidebarSection, useLayoutStore } from "../../stores/layoutStore";
@@ -29,10 +31,12 @@ type RailItem = {
 };
 
 const RAIL_ITEMS: RailItem[] = [
+  { id: "mission", slot: "mission", tooltip: "Mission Control", icon: Sparkles },
   { id: "runs", slot: "runs", tooltip: "Runs & History", icon: Activity },
   { id: "chat", slot: "chat", tooltip: "Chat", icon: MessageSquare },
   { id: "board", slot: "board", tooltip: "Board", icon: Columns3 },
   { id: "sessions", slot: "sessions", tooltip: "Sessions", icon: History },
+  { id: "design", slot: "design", tooltip: "Design Canvas", icon: DraftingCompass },
   { id: "artifacts", slot: "artifacts", tooltip: "Artifacts", icon: Package },
   { id: "processes", slot: "processes", tooltip: "Processes", icon: Cpu },
   { id: "context", slot: "context", tooltip: "Context Inspector", icon: Search },

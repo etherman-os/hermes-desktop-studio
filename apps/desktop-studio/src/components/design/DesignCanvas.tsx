@@ -1,0 +1,192 @@
+import React from "react";
+import type { ArtifactType } from "../../api/studioClient";
+import { useArtifactStore } from "../../stores/artifactStore";
+import { useHermesInventoryStore } from "../../stores/hermesInventoryStore";
+import { useLayoutStore } from "../../stores/layoutStore";
+import { useRunStore } from "../../stores/runStore";
+import { useSessionStore } from "../../stores/sessionStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
+
+type ImportKind = "html" | "screenshot" | "url" | "figma" | "json" | "markdown";
+
+const TYPE_BY_KIND: Record<ImportKind, ArtifactType> = {
+  html: "html",
+  screenshot: "screenshot",
+  url: "file_reference",
+  figma: "file_reference",
+  json: "json",
+  markdown: "markdown",
+};
+
+export function DesignCanvas() {
+  const artifacts = useArtifactStore((s) => s.artifacts);
+  const selectedArtifact = useArtifactStore((s) => s.selectedArtifact);
+  const selectedArtifactId = useArtifactStore((s) => s.selectedArtifactId);
+  const loadArtifacts = useArtifactStore((s) => s.loadArtifacts);
+  const selectArtifact = useArtifactStore((s) => s.selectArtifact);
+  const createArtifact = useArtifactStore((s) => s.createArtifact);
+  const saving = useArtifactStore((s) => s.saving);
+  const error = useArtifactStore((s) => s.error);
+  const sendPrompt = useRunStore((s) => s.sendPrompt);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const selectedWorkspace = useWorkspaceStore((s) => s.selectedWorkspace);
+  const setActiveTab = useLayoutStore((s) => s.setActiveTab);
+  const skills = useHermesInventoryStore((s) => s.skills);
+  const toolsets = useHermesInventoryStore((s) => s.toolsets);
+  const [kind, setKind] = React.useState<ImportKind>("html");
+  const [title, setTitle] = React.useState("Untitled design import");
+  const [content, setContent] = React.useState("");
+  const [brief, setBrief] = React.useState("Turn this into a polished, production-ready local app experience.");
+
+  React.useEffect(() => {
+    void loadArtifacts({ limit: 100 });
+  }, [loadArtifacts]);
+
+  const designArtifacts = artifacts.filter((artifact) => ["html", "screenshot", "json", "markdown", "file_reference"].includes(artifact.type));
+  const designSkills = skills
+    .filter((skill) => skill.installed && ["creative", "software-development", "github"].some((category) => skill.category.includes(category)))
+    .slice(0, 4)
+    .map((skill) => skill.cli_name || skill.name || skill.id);
+  const designToolsets = toolsets
+    .filter((toolset) => ["browser", "web", "file", "vision", "image_gen", "code_execution"].includes(toolset.id) || toolset.id.includes("figma"))
+    .map((toolset) => toolset.id);
+
+  async function importDesign() {
+    const trimmed = content.trim();
+    if (!trimmed) return null;
+    const artifact = await createArtifact({
+      title: title.trim() || "Design import",
+      type: TYPE_BY_KIND[kind],
+      description: `Design Canvas import: ${kind}`,
+      content_text: kind === "url" || kind === "figma" ? null : trimmed,
+      file_path: kind === "url" || kind === "figma" ? trimmed : null,
+      mime_type: kind === "html" ? "text/html" : kind === "json" ? "application/json" : "text/plain",
+      source: "design_canvas",
+      session_id: activeSessionId,
+    });
+    if (artifact) void loadArtifacts({ limit: 100 });
+    return artifact;
+  }
+
+  async function importAndGenerate() {
+    const artifact = await importDesign();
+    if (!artifact) return;
+    setActiveTab("chat");
+    await sendPrompt(
+      [
+        "Hermes Design Canvas request",
+        `Imported artifact: ${artifact.title} (${artifact.id})`,
+        `Source kind: ${kind}`,
+        artifact.file_path ? `Source reference: ${artifact.file_path}` : "",
+        artifact.content_text ? `Source excerpt:\n${artifact.content_text.slice(0, 2200)}` : "",
+        `Production brief:\n${brief.trim()}`,
+        kind === "figma" ? "If a local Figma MCP/tool is configured in Hermes, use it. Otherwise inspect the URL with browser/vision tools and produce an implementation-ready reconstruction plan." : "",
+        "Use local Hermes tools, browser checks, project files, and checkpoints where available. Return implementation steps, generated artifacts, and verification evidence.",
+      ].filter(Boolean).join("\n\n"),
+      activeSessionId ?? "default",
+      {
+        workspacePath: selectedWorkspace,
+        mode: "design",
+        skills: designSkills,
+        toolsets: designToolsets,
+      },
+    );
+  }
+
+  return (
+    <div className="design-canvas">
+      <div className="design-canvas-header">
+        <div>
+          <div className="workbench-eyebrow">Design Canvas</div>
+          <h2>Import, inspect, and hand off visual work to Hermes</h2>
+        </div>
+        <div className="design-canvas-actions">
+          <button className="tool-button" disabled={saving || !content.trim()} onClick={() => void importDesign()}>
+            Import Artifact
+          </button>
+          <button className="primary-button" disabled={saving || !content.trim()} onClick={() => void importAndGenerate()}>
+            Import + Generate
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="inline-warning">{error}</div>}
+
+      <div className="design-canvas-grid">
+        <section className="design-import-panel">
+          <div className="inventory-section-title">Import Source</div>
+          <div className="design-form-grid">
+            <label>
+              <span>Kind</span>
+              <select value={kind} onChange={(event) => setKind(event.target.value as ImportKind)}>
+                <option value="html">HTML / React output</option>
+                <option value="screenshot">Screenshot notes</option>
+                <option value="url">Local URL or file path</option>
+                <option value="figma">Figma URL</option>
+                <option value="json">JSON design spec</option>
+                <option value="markdown">Markdown brief</option>
+              </select>
+            </label>
+            <label>
+              <span>Title</span>
+              <input value={title} onChange={(event) => setTitle(event.target.value)} />
+            </label>
+          </div>
+          <textarea
+            className="studio-textarea design-source-textarea"
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder={kind === "url" ? "http://127.0.0.1:3000 or /path/to/file" : kind === "figma" ? "https://www.figma.com/file/..." : "Paste HTML, JSON, markdown, screenshot notes, or a design brief"}
+          />
+          <textarea
+            className="studio-textarea design-brief-textarea"
+            value={brief}
+            onChange={(event) => setBrief(event.target.value)}
+            placeholder="Production brief"
+          />
+        </section>
+
+        <section className="design-preview-panel selectable">
+          <div className="inventory-section-title">Selected Design Artifact</div>
+          {selectedArtifact ? (
+            <>
+              <div className="event-detail-title">{selectedArtifact.title}</div>
+              <dl className="event-detail-meta">
+                <dt>Type</dt>
+                <dd>{selectedArtifact.type}</dd>
+                <dt>Source</dt>
+                <dd>{selectedArtifact.source}</dd>
+                <dt>Artifact</dt>
+                <dd>{selectedArtifact.id}</dd>
+              </dl>
+              {selectedArtifact.type === "html" && selectedArtifact.content_text ? (
+                <iframe className="design-preview-frame" title={selectedArtifact.title} srcDoc={selectedArtifact.content_text} sandbox="" />
+              ) : (
+                <pre className="event-payload">{(selectedArtifact.content_text ?? selectedArtifact.file_path ?? "").slice(0, 3000)}</pre>
+              )}
+            </>
+          ) : (
+            <div className="workbench-empty compact">Select or import a design artifact.</div>
+          )}
+        </section>
+
+        <section className="design-artifact-list">
+          <div className="inventory-section-title">Design Imports</div>
+          <div className="mission-list">
+            {designArtifacts.slice(0, 12).map((artifact) => (
+              <button
+                key={artifact.id}
+                className={`mission-list-row ${selectedArtifactId === artifact.id ? "active" : ""}`}
+                onClick={() => void selectArtifact(artifact.id)}
+              >
+                <span>{artifact.title}</span>
+                <small>{artifact.type}</small>
+              </button>
+            ))}
+            {designArtifacts.length === 0 && <div className="panel-note">No design imports yet</div>}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}

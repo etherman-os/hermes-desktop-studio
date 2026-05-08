@@ -15,12 +15,14 @@ Chat remains important, but it is one surface inside the workbench. It submits p
 | Layer | Role |
 | --- | --- |
 | Run Ledger | Product spine. Captures live and recent run timelines, selected event details, status, backend/model, duration, warnings, and follow-up actions. |
+| Mission Control | Default command center for runtime health, local CLI/gateway bridge control, recent work, approvals, processes, delegations, and capability inventory. |
 | Chat | Prompt and assistant stream surface connected to the current run. |
 | Board | Control surface for runs, sessions, artifacts, and follow-up workflow. |
 | Sessions | Read-only view into Hermes session history. |
-| Artifact Shelf | Persistent Studio-owned landing zone for files, reports, previews, screenshots, test results, and log snapshots. |
+| Design Canvas | Design import and Hermes handoff surface for HTML, screenshot notes, URLs, JSON specs, and markdown briefs. |
+| Artifact Shelf | Persistent Studio-owned landing zone for files, reports, previews, screenshots, test results, visual edit requests, browser evidence plans, and log snapshots. |
 | Context Inspector | Read-only explanation surface for profile, model/provider config, workspace files, runtime state, run/session metadata, and related Studio work. |
-| Approval Center | Read-only audit and visibility surface for tool approval requests, risk, decisions, and run/session links. |
+| Approval Center | Audit, visibility, and local decision surface for tool approval requests, risk, decisions, and run/session links. |
 | Logs and Diagnostics | Adapter/Hermes observability without exposing Hermes internals to the frontend. |
 
 ## Kanban Positioning
@@ -37,7 +39,7 @@ Phase Product-2 makes Board a real control surface. It loads persistent Studio c
 
 Artifacts are persistent work outputs from runs, sessions, cards, logs, tests, reports, markdown, JSON, screenshots, HTML source, and file references. They are Studio-owned metadata in `studio.db`, not Hermes Agent state.
 
-Phase Product-3 adds Artifact Shelf v1. Run Ledger can preserve a run summary, markdown report, or log snapshot as an artifact. Sessions can create linked session summaries. Board cards can create linked card summaries. HTML is shown as inert source text until a sanitizer-backed Preview Canvas exists.
+Artifact Shelf can preserve run summaries, markdown reports, log snapshots, session summaries, card summaries, browser evidence plans, and design imports. HTML artifacts are inspected through sanitized sandboxed previews and source text. Visual Edit and A/B Variant actions hand structured requests back to Hermes through `/studio/runs`.
 
 ## Context Positioning
 
@@ -49,7 +51,7 @@ Phase Product-4 keeps this read-only. Workspace files are previewed with length 
 
 Approval Center makes tool approval requests visible as part of the run record. It persists normalized `approval.requested` and `approval.resolved` Studio events into Studio-owned `studio.db`, shows pending/history, and links approvals back to runs and sessions.
 
-Phase Product-5 is intentionally read-only. It does not answer approvals, auto-approve tools, bypass Hermes approval mechanisms, or write Hermes state/config. Approve/deny routes return `501 Not Implemented` until an official verified Hermes approval response API is wired.
+Approval Center does not auto-approve tools, bypass Hermes approval mechanisms, or write Hermes state/config. Approve/deny routes update the local Studio audit record and notify Hermes through the local gateway when the verified approval response route is available.
 
 ## Run Ledger Persistence
 
@@ -81,8 +83,7 @@ Hermes Desktop Studio should not copy the Hermes web dashboard feature-for-featu
 - Run Ledger history, workflow actions, and summary export
 - Artifact Shelf
 - Context Inspector with safe local reads
-- Approval Center read-only visibility and audit
-- Checkpoint Timeline
-- Preview Canvas
-- Process Cockpit
-- Richer concept packs after the workbench spine is clear
+- Checkpoint-backed artifact revisions and visual diffs
+- Browser-in-the-loop evidence runner
+- Click-to-selector visual editing in sanitized previews
+- Richer animated concept packs and local marketplace

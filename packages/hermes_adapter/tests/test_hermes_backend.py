@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from typing import Any
 
 import httpx
@@ -12,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
 from hermes_adapter.hermes_backend import HermesBackend, _normalize_hermes_event
+from hermes_adapter.hermes_cli_backend import HermesCliBackend
 
 # ---------------------------------------------------------------------------
 # Fake Hermes API server for testing
@@ -193,7 +195,8 @@ class TestHermesBackend:
         health = await backend.health()
         assert health["hermes_connected"] is True
         assert health["backend_mode"] == "hermes"
-        await backend.close()
+        if hasattr(backend, "close"):
+            await backend.close()  # type: ignore[attr-defined]
 
     async def test_health_unavailable(self, fake_hermes_unavailable):
         backend = HermesBackend(fake_hermes_unavailable)
@@ -236,6 +239,80 @@ class TestHermesBackend:
         await backend.close()
         assert result == {"run_id": "run-1", "status": "started"}
 
+    async def test_patch_model_config_uses_hermes_cli(self, tmp_path, monkeypatch):
+        hermes_home = tmp_path / ".hermes"
+        hermes_home.mkdir()
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        fake_hermes = bin_dir / "hermes"
+        fake_hermes.write_text(
+            """#!/usr/bin/env bash
+set -eu
+echo "$@" >> "$HERMES_HOME/calls.log"
+if [[ "$1" == "config" && "$2" == "set" ]]; then
+  python3 - "$HERMES_HOME/config.yaml" "$3" "$4" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+cli_key = sys.argv[2]
+cli_value = sys.argv[3]
+data = {}
+if path.exists():
+    current = None
+    for line in path.read_text().splitlines():
+        if not line.strip() or ":" not in line:
+            continue
+        if not line.startswith(" "):
+            key, raw_value = line.split(":", 1)
+            key = key.strip()
+            value = raw_value.strip()
+            if value:
+                data[key] = value
+                current = None
+            else:
+                data.setdefault(key, {})
+                current = key
+        elif current:
+            key, raw_value = line.split(":", 1)
+            data.setdefault(current, {})[key.strip()] = raw_value.strip()
+target = data
+parts = cli_key.split(".")
+for part in parts[:-1]:
+    target = target.setdefault(part, {})
+target[parts[-1]] = cli_value
+def dump(obj, indent=0):
+    out = []
+    for k, v in obj.items():
+        if isinstance(v, dict):
+            out.append(" " * indent + f"{k}:")
+            out.extend(dump(v, indent + 2))
+        else:
+            out.append(" " * indent + f"{k}: {v}")
+    return out
+path.write_text("\\n".join(dump(data)) + "\\n")
+PY
+  exit 0
+fi
+exit 2
+""",
+            encoding="utf-8",
+        )
+        fake_hermes.chmod(0o755)
+        monkeypatch.setenv("HERMES_STUDIO_HERMES_HOME", str(hermes_home))
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+
+        backend = HermesBackend("http://hermes.test")
+        result = await backend.patch_model_config({"provider": "glm", "model": "glm-5"})
+
+        await backend.close()
+        assert result["provider"] == "glm"
+        assert result["model"] == "glm-5"
+        assert result["status"] == "updated"
+        assert (hermes_home / "calls.log").read_text(encoding="utf-8").splitlines() == [
+            "config set model.provider glm",
+            "config set model.default glm-5",
+        ]
+
     async def test_stream_run_events(self, fake_hermes):
         backend = HermesBackend(fake_hermes)
         result = await backend.start_run("s-1", "hello")
@@ -267,26 +344,154 @@ class TestHermesBackend:
         await backend.close()
 
 
+class TestHermesCliBackend:
+    async def test_local_cli_run_streams_output(self, tmp_path, monkeypatch):
+        hermes_home = tmp_path / ".hermes"
+        hermes_home.mkdir()
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        fake_hermes = bin_dir / "hermes"
+        fake_hermes.write_text(
+            """#!/bin/sh
+set -eu
+if [ "${1:-}" = "--version" ]; then
+  echo "Hermes Agent test"
+  exit 0
+fi
+if [ "${1:-}" = "chat" ]; then
+  echo "local cli response"
+  exit 0
+fi
+exit 2
+""",
+            encoding="utf-8",
+        )
+        fake_hermes.chmod(0o755)
+        monkeypatch.setenv("HERMES_STUDIO_HERMES_HOME", str(hermes_home))
+        monkeypatch.setenv("PATH", str(bin_dir))
+
+        backend = HermesCliBackend()
+        result = await backend.start_run(
+            "default",
+            "hello",
+            context={"provider": "glm", "model": "glm-5", "toolsets": ["file"], "skills": ["design"]},
+        )
+        events = [event async for event in backend.stream_run_events(result["run_id"])]
+
+        if hasattr(backend, "close"):
+            await backend.close()  # type: ignore[attr-defined]
+        assert result["transport"] == "local-cli"
+        assert [event["type"] for event in events] == [
+            "run.started",
+            "adapter.warning",
+            "assistant.delta",
+            "assistant.completed",
+            "run.completed",
+        ]
+        assert events[2]["payload"]["text"] == "local cli response\n"
+
+    async def test_local_cli_run_forwards_hermes_flags(self, tmp_path, monkeypatch):
+        hermes_home = tmp_path / ".hermes"
+        hermes_home.mkdir()
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        command_log = tmp_path / "command.log"
+        fake_hermes = bin_dir / "hermes"
+        fake_hermes.write_text(
+            """#!/bin/sh
+set -eu
+if [ "${1:-}" = "--version" ]; then
+  echo "Hermes Agent test"
+  exit 0
+fi
+if [ "${1:-}" = "chat" ]; then
+  printf '%s\n' "$@" > "$COMMAND_LOG"
+  echo "ok"
+  exit 0
+fi
+exit 2
+""",
+            encoding="utf-8",
+        )
+        fake_hermes.chmod(0o755)
+        monkeypatch.setenv("HERMES_STUDIO_HERMES_HOME", str(hermes_home))
+        monkeypatch.setenv("COMMAND_LOG", str(command_log))
+        monkeypatch.setenv("PATH", str(bin_dir))
+
+        backend = HermesCliBackend()
+        result = await backend.start_run(
+            "session-1",
+            "hello",
+            context={
+                "provider": "glm",
+                "model": "glm-5",
+                "toolsets": ["file", "browser"],
+                "skills": ["systematic-debugging"],
+                "checkpoints": True,
+                "max_turns": 42,
+                "worktree": True,
+                "pass_session_id": True,
+                "ignore_rules": True,
+            },
+        )
+        events = [event async for event in backend.stream_run_events(result["run_id"])]
+
+        assert events[-1]["type"] == "run.completed"
+        args = command_log.read_text(encoding="utf-8").splitlines()
+        assert args[:3] == ["chat", "--query", "hello"]
+        assert "--provider" in args and "glm" in args
+        assert "--model" in args and "glm-5" in args
+        assert "--toolsets" in args and "file,browser" in args
+        assert "--skills" in args and "systematic-debugging" in args
+        assert "--checkpoints" in args
+        assert "--max-turns" in args and "42" in args
+        assert "--worktree" in args
+        assert "--pass-session-id" in args
+        assert "--ignore-rules" in args
+        assert "--resume" in args and "session-1" in args
+
+
 # ---------------------------------------------------------------------------
 # Auto mode fallback test
 # ---------------------------------------------------------------------------
 
 
 class TestAutoModeFallback:
-    async def test_auto_falls_back_to_mock_when_hermes_unavailable(self):
-        import os
-
+    async def test_auto_uses_local_cli_when_available(self, tmp_path, monkeypatch):
         from hermes_adapter.backend_factory import create_backend
 
-        # Force auto mode with unavailable Hermes
-        os.environ["HERMES_STUDIO_BACKEND"] = "auto"
-        os.environ["HERMES_API_BASE_URL"] = "http://127.0.0.1:19999"
+        hermes_home = tmp_path / ".hermes"
+        hermes_home.mkdir()
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        fake_hermes = bin_dir / "hermes"
+        fake_hermes.write_text("#!/bin/sh\necho 'Hermes Agent test'\n", encoding="utf-8")
+        fake_hermes.chmod(0o755)
+        monkeypatch.setenv("HERMES_STUDIO_BACKEND", "auto")
+        monkeypatch.setenv("HERMES_STUDIO_HERMES_HOME", str(hermes_home))
+        monkeypatch.setenv("PATH", str(bin_dir))
+
+        backend, status = await create_backend()
+        assert status["backend_mode"] == "auto"
+        assert status["active_backend"] == "local-cli"
+        assert status["hermes_connected"] is True
+
+        if hasattr(backend, "close"):
+            await backend.close()  # type: ignore[attr-defined]
+
+    async def test_auto_falls_back_to_mock_when_local_cli_and_gateway_unavailable(self, tmp_path, monkeypatch):
+        from hermes_adapter.backend_factory import create_backend
+
+        empty_bin = tmp_path / "empty-bin"
+        empty_bin.mkdir()
+        monkeypatch.setenv("HERMES_STUDIO_BACKEND", "auto")
+        monkeypatch.setenv("HERMES_API_BASE_URL", "http://127.0.0.1:19999")
+        monkeypatch.setenv("PATH", str(empty_bin))
 
         backend, status = await create_backend()
         assert status["backend_mode"] == "auto"
         assert status["active_backend"] == "mock"
         assert status["hermes_connected"] is False
 
-        # Cleanup
-        os.environ.pop("HERMES_STUDIO_BACKEND", None)
-        os.environ.pop("HERMES_API_BASE_URL", None)
+        if hasattr(backend, "close"):
+            await backend.close()  # type: ignore[attr-defined]

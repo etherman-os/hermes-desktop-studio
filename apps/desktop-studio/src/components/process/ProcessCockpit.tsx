@@ -17,9 +17,21 @@ export function ProcessCockpit() {
 
   React.useEffect(() => {
     void loadProcesses();
+    const timer = window.setInterval(() => {
+      void loadProcesses();
+    }, 5000);
+    return () => window.clearInterval(timer);
   }, [loadProcesses]);
 
   const runningCount = processes.filter((p) => p.status === "running").length;
+  const groupedTemplates = React.useMemo(() => {
+    const groups = new Map<string, typeof templates>();
+    for (const template of templates) {
+      const group = template.category === "hermes" ? "Hermes Runtime" : "Studio";
+      groups.set(group, [...(groups.get(group) ?? []), template]);
+    }
+    return [...groups.entries()];
+  }, [templates]);
 
   function copyPid(processId: string) {
     const proc = processes.find((p) => p.id === processId);
@@ -58,24 +70,29 @@ export function ProcessCockpit() {
 
       <div className="process-templates">
         <div className="pane-label">Start a Process</div>
-        <div className="process-template-grid">
-          {templates.map((t) => {
-            const isTemplateRunning = processes.some((p) => p.template_id === t.id && p.status === "running");
-            return (
-              <button
-                key={t.id}
-                className="process-template-card"
-                onClick={() => void startProcess(t.id)}
-                disabled={isTemplateRunning}
-                title={t.description}
-              >
-                <span className="process-template-name">{t.name}</span>
-                <span className="process-template-cmd">{t.command}</span>
-                {isTemplateRunning && <span className="process-template-running">Running</span>}
-              </button>
-            );
-          })}
-        </div>
+        {groupedTemplates.map(([group, items]) => (
+          <div key={group} className="process-template-group">
+            <div className="process-template-group-title">{group}</div>
+            <div className="process-template-grid">
+              {items.map((t) => {
+                const isTemplateRunning = processes.some((p) => p.template_id === t.id && p.status === "running");
+                return (
+                  <button
+                    key={t.id}
+                    className="process-template-card"
+                    onClick={() => void startProcess(t.id)}
+                    disabled={isTemplateRunning}
+                    title={t.description}
+                  >
+                    <span className="process-template-name">{t.name}</span>
+                    <span className="process-template-cmd">{t.command}</span>
+                    {isTemplateRunning && <span className="process-template-running">Running</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {processes.length > 0 && (

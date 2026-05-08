@@ -202,7 +202,7 @@ function ModelSection({ connected, backendMode, label, icon }: { connected: bool
                 marginTop: "var(--app-spacing-xs)",
               }}
             >
-              {saving ? "Applying..." : "Apply Model Change"}
+              {saving ? "Applying..." : "Apply in Hermes"}
             </button>
           )}
 

@@ -79,7 +79,7 @@ export function ChatSurface() {
           </div>
         </div>
         <div className="chat-run-actions">
-          <button className="tool-button" onClick={openNewRun} aria-label="Start new chat">New Chat</button>
+          <button className="tool-button" onClick={() => openNewRun()} aria-label="Start new chat">New Chat</button>
           <button className="tool-button" onClick={openLedger} aria-label="Open run in ledger">Open in Run Ledger</button>
           <button
             className="tool-button"

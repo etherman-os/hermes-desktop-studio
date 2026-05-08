@@ -17,8 +17,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] `pnpm run test:visual:firefox` starts/uses the Vite frontend and launches Firefox when available
 - [ ] Missing Playwright Firefox prints `pnpm run test:visual:install` and skips without confusing Chrome/Puppeteer errors
 - [ ] `PLAYWRIGHT_FIREFOX_EXECUTABLE_PATH=/usr/bin/firefox pnpm run test:visual:firefox` is documented as an optional system Firefox override
-- [ ] Smoke test verifies activity rail entries: Runs, Chat, Board, Sessions, Artifacts, Context, Logs, Themes, Settings
-- [ ] Smoke test verifies the Run Ledger tab exists
+- [ ] Smoke test verifies activity rail entries: Mission, Runs, Chat, Board, Sessions, Design, Artifacts, Context, Logs, Themes, Settings
+- [ ] Smoke test verifies the Mission Control and Run Ledger tabs exist
 - [ ] Smoke test fails on fatal React/Vite overlay text
 - [ ] Optional screenshot is written to `artifacts/visual-smoke/home.png` and is not committed
 
@@ -41,6 +41,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Manual workspace path appears in the top bar and status bar
 - [ ] Recent workspaces are listed after selecting a path
 - [ ] New Run modal includes prompt, workspace path, profile, model/provider, session, linked card, and run mode
+- [ ] New Run presets include implementation, review, debug, design, browser verification, multi-agent, Kanban swarm, video, and Studio memory modes
+- [ ] Presets prefill skills, toolsets, checkpoints, max turns, and worktree/session toggles
 - [ ] Starting a run from New Run sends through `/studio/runs`
 - [ ] Workspace path appears in Chat header and Run Ledger
 - [ ] Workspace path persists in Studio-owned run metadata after adapter restart
@@ -59,8 +61,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 
 ## Run-Centered Workbench
 
-- [ ] App opens with Run Ledger as the primary center tab
-- [ ] Activity rail includes Runs, Chat, Board, Sessions, Artifacts, Context, Approvals, Logs, Themes, and Settings
+- [ ] App opens with Mission Control as the primary center tab
+- [ ] Activity rail includes Mission, Runs, Chat, Board, Sessions, Design, Artifacts, Processes, Context, Approvals, Hermes Arsenal, Delegations, Cron, Logs, Themes, and Settings
 - [ ] Starting a prompt creates a current run in the Run Ledger
 - [ ] Recent runs persist in Studio-owned `studio.db` and reappear after adapter restart
 - [ ] Selecting a recent run loads its persisted timeline from `/studio/runs/{run_id}/ledger`
@@ -76,8 +78,12 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Right inspector shows selected run, model, tools, memory, context, approvals, and diagnostics
 - [ ] Bottom panel Activity and Tool Events reflect current run events
 - [ ] Artifact Shelf renders persisted artifacts, filters, search, and selected artifact details
+- [ ] HTML artifacts show a live sanitized preview and source editor
+- [ ] Click-to-Edit mode captures a CSS selector from the HTML preview without running artifact scripts
+- [ ] Visual Edit, A/B Variants, Browser Check, Video Brief, and Design DNA actions open/send Hermes-targeted work
+- [ ] Board "Plan Agent Swarm" opens a Hermes Kanban/delegation run draft
 - [ ] Context Inspector renders active profile, model/provider, workspace files, runtime status, memory/skills availability, warnings, and related Studio work
-- [ ] Approval Center shows pending approvals, history, risk/status, run/session links, and read-only wording when present
+- [ ] Approval Center shows pending approvals, history, risk/status, run/session links, and local/Hermes notification state when present
 - [ ] Themes still switch after the UX-1 shell realignment
 - [ ] Logs, profiles, sessions, and model viewer still load from the adapter when available
 
@@ -222,8 +228,10 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Link-run, link-session, and link-card endpoints persist IDs
 - [ ] Secret-like text is redacted from artifact content
 - [ ] Oversized content is rejected safely
-- [ ] HTML artifacts are displayed as inert source text, not executed
+- [ ] HTML artifacts are displayed in a sanitized sandbox preview and as source text; scripts are not executed
 - [ ] File-reference artifacts store path metadata only
+- [ ] Browser Check creates a report artifact before handing evidence collection to Hermes
+- [ ] Visual Edit prompts include optional selector/component target context
 - [ ] Artifact tests verify no writes to Hermes `state.db`
 
 ## Artifact Shelf Frontend
@@ -237,6 +245,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Run Ledger can create a log snapshot artifact
 - [ ] Sessions can create a linked session summary artifact
 - [ ] Board cards can create linked card summary artifacts
+- [ ] Artifact Shelf shows artifact history events
+- [ ] Artifact Shelf can send Visual Edit, A/B Variants, and Browser Check requests through `/studio/runs`
 - [ ] Adapter unavailable state is visible and does not crash the shelf
 
 ## Context Inspector
@@ -268,8 +278,8 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] `GET /studio/approvals/{approval_id}` returns detail with redacted request payload and events
 - [ ] `GET /studio/runs/{run_id}/approvals` filters approvals by run id
 - [ ] `GET /studio/sessions/{session_id}/approvals` filters approvals by session id
-- [ ] `POST /studio/approvals/{approval_id}/approve` returns `501` until verified Hermes response wiring exists
-- [ ] `POST /studio/approvals/{approval_id}/deny` returns `501` until verified Hermes response wiring exists
+- [ ] `POST /studio/approvals/{approval_id}/approve` records a local decision and reports whether Hermes was notified
+- [ ] `POST /studio/approvals/{approval_id}/deny` records a local decision and reports whether Hermes was notified
 - [ ] Approval routes require adapter auth and return standard error envelopes
 - [ ] OpenAPI route parity includes all `/studio/approvals/*` and scoped approval routes
 - [ ] `approval.requested` run stream events persist without breaking SSE
@@ -280,7 +290,7 @@ Manual smoke test checklist for verifying the desktop studio works correctly.
 - [ ] Run Ledger highlights approval events and "Open Approvals" scopes the center to the selected run
 - [ ] Context Inspector shows related approvals for selected run/session context
 - [ ] Activity rail or status bar shows pending approval count
-- [ ] UI clearly states approval response is read-only when not wired
+- [ ] UI clearly distinguishes local-only approval decisions from Hermes-notified decisions
 - [ ] Approval tests verify no writes to Hermes `state.db`
 
 ## Status Bar

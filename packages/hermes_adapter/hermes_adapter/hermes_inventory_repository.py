@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -141,8 +142,10 @@ def _parse_frontmatter(text: str) -> dict[str, Any]:
 class HermesInventoryRepository:
     """Discover local Hermes capabilities without modifying Hermes files."""
 
-    def __init__(self, hermes_home: Path | None = None) -> None:
-        self._hermes_home = hermes_home or get_hermes_home()
+    def __init__(self, hermes_home: Path | None = None, *, enable_cli_probe: bool | None = None) -> None:
+        default_home = get_hermes_home()
+        self._hermes_home = hermes_home or default_home
+        self._enable_cli_probe = enable_cli_probe if enable_cli_probe is not None else self._hermes_home == default_home
         self._config = self._load_config()
         self._model_catalog = _read_json(self._hermes_home / "models_dev_cache.json")
         self._ollama_cloud = _read_json(self._hermes_home / "ollama_cloud_models_cache.json")
@@ -444,7 +447,8 @@ class HermesInventoryRepository:
             "related_skills": _string_list(hermes_meta.get("related_skills")),
             "prerequisites": prerequisites if isinstance(prerequisites, dict) else {},
             "source": source,
-            "installed": source == "installed",
+            "installed": source in {"installed", "bundled"},
+            "cli_name": str(metadata.get("name") or skill_path.parent.name),
             "path": str(skill_path),
             "size_bytes": stat.st_size,
             "updated_at": datetime.fromtimestamp(stat.st_mtime, UTC).isoformat(),
@@ -471,6 +475,76 @@ class HermesInventoryRepository:
                 "source": "config.yaml",
             })
         return sorted(result, key=lambda item: str(item["id"]).lower())
+
+    def _cli_tools_summary(self) -> str:
+        if not self._enable_cli_probe:
+            return ""
+        env = {**os.environ, "HERMES_HOME": str(self._hermes_home)}
+        try:
+            result = subprocess.run(
+                ["hermes", "tools", "--summary", "list"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+                env=env,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.debug("Hermes tools CLI summary unavailable: %s", exc)
+            return ""
+        if result.returncode != 0:
+            logger.debug("Hermes tools CLI summary failed: %s", result.stderr.strip())
+            return ""
+        return result.stdout
+
+    def _toolsets_from_cli_summary(self) -> list[dict[str, Any]]:
+        text = self._cli_tools_summary()
+        if not text:
+            return []
+        toolsets: list[dict[str, Any]] = []
+        section = ""
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith("Built-in toolsets"):
+                platform_match = re.search(r"\(([^)]+)\)", line)
+                section = f"builtins:{platform_match.group(1) if platform_match else 'cli'}"
+                continue
+            if line.startswith("MCP servers"):
+                section = "mcp"
+                continue
+            if section.startswith("builtins:") and (line.startswith("\u2713") or line.startswith("\u2717") or line.startswith("+") or line.startswith("-")):
+                parts = line.split()
+                if len(parts) < 3:
+                    continue
+                platform = section.split(":", 1)[1]
+                enabled = parts[0] in {"\u2713", "+"}
+                tool_id = parts[2]
+                label = " ".join(parts[3:]).strip()
+                toolsets.append({
+                    "id": tool_id,
+                    "platform": platform,
+                    "kind": "platform",
+                    "enabled": enabled,
+                    "source": "hermes tools --summary list",
+                    "label": label,
+                })
+            elif section == "mcp" and not line.startswith("─") and " " in line:
+                parts = line.split()
+                server_id = parts[0]
+                if server_id.lower() in {"name", "transport"}:
+                    continue
+                enabled = "enabled" in line or "all tools enabled" in line
+                toolsets.append({
+                    "id": f"{server_id}:*",
+                    "platform": "mcp",
+                    "kind": "mcp",
+                    "enabled": enabled,
+                    "source": "hermes tools --summary list",
+                    "label": "all MCP tools" if "all" in line else "selected MCP tools",
+                })
+        return toolsets
 
     def list_toolsets(self) -> list[dict[str, Any]]:
         """Return platform and plugin toolsets declared in Hermes config.yaml."""
@@ -507,7 +581,12 @@ class HermesInventoryRepository:
                 "enabled": bool(server.get("enabled")),
                 "source": "config.yaml",
             })
-        return sorted(toolsets, key=lambda item: (str(item["platform"]), str(item["id"])))
+        merged: dict[tuple[str, str], dict[str, Any]] = {}
+        for item in toolsets:
+            merged[(str(item["platform"]), str(item["id"]))] = item
+        for item in self._toolsets_from_cli_summary():
+            merged[(str(item["platform"]), str(item["id"]))] = item
+        return sorted(merged.values(), key=lambda item: (str(item["platform"]), str(item["id"])))
 
     def summary(self) -> dict[str, Any]:
         active_provider, active_model = self._active_provider_model()

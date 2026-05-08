@@ -1,24 +1,22 @@
 # Real Hermes Smoke Test
 
-Manual smoke test guide for validating the Hermes bridge against a real local Hermes Agent API server.
+Manual smoke test guide for validating Hermes Desktop Studio against a real local Hermes Agent install.
 
 ## Prerequisites
 
 - Hermes Agent installed and working locally
-- Hermes API server running (typically `http://127.0.0.1:8642`)
+- For local CLI mode, no Hermes API server is required.
+- For gateway/API mode, Hermes API server runs on `http://127.0.0.1:8642`.
 - Hermes Desktop Studio repo cloned and dependencies installed
 
 ## Quick Start
 
 ```bash
-# Terminal 1: Start Hermes Agent API server
-API_SERVER_ENABLED=true hermes gateway --accept-hooks run
-
-# Terminal 2: Start adapter in Hermes mode
+# Terminal 1: Start adapter in default local CLI mode
 cd hermes-desktop-studio
-HERMES_STUDIO_BACKEND=hermes HERMES_API_BASE_URL=http://127.0.0.1:8642 pnpm run dev:adapter
+HERMES_STUDIO_BACKEND=local pnpm run dev:adapter
 
-# Terminal 3: Start desktop frontend through Tauri
+# Terminal 2: Start desktop frontend through Tauri
 pnpm --filter @hermes-desktop-studio/desktop-studio tauri dev
 
 # Browser dev alternative:
@@ -32,12 +30,19 @@ HERMES_STUDIO_ADAPTER_TOKEN=dev-token HERMES_STUDIO_BACKEND=hermes HERMES_API_BA
 VITE_HERMES_STUDIO_ADAPTER_TOKEN=dev-token pnpm run dev:desktop
 ```
 
+For optional gateway/API mode:
+
+```bash
+API_SERVER_ENABLED=true hermes gateway --accept-hooks run
+HERMES_STUDIO_BACKEND=gateway HERMES_API_BASE_URL=http://127.0.0.1:8642 pnpm run dev:adapter
+```
+
 ## Verification Checklist
 
 ### Health Check
 
 ```bash
-# Should show hermes_connected: true
+# Should show hermes_connected: true in local or gateway mode
 curl http://127.0.0.1:39191/studio/health | python3 -m json.tool
 ```
 
@@ -47,19 +52,18 @@ Expected:
   "status": "healthy",
   "adapter_version": "0.1.0",
   "hermes_connected": true,
-  "backend_mode": "hermes",
-  "hermes_url": "http://127.0.0.1:8642"
+  "backend_mode": "local"
 }
 ```
 
 ### Desktop App
 
-- [ ] Status bar shows "Backend: Hermes" (not "Mock")
+- [ ] Status bar shows local CLI or gateway backend, not Mock
 - [ ] Status bar shows green "Adapter: Connected"
 - [ ] No token is stored in `localStorage`
 - [ ] Sending a chat prompt triggers a real Hermes run
-- [ ] `assistant.delta` text appears progressively in chat
-- [ ] Tool events (if any) render as chips without crashing
+- [ ] Local CLI mode returns the final response into chat
+- [ ] Gateway mode streams `assistant.delta` and tool events when Hermes exposes them
 - [ ] Stop button cancels the active run
 - [ ] Unknown Hermes events do not crash the UI (shown as adapter.warning or silently ignored)
 
@@ -71,16 +75,14 @@ Expected:
 HERMES_STUDIO_BACKEND=auto pnpm run dev:adapter
 ```
 
-- [ ] Status bar shows "Backend: Mock (auto)"
-- [ ] Health endpoint reports `hermes_connected: false`
-- [ ] Chat still works using mock backend
-- [ ] Restarting Hermes and re-checking health reconnects
+- [ ] Auto uses local CLI when local `hermes` exists
+- [ ] If CLI and gateway are unavailable, status shows Studio simulation fallback
 
 ### Debug Mode
 
 ```bash
 # Enable event logging (verbose, for debugging only)
-HERMES_STUDIO_DEBUG_EVENTS=1 HERMES_STUDIO_BACKEND=hermes pnpm run dev:adapter
+HERMES_STUDIO_DEBUG_EVENTS=1 HERMES_STUDIO_BACKEND=gateway pnpm run dev:adapter
 ```
 
 - [ ] Raw Hermes SSE event types are logged to stderr
@@ -92,7 +94,7 @@ HERMES_STUDIO_DEBUG_EVENTS=1 HERMES_STUDIO_BACKEND=hermes pnpm run dev:adapter
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HERMES_STUDIO_BACKEND` | `auto` | `mock`, `hermes`, or `auto` |
+| `HERMES_STUDIO_BACKEND` | `local` | `local`, `gateway`/`hermes`, `ssh`, `mock`, or `auto` |
 | `HERMES_API_BASE_URL` | `http://127.0.0.1:8642` | Hermes API server URL |
 | `HERMES_API_KEY` | *(none)* | Optional API key |
 | `HERMES_STUDIO_DEBUG_EVENTS` | `0` | Set to `1` to log raw/normalized events |
@@ -127,7 +129,7 @@ HERMES_STUDIO_DEBUG_EVENTS=1 HERMES_STUDIO_BACKEND=hermes pnpm run dev:adapter
 
 ### "Stop button does not work"
 
-- Hermes Agent v0.12.0 exposes the API server through `hermes gateway run`; see `docs/HERMES_RUNTIME_COMPATIBILITY.md`.
+- Hermes Agent v0.13.0 exposes the optional API server through `hermes gateway run`; see `docs/HERMES_RUNTIME_COMPATIBILITY.md`.
 - Some Hermes backends may not support the stop endpoint or may return `stopping` before cancellation completes.
 - Check adapter logs for stop request errors
 - The run may have already completed before stop was sent

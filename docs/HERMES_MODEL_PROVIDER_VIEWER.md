@@ -1,10 +1,10 @@
-# Hermes Model/Provider Config Viewer
+# Hermes Model/Provider Integration
 
 ## What Is Read
 
 | File | Purpose | Mode |
 |------|---------|------|
-| `~/.hermes/config.yaml` | Provider, model, base_url, temperature, max_tokens | Read-only |
+| `~/.hermes/config.yaml` | Provider, model, base_url, temperature, max_tokens | Read through repository; written only through official `hermes config set` |
 | `~/.hermes/.env` | API key presence detection | Read-only, values redacted |
 
 ## What Is Shown
@@ -27,15 +27,25 @@
 - Full .env file content
 - Secrets from any source
 
+## Safe Write Path
+
+Studio can change model/provider config through the official local Hermes CLI:
+
+- `hermes config set model.provider <provider>`
+- `hermes config set model.default <model>`
+- `hermes config set model.base_url <url>`
+- `hermes config set model.temperature <number>`
+- `hermes config set model.max_tokens <number>`
+- `hermes config set model.context_window <number>`
+
+The adapter does not edit YAML directly. In `local` and `auto` modes, model/provider updates use this CLI path against the installed local Hermes runtime even when the optional gateway bridge is not running.
+
 ## What Is NOT Implemented
 
-- Provider setup wizard
-- Config editing
-- .env editing
-- Model switching
-- Provider switching
-
-These will be added in a future phase.
+- API key editing in Studio
+- Raw `.env` editing
+- Provider auth setup wizard
+- Direct mutation of Hermes files without Hermes CLI
 
 ## Environment Variables
 
@@ -46,10 +56,11 @@ These will be added in a future phase.
 
 ## Safety
 
-- config.yaml is opened read-only
+- config.yaml is opened read-only for display
+- model/provider mutations are delegated to official `hermes config set`
 - .env is scanned for key presence only, values are never read
 - All sensitive values are redacted before returning to frontend
-- No config files are written
+- Studio never writes config files directly
 - Malformed YAML returns warnings, not errors
 
 ## Troubleshooting

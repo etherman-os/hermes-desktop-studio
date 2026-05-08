@@ -435,6 +435,7 @@ export interface HermesSkill {
   prerequisites: Record<string, unknown>;
   source: "installed" | "bundled" | "optional" | string;
   installed: boolean;
+  cli_name?: string;
   path: string;
   size_bytes: number;
   updated_at: string;
@@ -456,6 +457,7 @@ export interface HermesToolset {
   kind: string;
   enabled: boolean;
   source: string;
+  label?: string;
 }
 
 export interface HermesInventoryResponse {
@@ -469,6 +471,30 @@ export interface HermesInventoryResponse {
 
 export async function getHermesInventory() {
   return request<HermesInventoryResponse>("/studio/hermes/inventory");
+}
+
+export interface HermesCliStatus {
+  available: boolean;
+  version?: string;
+  transport?: string;
+  error?: string;
+  commands: Record<string, boolean>;
+  chat_flags: Record<string, boolean>;
+}
+
+export async function getHermesCliStatus() {
+  return request<HermesCliStatus>("/studio/hermes/cli");
+}
+
+export interface HermesCheckpointStoreStatus {
+  available: boolean;
+  error?: string;
+  lines: string[];
+  status?: Record<string, string>;
+}
+
+export async function getHermesCheckpointStoreStatus() {
+  return request<HermesCheckpointStoreStatus>("/studio/hermes/checkpoints/status");
 }
 
 export async function getHermesModels(params?: { provider?: string; query?: string; limit?: number }) {
@@ -694,6 +720,12 @@ export async function updateArtifact(artifactId: string, input: ArtifactUpdateRe
 
 export async function archiveArtifact(artifactId: string) {
   return request<ArtifactDetail>(`/studio/artifacts/${artifactId}/archive`, {
+    method: "POST",
+  });
+}
+
+export async function runArtifactBrowserEvidence(artifactId: string) {
+  return request<ArtifactDetail>(`/studio/artifacts/${artifactId}/browser-evidence`, {
     method: "POST",
   });
 }
@@ -956,6 +988,7 @@ export interface ProcessTemplate {
   name: string;
   command: string;
   description: string;
+  category?: string;
 }
 
 export interface ProcessesResponse {

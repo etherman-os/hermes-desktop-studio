@@ -6,11 +6,13 @@ import * as api from "../api/studioClient";
 
 const DEFAULT_LABELS: Record<string, string> = {
   runs: "Runs",
+  mission: "Mission",
   run_ledger: "Run Ledger",
   chat: "Chat",
   board: "Board",
   kanban: "Board",
   sessions: "Sessions",
+  design: "Design",
   artifacts: "Artifacts",
   context: "Context",
   logs: "Logs",
@@ -37,11 +39,13 @@ const DEFAULT_LABELS: Record<string, string> = {
 
 const DEFAULT_ICONS: Record<string, string> = {
   runs: "R",
+  mission: "M",
   run_ledger: "R",
   chat: "C",
   board: "B",
   kanban: "B",
   sessions: "S",
+  design: "D",
   artifacts: "A",
   context: "@",
   logs: "L",
@@ -83,6 +87,11 @@ function resolveThemeId(mode: ThemeMode, themes: Record<string, ThemePack>): str
     if (themes[id]) return id;
   }
   return "default-dark";
+}
+
+function resolveThemeAlias(id: string, themes: Record<string, ThemePack>): string {
+  if (id === "default-light" && !themes[id] && themes["minimal-light"]) return "minimal-light";
+  return id;
 }
 
 interface ThemeState {
@@ -184,14 +193,15 @@ export const useThemeStore = create<ThemeState>((set, get) => {
     },
 
     activateTheme: async (id: string) => {
+      const requestedId = resolveThemeAlias(id, get().themes);
       set({ error: null });
       try {
-        await api.activateTheme(id);
-        const normalized = await api.getTheme(id);
+        await api.activateTheme(requestedId);
+        const normalized = await api.getTheme(requestedId);
         const themePack = adapterThemeToPack(normalized);
         set((s) => ({
-          activeThemeId: id,
-          themes: { ...s.themes, [id]: themePack },
+          activeThemeId: requestedId,
+          themes: { ...s.themes, [requestedId]: themePack },
           error: null,
         }));
         applyThemeToDOM(themePack);
@@ -199,9 +209,9 @@ export const useThemeStore = create<ThemeState>((set, get) => {
         const msg = err instanceof Error ? err.message : "Failed to activate theme";
         set({ error: msg });
         // Fallback to local theme if available
-        const local = get().themes[id];
+        const local = get().themes[requestedId];
         if (local) {
-          set({ activeThemeId: id });
+          set({ activeThemeId: requestedId });
           applyThemeToDOM(local);
         }
       }
@@ -233,7 +243,8 @@ export const useThemeStore = create<ThemeState>((set, get) => {
         }
 
         // Load active theme
-        let activeId = data.active ?? "default-dark";
+        const initialMerged = { ...LOCAL_FALLBACK_THEMES, ...themesFromAdapter };
+        let activeId = resolveThemeAlias(data.active ?? "default-dark", initialMerged);
         let activePack: ThemePack | null = null;
         try {
           const activeData = await api.getActiveTheme();

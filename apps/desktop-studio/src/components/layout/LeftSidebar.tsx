@@ -25,9 +25,11 @@ export function LeftSidebar() {
       <div className="sidebar-header" id="sidebar-heading">{label(section)}</div>
       <div className="sidebar-content" aria-labelledby="sidebar-heading">
         {section === "runs" && <RunsList />}
+        {section === "mission" && <MissionSection />}
         {section === "chat" && <ChatSection />}
         {section === "board" && <BoardSection />}
         {section === "sessions" && <SessionsList />}
+        {section === "design" && <DesignSection />}
         {section === "artifacts" && <ArtifactsSection />}
         {section === "checkpoints" && <GitSection />}
         {section === "worktrees" && <GitSection />}
@@ -51,6 +53,19 @@ export function LeftSidebar() {
   );
 }
 
+function MissionSection() {
+  const setActiveTab = useLayoutStore((s) => s.setActiveTab);
+  return (
+    <div className="sidebar-stack">
+      <button className="sidebar-item active" onClick={() => setActiveTab("mission")}>Mission Control</button>
+      <button className="sidebar-item" onClick={() => setActiveTab("processes")}>Gateway Bridge</button>
+      <button className="sidebar-item" onClick={() => setActiveTab("extensions")}>Hermes Arsenal</button>
+      <button className="sidebar-item" onClick={() => setActiveTab("approvals")}>Approvals</button>
+      <div className="sidebar-note">Local Hermes runtime, active runs, approvals, tools, and process control in one surface.</div>
+    </div>
+  );
+}
+
 function RunsList() {
   const runs = useRunLedgerStore((s) => s.runs);
   const currentRunId = useRunLedgerStore((s) => s.currentRunId);
@@ -60,12 +75,12 @@ function RunsList() {
   if (runs.length === 0) {
     return (
       <div className="sidebar-stack">
-        <button className="primary-button" onClick={openNewRun} aria-label="Create new run">New Run</button>
+        <button className="primary-button" onClick={() => openNewRun()} aria-label="Create new run">New Run</button>
         <div className="empty-state" style={{ padding: "var(--app-spacing-md)" }}>
           <div className="workbench-empty-icon" aria-hidden="true">R</div>
           <div className="sidebar-note">No runs captured in this Studio session.</div>
           <div className="empty-state-action">
-            <button className="tool-button" onClick={openNewRun}>Start your first run</button>
+            <button className="tool-button" onClick={() => openNewRun()}>Start your first run</button>
           </div>
         </div>
       </div>
@@ -74,7 +89,7 @@ function RunsList() {
 
   return (
     <>
-      <button className="primary-button sidebar-primary" onClick={openNewRun}>New Run</button>
+      <button className="primary-button sidebar-primary" onClick={() => openNewRun()}>New Run</button>
       <div className="sidebar-note">{runs.length} recent run{runs.length !== 1 ? "s" : ""}</div>
       {runs.map((run) => (
         <button
@@ -99,7 +114,7 @@ function ChatSection() {
   const openNewRun = useUiStore((s) => s.openNewRun);
   return (
     <div className="sidebar-stack">
-      <button className="primary-button" onClick={openNewRun}>New Chat / Run</button>
+      <button className="primary-button" onClick={() => openNewRun()}>New Chat / Run</button>
       <button className="sidebar-item active" onClick={() => setActiveTab("chat")}>Composer</button>
       <button className="sidebar-item" onClick={() => setActiveTab("runs")}>Run Ledger</button>
       <div className="sidebar-note">Chat is a prompt surface. Run state, tools, warnings, and outcomes are tracked in the ledger.</div>
@@ -113,6 +128,18 @@ function BoardSection() {
     <div className="sidebar-stack">
       <button className="sidebar-item active" onClick={() => setActiveTab("board")}>Run Board</button>
       <div className="sidebar-note">Board cards persist in Studio storage, link to runs or sessions, and move through explicit stage controls.</div>
+    </div>
+  );
+}
+
+function DesignSection() {
+  const setActiveTab = useLayoutStore((s) => s.setActiveTab);
+  return (
+    <div className="sidebar-stack">
+      <button className="sidebar-item active" onClick={() => setActiveTab("design")}>Design Canvas</button>
+      <button className="sidebar-item" onClick={() => setActiveTab("artifacts")}>Artifact Studio</button>
+      <button className="sidebar-item" onClick={() => setActiveTab("chat")}>Generate with Hermes</button>
+      <div className="sidebar-note">Import UI sources as artifacts, then hand them to Hermes with browser/design toolsets.</div>
     </div>
   );
 }

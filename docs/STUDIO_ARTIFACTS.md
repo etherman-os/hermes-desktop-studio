@@ -43,6 +43,7 @@ All artifact calls are protected `/studio/*` calls:
 - `POST /studio/artifacts`
 - `PATCH /studio/artifacts/{artifact_id}`
 - `POST /studio/artifacts/{artifact_id}/archive`
+- `POST /studio/artifacts/{artifact_id}/browser-evidence`
 - `POST /studio/artifacts/{artifact_id}/link-run`
 - `POST /studio/artifacts/{artifact_id}/link-session`
 - `POST /studio/artifacts/{artifact_id}/link-card`
@@ -57,7 +58,9 @@ The OpenAPI route parity test fails if these paths drift from `packages/protocol
 - Keep text content small and bounded.
 - Store file references as metadata only.
 - Do not execute artifact HTML or scripts.
-- Show HTML as inert source text until a sanitizer-backed preview canvas exists.
+- Render HTML previews only after sanitizer removal of scripts, event-handler attributes, forms, nested iframes, objects, and `javascript:` URLs.
+- Use sandboxed iframes without script permissions for inline previews.
+- Browser evidence for stored HTML is materialized as a sanitized temporary file with JavaScript disabled. URL/file evidence runs with local Playwright against the referenced target.
 - Treat model output as untrusted; persistent artifact creation should come from structured user or app intent.
 
 ## Frontend
@@ -73,8 +76,18 @@ Artifact Shelf v1 supports:
 - create session summary artifacts from Sessions
 - create card summary artifacts from Board
 - inspect related run/session context through Context Inspector
+- inspect HTML artifacts in a sanitized sandboxed inline preview
+- edit HTML artifact source beside a live sanitized preview and persist the revision through `/studio/artifacts/{id}`
+- click an element inside the sanitized HTML preview to capture a CSS selector for targeted Hermes edits
+- send targeted Visual Edit prompts to Hermes with optional CSS selector/component target
+- request A/B visual variants through Hermes
+- capture a local Playwright browser evidence artifact with screenshot path, console/runtime findings, basic accessibility/overflow checks, and artifact links
+- create a Hermes browser-check request when the user wants the agent to interpret or fix the evidence
+- request a video production brief from any artifact using Hermes video/image generation skills and toolsets
+- extract a reusable "Design DNA" profile proposal from an artifact for future visual edits
+- inspect artifact history events
 
-Markdown is rendered using safe React text nodes. JSON is pretty printed. Logs and HTML source are shown as inert monospaced text. File references show path metadata and an "Open file" placeholder.
+Markdown is rendered using safe React text nodes. JSON is pretty printed. Logs and source text remain visible as monospaced text. File references show path metadata and an "Open file" placeholder.
 
 Context Inspector can show artifacts linked to a selected run or session. This relationship is read-only from the context surface; artifact writes still go only through `/studio/artifacts/*`.
 
@@ -82,11 +95,11 @@ Context Inspector can show artifacts linked to a selected run or session. This r
 
 Future layers can add:
 
-- Preview Canvas for sanitized previews
 - artifact extraction from real run outputs
-- screenshot capture
+- richer screenshot diffing and viewport matrices
 - test result parsing
 - checkpoint/diff references
 - richer card/run/session artifact relationship views
+- direct screenshot capture from preview frames
 
 Those layers should keep the same Studio-owned storage boundary.

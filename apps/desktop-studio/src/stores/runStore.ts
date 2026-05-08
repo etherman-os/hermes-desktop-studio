@@ -45,6 +45,13 @@ interface RunState {
       provider?: string;
       skills?: string[];
       toolsets?: string[];
+      checkpoints?: boolean;
+      maxTurns?: number;
+      worktree?: boolean;
+      passSessionId?: boolean;
+      ignoreRules?: boolean;
+      ignoreUserConfig?: boolean;
+      linkedCardId?: string | null;
     },
   ) => Promise<void>;
   stopRun: () => Promise<void>;
@@ -112,6 +119,13 @@ export const useRunStore = create<RunState>((set, get) => ({
           provider: options?.provider,
           skills: options?.skills,
           toolsets: options?.toolsets,
+          checkpoints: options?.checkpoints,
+          max_turns: options?.maxTurns,
+          worktree: options?.worktree,
+          pass_session_id: options?.passSessionId,
+          ignore_rules: options?.ignoreRules,
+          ignore_user_config: options?.ignoreUserConfig,
+          linked_card_id: options?.linkedCardId,
         },
       });
       useRunLedgerStore.getState().startRun(run.run_id, prompt, sessionId, run.status, {

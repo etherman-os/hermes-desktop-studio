@@ -2,11 +2,11 @@
 
 A local-first, themeable desktop workbench for [Hermes Agent](https://github.com/NousResearch/hermes-agent).
 
-Hermes Desktop Studio is **not** a terminal-only TUI and **not** a chat app. It is a desktop-class, run-centered operations workbench for users who run Hermes primarily on their own machine.
+Hermes Desktop Studio is **not** a terminal-only TUI and **not** a chat app. It is a desktop-class, run-centered production workbench for users who install Hermes Agent locally and want a full desktop studio on top of it.
 
 ## Why a Desktop Workbench?
 
-Terminal TUIs have inherent ceilings in visual ergonomics, panel docking, drag-and-drop layout, rich theming, and accessibility. Hermes Desktop Studio uses **Tauri v2 + React** to provide a full desktop experience: a Run Ledger, prompt/chat surface, board, sessions, artifact shelf, context inspector, live logs, diagnostics, and user-installable concept packs — all without requiring users to live inside a terminal.
+Terminal TUIs have inherent ceilings in visual ergonomics, panel docking, visual preview, rich theming, and accessibility. Hermes Desktop Studio uses **Tauri v2 + React** to provide a full desktop experience: Mission Control, Run Ledger, prompt/chat surface, board, sessions, Design Canvas, Artifact Studio, context inspector, live logs, diagnostics, and user-installable concept packs - all without requiring users to live inside a terminal.
 
 ## Stack
 
@@ -26,8 +26,8 @@ Terminal TUIs have inherent ceilings in visual ergonomics, panel docking, drag-a
 ```
 ┌──────────────────────────────────────────┐
 │ Desktop UI (Tauri v2 + React)            │
-│ Run Ledger / Chat / Board / Sessions     │
-│ Artifacts / Context / Logs / Themes      │
+│ Mission / Runs / Chat / Board / Design   │
+│ Artifacts / Context / Hermes Arsenal     │
 └──────────────────┬───────────────────────┘
                     │ HTTP/SSE (local only)
 ┌──────────────────▼───────────────────────┐
@@ -38,10 +38,11 @@ Terminal TUIs have inherent ceilings in visual ergonomics, panel docking, drag-a
                     │
       ┌─────────────┼─────────────┐
       ▼             ▼             ▼
- Hermes API    Hermes CLI   Local State
- /v1/runs      config/set   ~/.hermes/state.db
- SSE stream    sessions     ~/.hermes/logs
- capabilities  profiles     ~/.hermes/config.yaml
+Hermes CLI     Hermes API/Gateway     Local State
+chat -q        /v1/runs (optional)   ~/.hermes/state.db
+config set     SSE stream (optional) ~/.hermes/logs
+tools/mcp      remote bridge         ~/.hermes/config.yaml
+checkpoints                         ~/.hermes/checkpoints
 ```
 
 ## Core Principles
@@ -53,7 +54,7 @@ Terminal TUIs have inherent ceilings in visual ergonomics, panel docking, drag-a
 - **Run-centered, not message-centered.** Chat is one surface; the Run Ledger is the product spine.
 - **Generic theme system:** Colors, icons, labels, layout, and terminology are driven by concept packs. No concept is hardcoded.
 - **Local-only by default:** Bind 127.0.0.1, rotate tokens per launch, never expose without key.
-- **Read-only Hermes observation:** Hermes `state.db`, logs, profiles, and model/provider config are read without mutation unless an official safe write path exists.
+- **Hermes-first local integration:** Hermes `state.db`, logs, profiles, providers, models, skills, toolsets, and MCP servers are discovered from the local install. Mutations use official Hermes API or CLI surfaces only.
 - **Future-proof:** Same adapter contract supports desktop shell today, terminal mode later.
 
 ## Project Structure
@@ -89,6 +90,8 @@ hermes-local-studio/
     PRODUCT_DIRECTION.md
     ADR-0001-desktop-first.md
     STUDIO_STORAGE.md
+    MISSION_CONTROL.md
+    DESIGN_CANVAS.md
 ```
 
 ## Theme / Concept Pack System
@@ -195,7 +198,7 @@ Persistent Kanban data uses the same Studio-owned `studio.db`, never Hermes `sta
 
 ### Studio-owned Artifact Shelf
 
-Artifact Shelf data uses Studio-owned `studio.db`, never Hermes `state.db`. Artifacts can store bounded redacted text content or local file references, and can link to runs, sessions, and Kanban cards. HTML artifacts are shown as inert source text; Studio does not execute artifact scripts. See [docs/STUDIO_ARTIFACTS.md](docs/STUDIO_ARTIFACTS.md).
+Artifact Shelf data uses Studio-owned `studio.db`, never Hermes `state.db`. Artifacts can store bounded redacted text content or local file references, and can link to runs, sessions, and Kanban cards. HTML artifacts can be inspected in a sanitized sandboxed preview with scripts disabled. Artifact Studio actions can send targeted visual edits, A/B variant requests, and browser evidence plans through Hermes. See [docs/STUDIO_ARTIFACTS.md](docs/STUDIO_ARTIFACTS.md).
 
 ### Context Inspector
 
@@ -203,11 +206,11 @@ Context Inspector is a read-only aggregation surface for active profile, model/p
 
 ### Approval Center
 
-Approval Center stores redacted Studio-owned approval visibility and history in `studio.db` when run streams emit `approval.requested` or `approval.resolved`. It shows pending/history, risk/status, run/session links, and request payload previews. It is read-only in v1: approve/deny routes return `501` until a verified Hermes approval response API is wired. See [docs/APPROVAL_CENTER.md](docs/APPROVAL_CENTER.md).
+Approval Center stores redacted Studio-owned approval visibility and history in `studio.db` when run streams emit `approval.requested` or `approval.resolved`. It shows pending/history, risk/status, run/session links, and request payload previews. Approve/deny actions record the local decision and notify Hermes through the verified local approval response route when available. See [docs/APPROVAL_CENTER.md](docs/APPROVAL_CENTER.md).
 
 ### Run-Centered Workbench
 
-The Run Ledger is the default desktop surface. It tracks live runs from the Studio SSE stream and persists recent run metadata/events in Studio-owned `studio.db`. Selecting a run shows the prompt preview, status, backend/model, duration, grouped assistant/tool/approval events, warnings/errors, and selected event payloads. Runs can create linked Kanban cards and persistent artifacts, and open run-scoped approvals. Checkpoints and diffs remain future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
+Mission Control is the default desktop surface. The Run Ledger remains the product spine for operational history: it tracks live runs from the Studio SSE stream and persists recent run metadata/events in Studio-owned `studio.db`. Selecting a run shows the prompt preview, status, backend/model, duration, grouped assistant/tool/approval events, warnings/errors, and selected event payloads. Runs can create linked Kanban cards and persistent artifacts, and open run-scoped approvals. Checkpoints and diffs remain future layers. See [docs/RUN_CENTERED_WORKBENCH.md](docs/RUN_CENTERED_WORKBENCH.md).
 
 ### Backend Modes
 
@@ -215,50 +218,73 @@ The adapter supports three backend modes:
 
 | Mode | Behavior |
 |------|----------|
+| `local` | Default. Runs installed local Hermes through CLI; no gateway required. |
+| `gateway` / `hermes` | Uses Hermes local API/gateway for rich SSE/API workflows. |
+| `ssh` | Experimental VPS/remote mode; runs Hermes through `ssh` against a configured target. |
 | `mock` | Fake in-memory data. No real Hermes needed. |
-| `hermes` | Real Hermes API. Fails if Hermes is unreachable. |
-| `auto` | Tries Hermes first, falls back to mock if unavailable. (default) |
+| `auto` | Tries local CLI first, then gateway, then Studio simulation. |
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HERMES_STUDIO_BACKEND` | `auto` | Backend mode: `mock`, `hermes`, or `auto` |
+| `HERMES_STUDIO_BACKEND` | `local` | Backend mode: `local`, `gateway`/`hermes`, `ssh`, `mock`, or `auto` |
 | `HERMES_API_BASE_URL` | `http://127.0.0.1:8642` | Hermes Agent API URL |
 | `HERMES_API_KEY` | *(none)* | Optional API key for Hermes |
+| `HERMES_STUDIO_REMOTE_SSH_TARGET` | *(none)* | SSH target for experimental remote Hermes mode, for example `user@vps` |
+| `HERMES_STUDIO_REMOTE_HERMES_BIN` | `hermes` | Hermes executable on the remote SSH host |
+| `HERMES_STUDIO_CLI_RUN_TIMEOUT` | `3600` | Timeout for local/SSH CLI-backed runs |
 | `HERMES_STUDIO_ADAPTER_TOKEN` | *(generated)* | Explicit local adapter auth token for dev |
 | `HERMES_STUDIO_ENABLE_LEGACY_SHELL_ROUTES` | `0` | Set `1` only to mount legacy prototype `/shell/*` routes |
 | `HERMES_STUDIO_HOME` | platform user data dir | Studio-owned data directory for `studio.db` |
 | `HERMES_STUDIO_DB_PATH` | *(none)* | Optional direct path to a file named `studio.db`; guarded against Hermes `state.db` |
 
-The local Hermes runtime contract has been validated against Hermes Agent v0.12.0. See [docs/HERMES_RUNTIME_COMPATIBILITY.md](docs/HERMES_RUNTIME_COMPATIBILITY.md) for the discovered API server command, endpoint shapes, SSE event shapes, and read-only local storage audit.
+The local Hermes runtime contract has been validated against Hermes Agent v0.13.0. See [docs/HERMES_RUNTIME_COMPATIBILITY.md](docs/HERMES_RUNTIME_COMPATIBILITY.md) for the discovered API server command, endpoint shapes, SSE event shapes, and read-only local storage audit.
 
 ### Runtime Status and Workspaces
 
-The app now surfaces runtime state directly in the desktop shell: adapter auth, backend mode, active backend, Hermes reachability, Hermes API URL, profile, model/provider, and Studio storage. Mock mode is labeled as mock and Auto fallback shows the reason.
+The app now surfaces runtime state directly in the desktop shell: adapter auth, backend mode, active backend, Hermes reachability, Hermes API URL, profile, model/provider, and Studio storage. Local CLI mode does not need gateway. Mock mode is labeled as mock and Auto fallback shows the reason.
 
-To run against real Hermes:
+Default local mode:
 
 ```bash
-API_SERVER_ENABLED=true hermes gateway --accept-hooks run
-HERMES_STUDIO_BACKEND=hermes HERMES_API_BASE_URL=http://127.0.0.1:8642 pnpm run dev:adapter
+HERMES_STUDIO_BACKEND=local pnpm run dev:adapter
 pnpm run tauri dev
 ```
 
-Studio workspaces are local project paths used as run metadata and read-only Context Inspector input. They are shown in the top/status bars and persisted with Run Ledger records in `studio.db`. Workspace paths are not forwarded to Hermes until an official Hermes cwd/workspace field is verified. See [docs/RUNTIME_STATUS.md](docs/RUNTIME_STATUS.md), [docs/WORKSPACES.md](docs/WORKSPACES.md), and [docs/CONTEXT_INSPECTOR.md](docs/CONTEXT_INSPECTOR.md).
+Optional gateway/API mode for richer SSE/API workflows:
+
+```bash
+API_SERVER_ENABLED=true hermes gateway --accept-hooks run
+HERMES_STUDIO_BACKEND=gateway HERMES_API_BASE_URL=http://127.0.0.1:8642 pnpm run dev:adapter
+pnpm run tauri dev
+```
+
+Experimental remote VPS mode:
+
+```bash
+HERMES_STUDIO_BACKEND=ssh HERMES_STUDIO_REMOTE_SSH_TARGET=user@your-vps pnpm run dev:adapter
+pnpm run tauri dev
+```
+
+Studio workspaces are local project paths used as run metadata, Context Inspector input, and the local Hermes CLI working directory. In default local mode, the adapter forwards provider, model, skills, toolsets, checkpoints, max turns, worktree isolation, and session flags directly to `hermes chat --query`. When gateway mode supports Studio run options, the adapter can forward the same context through the API path. See [docs/RUNTIME_STATUS.md](docs/RUNTIME_STATUS.md), [docs/WORKSPACES.md](docs/WORKSPACES.md), and [docs/CONTEXT_INSPECTOR.md](docs/CONTEXT_INSPECTOR.md).
 
 ## Development Status
 
-Hermes Desktop Studio is actively developed through Phase Product-13 (Hermes v0.13.0 Integration). Key implemented features include:
+Hermes Desktop Studio is actively developed as a Hermes-backed local production studio. Key implemented features include:
 
+- Mission Control with local CLI/gateway/process controls, runtime health, recent work, approvals, delegations, and capability counts
+- Local Hermes run presets for implementation, review, debugging, design polish, browser verification, and multi-agent orchestration
+- Kanban swarm, video generation, and Studio memory presets that map to Hermes skills/toolsets without modifying Hermes core
 - Run Ledger with persistent history and event timeline
 - Chat surface with real-time SSE streaming
 - Kanban board with Studio-owned persistence
-- Artifact Shelf with safe text/reference viewer
+- Design Canvas for importing HTML, JSON, screenshots notes, URLs, Figma links, and briefs, then handing them to Hermes with design skills/toolsets
+- Artifact Shelf with sanitized live preview/source editing, click-to-selector visual targeting, visual edit prompts, A/B variant requests, local Playwright browser evidence capture, video briefs, Design DNA extraction, and artifact history
 - Context Inspector with read-only local aggregation
-- Approval Center with pending/history visibility
-- Process Management with template-based process cockpit
-- Extensions and Tool Packs with discovery and enable/disable
+- Approval Center with pending/history visibility and local approve/deny decision flow
+- Process Management with Studio and Hermes runtime templates
+- Hermes Arsenal with local provider/model/skill/MCP/toolset inventory from the installed Hermes runtime, plus skill/toolset-to-run handoff
 - Checkpoints and Worktrees for git-based timeline and branching
 - Delegations and Cron for sub-agent tracking and scheduling
 - Security hardening (secret guard, input validation, audit logging)

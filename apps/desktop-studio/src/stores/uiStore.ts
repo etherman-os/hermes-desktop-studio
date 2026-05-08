@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { NewRunDraft } from "../lib/runPresets";
 
 interface CommandItem {
   id: string;
@@ -11,13 +12,14 @@ interface CommandItem {
 interface UiState {
   commandPaletteOpen: boolean;
   newRunOpen: boolean;
+  newRunDraft: NewRunDraft | null;
   workspacePickerOpen: boolean;
   commandPaletteQuery: string;
   commands: CommandItem[];
   selectedCommandIndex: number;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
-  openNewRun: () => void;
+  openNewRun: (draft?: NewRunDraft) => void;
   closeNewRun: () => void;
   openWorkspacePicker: () => void;
   closeWorkspacePicker: () => void;
@@ -29,6 +31,7 @@ interface UiState {
 export const useUiStore = create<UiState>((set) => ({
   commandPaletteOpen: false,
   newRunOpen: false,
+  newRunDraft: null,
   workspacePickerOpen: false,
   commandPaletteQuery: "",
   commands: [],
@@ -36,8 +39,8 @@ export const useUiStore = create<UiState>((set) => ({
 
   openCommandPalette: () => set({ commandPaletteOpen: true, commandPaletteQuery: "", selectedCommandIndex: 0 }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
-  openNewRun: () => set({ newRunOpen: true }),
-  closeNewRun: () => set({ newRunOpen: false }),
+  openNewRun: (draft) => set({ newRunOpen: true, newRunDraft: draft ?? null }),
+  closeNewRun: () => set({ newRunOpen: false, newRunDraft: null }),
   openWorkspacePicker: () => set({ workspacePickerOpen: true }),
   closeWorkspacePicker: () => set({ workspacePickerOpen: false }),
   setCommandPaletteQuery: (q) => set({ commandPaletteQuery: q, selectedCommandIndex: 0 }),

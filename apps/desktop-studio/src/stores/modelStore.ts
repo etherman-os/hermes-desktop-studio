@@ -106,7 +106,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
         model: selectedModel ?? undefined,
         provider: selectedProvider ?? undefined,
       });
-      set({ config, saving: false });
+      set({
+        config,
+        saving: false,
+        selectedModel: config.model,
+        selectedProvider: config.provider,
+        availableModels: config.available_models?.length ? config.available_models : get().availableModels,
+      });
     } catch (err) {
       set({
         saving: false,

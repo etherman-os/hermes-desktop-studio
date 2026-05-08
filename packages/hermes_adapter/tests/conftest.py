@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_adapter import theme_repository
+from hermes_adapter import studio_routes, theme_repository
 from hermes_adapter.security import set_auth_token
 
 
@@ -70,3 +70,10 @@ def _isolate_studio_storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("HERMES_STUDIO_HOME", str(tmp_path / "studio-home"))
     monkeypatch.setenv("HERMES_STUDIO_HERMES_HOME", str(tmp_path / ".hermes"))
     monkeypatch.delenv("HERMES_STUDIO_DB_PATH", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _reset_studio_route_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep cached route backends from leaking across API tests."""
+    monkeypatch.setattr(studio_routes, "_backend", None)
+    monkeypatch.setattr(studio_routes, "_backend_status", {})

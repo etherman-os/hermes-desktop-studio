@@ -7,8 +7,10 @@ import { ChatSurface } from "../chat/ChatSurface";
 import { ContextInspector } from "../context/ContextInspector";
 import { CronPanel } from "../cron/CronPanel";
 import { DelegationPanel } from "../delegation/DelegationPanel";
+import { DesignCanvas } from "../design/DesignCanvas";
 import { ExtensionsPanel } from "../extensions/ExtensionsPanel";
 import { KanbanBoard } from "../kanban/KanbanBoard";
+import { MissionControl } from "../mission/MissionControl";
 import { ProcessCockpit } from "../process/ProcessCockpit";
 import { RunLedger } from "../runs/RunLedger";
 import { SessionsPanel } from "../sessions/SessionsPanel";
@@ -16,10 +18,12 @@ import { CheckpointTimeline } from "../checkpoints/CheckpointTimeline";
 import { WorktreeLauncher } from "../worktrees/WorktreeLauncher";
 
 const TAB_META: Record<CenterTab, { slot: string }> = {
+  mission: { slot: "mission" },
   runs: { slot: "run_ledger" },
   chat: { slot: "chat" },
   board: { slot: "board" },
   sessions: { slot: "sessions" },
+  design: { slot: "design" },
   artifacts: { slot: "artifacts" },
   processes: { slot: "processes" },
   checkpoints: { slot: "checkpoints" },
@@ -32,10 +36,12 @@ const TAB_META: Record<CenterTab, { slot: string }> = {
 };
 
 const COMPONENT_MAP: Record<CenterTab, React.ComponentType> = {
+  mission: MissionControl,
   runs: RunLedger,
   chat: ChatSurface,
   board: KanbanBoard,
   sessions: SessionsPanel,
+  design: DesignCanvas,
   artifacts: ArtifactShelf,
   processes: ProcessCockpit,
   checkpoints: CheckpointTimeline,
@@ -48,10 +54,12 @@ const COMPONENT_MAP: Record<CenterTab, React.ComponentType> = {
 };
 
 const PRIMARY_CENTER_TABS: CenterTab[] = [
+  "mission",
   "runs",
   "chat",
   "board",
   "sessions",
+  "design",
   "artifacts",
   "processes",
   "context",

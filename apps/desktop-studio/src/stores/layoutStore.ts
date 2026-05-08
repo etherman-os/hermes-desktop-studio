@@ -1,10 +1,12 @@
 import { create } from "zustand";
 
 export const CENTER_TABS = [
+  "mission",
   "runs",
   "chat",
   "board",
   "sessions",
+  "design",
   "artifacts",
   "processes",
   "checkpoints",
@@ -97,11 +99,11 @@ interface LayoutState {
 const initialSizes = readSizes();
 
 export const useLayoutStore = create<LayoutState>((set, get) => ({
-  activeTab: "runs",
+  activeTab: "mission",
   sidebarCollapsed: false,
   showRightPanel: true,
   showBottomPanel: true,
-  sidebarSection: "runs",
+  sidebarSection: "mission",
   bottomTab: "activity",
   sidebarWidth: initialSizes.sidebarWidth ?? 284,
   rightPanelWidth: initialSizes.rightPanelWidth ?? 360,

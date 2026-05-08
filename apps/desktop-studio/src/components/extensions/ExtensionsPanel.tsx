@@ -2,6 +2,7 @@ import React from "react";
 import { useToolPackStore } from "../../stores/toolPackStore";
 import { useHermesInventoryStore } from "../../stores/hermesInventoryStore";
 import { useThemeStore } from "../../stores/themeStore";
+import { useUiStore } from "../../stores/uiStore";
 import type { HermesSkill, ToolPackInfo } from "../../api/studioClient";
 
 type CatalogTab = "overview" | "skills" | "mcp" | "packs";
@@ -26,6 +27,7 @@ export function ExtensionsPanel() {
   const loadInventory = useHermesInventoryStore((s) => s.loadInventory);
   const clearInventoryError = useHermesInventoryStore((s) => s.clearError);
   const label = useThemeStore((s) => s.label);
+  const openNewRun = useUiStore((s) => s.openNewRun);
 
   const [selectedPackId, setSelectedPackId] = React.useState<string | null>(null);
   const [installPath, setInstallPath] = React.useState("");
@@ -128,11 +130,30 @@ export function ExtensionsPanel() {
           onQueryChange={setSkillQuery}
           onCategoryChange={setSkillCategory}
           loading={inventoryLoading}
+          onRunWithSkill={(skill) => openNewRun({
+            mode: "task",
+            prompt: `Use the ${skill.name} Hermes skill in this workspace. Inspect the relevant files first, then complete the requested work with verification.`,
+            skills: [skill.cli_name || skill.name || skill.id],
+            toolsets: ["file", "terminal", "code_execution", "skills"],
+            checkpoints: true,
+            maxTurns: 90,
+          })}
         />
       )}
 
       {tab === "mcp" && (
-        <McpCatalog servers={mcpServers} toolsets={toolsets} loading={inventoryLoading} />
+        <McpCatalog
+          servers={mcpServers}
+          toolsets={toolsets}
+          loading={inventoryLoading}
+          onRunWithToolset={(toolsetId) => openNewRun({
+            mode: "task",
+            prompt: `Use the ${toolsetId} Hermes toolset while working in this local workspace. Gather context, execute the requested task, and return concrete results.`,
+            toolsets: [toolsetId],
+            checkpoints: true,
+            maxTurns: 90,
+          })}
+        />
       )}
 
       {tab === "packs" && (
@@ -317,6 +338,7 @@ function SkillsCatalog({
   onQueryChange,
   onCategoryChange,
   loading,
+  onRunWithSkill,
 }: {
   skills: HermesSkill[];
   query: string;
@@ -324,6 +346,7 @@ function SkillsCatalog({
   onQueryChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   loading: boolean;
+  onRunWithSkill: (skill: HermesSkill) => void;
 }) {
   const categories = ["all", ...Array.from(new Set(skills.map((skill) => skill.category))).sort()];
   const filtered = skills.filter((skill) => {
@@ -369,6 +392,9 @@ function SkillsCatalog({
               </div>
             )}
             <code>{skill.id}</code>
+            <button className="tool-button" type="button" onClick={() => onRunWithSkill(skill)}>
+              Run with skill
+            </button>
           </div>
         ))}
       </div>
@@ -385,10 +411,12 @@ function McpCatalog({
   servers,
   toolsets,
   loading,
+  onRunWithToolset,
 }: {
   servers: ReturnType<typeof useHermesInventoryStore.getState>["mcpServers"];
   toolsets: ReturnType<typeof useHermesInventoryStore.getState>["toolsets"];
   loading: boolean;
+  onRunWithToolset: (toolsetId: string) => void;
 }) {
   return (
     <div className="mcp-catalog">
@@ -403,6 +431,9 @@ function McpCatalog({
             <div className="mcp-server-meta">
               <span>{server.enabled ? "enabled" : "disabled"}</span>
               <span>{server.env_keys.length} env</span>
+              <button className="tool-button" type="button" onClick={() => onRunWithToolset(`${server.id}:*`)}>
+                Use
+              </button>
             </div>
           </div>
         ))}
@@ -416,9 +447,15 @@ function McpCatalog({
         <div className="inventory-section-title">Toolsets</div>
         <div className="toolset-grid">
           {toolsets.map((toolset) => (
-            <span key={`${toolset.platform}:${toolset.kind}:${toolset.id}`} className="toolset-pill">
+            <button
+              key={`${toolset.platform}:${toolset.kind}:${toolset.id}`}
+              className={`toolset-pill as-button ${toolset.enabled ? "enabled" : "disabled"}`}
+              type="button"
+              onClick={() => onRunWithToolset(toolset.id)}
+              title={toolset.label || toolset.source}
+            >
               {toolset.platform}:{toolset.id}
-            </span>
+            </button>
           ))}
         </div>
       </div>

@@ -127,11 +127,11 @@ Phase 6C Kanban persistence uses this storage foundation. Kanban tables remain S
 
 Phase Product-1 stores recent run metadata and normalized Studio event envelopes in `studio.db`. Prompt previews and event payloads are redacted before storage. Run history remains Studio-owned and must not write to Hermes `state.db`.
 
-Run Ledger tables support current local workflow actions and future artifacts, checkpoints, diffs, and result summaries. Phase UX-2 adds `workspace_path` as Studio-side run metadata for project-folder orientation. It is not forwarded to Hermes unless an official Hermes runtime field is verified.
+Run Ledger tables support current local workflow actions and future artifacts, checkpoints, diffs, and result summaries. `workspace_path` is Studio-side run metadata for project-folder orientation. HermesBackend may forward it as optional run context when supported by the installed Hermes gateway, with a minimal-payload retry fallback for older gateways.
 
 ## Artifact Shelf Use
 
-Phase Product-3 stores artifact metadata and small text outputs in `studio.db`. Artifact records can link to runs, sessions, and Kanban cards. File artifacts are path references only; Studio does not copy arbitrary large files into SQLite. HTML artifacts are shown as inert source text until a sanitizer-backed Preview Canvas exists. See [STUDIO_ARTIFACTS.md](STUDIO_ARTIFACTS.md).
+Phase Product-3 stores artifact metadata and small text outputs in `studio.db`. Artifact records can link to runs, sessions, and Kanban cards. File artifacts are path references only; Studio does not copy arbitrary large files into SQLite. HTML artifacts can be inspected in sanitized sandboxed previews and as source text. See [STUDIO_ARTIFACTS.md](STUDIO_ARTIFACTS.md).
 
 ## Context Inspector Use
 
@@ -139,7 +139,7 @@ Phase Product-4 reads Studio-owned run, artifact, and Kanban metadata from `stud
 
 ## Approval Center Use
 
-Phase Product-5 stores redacted approval request/decision metadata in `studio.db` when normalized run stream events include `approval.requested` or `approval.resolved`. Approval Center is read-only in v1 and does not answer approvals, bypass Hermes approval mechanisms, or write Hermes `state.db`. See [APPROVAL_CENTER.md](APPROVAL_CENTER.md).
+Phase Product-5 stores redacted approval request/decision metadata in `studio.db` when normalized run stream events include `approval.requested` or `approval.resolved`. Approval Center records local approve/deny decisions and notifies Hermes through the local gateway when the verified route is available. It does not bypass Hermes approval mechanisms or write Hermes `state.db`. See [APPROVAL_CENTER.md](APPROVAL_CENTER.md).
 
 ## Troubleshooting
 

@@ -20,7 +20,7 @@ export function TopBar() {
     <header className="top-bar" role="banner">
       <div className="top-bar-left">
         <div className="app-mark">Hermes Studio</div>
-        <button className="topbar-button primary" onClick={openNewRun} title="Ctrl+Shift+N" aria-label="Create new run">
+        <button className="topbar-button primary" onClick={() => openNewRun()} title="Ctrl+Shift+N" aria-label="Create new run">
           <Plus size={14} aria-hidden="true" />
           <span>New Run</span>
         </button>

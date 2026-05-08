@@ -67,6 +67,15 @@ Both include `storage` diagnostics for Studio-owned `studio.db`:
 - `GET /studio/logs`
 - `GET /studio/logs/stream`
 - `GET /studio/model-config`
+- `GET /studio/model-config/models`
+- `GET /studio/hermes/inventory`
+- `GET /studio/hermes/cli`
+- `GET /studio/hermes/checkpoints/status`
+- `GET /studio/hermes/providers`
+- `GET /studio/hermes/models`
+- `GET /studio/hermes/skills`
+- `GET /studio/hermes/mcp-servers`
+- `GET /studio/hermes/toolsets`
 - `GET /studio/themes`
 - `GET /studio/themes/active`
 - `GET /studio/themes/{theme_id}`
@@ -147,13 +156,13 @@ All Studio SSE events must match `packages/protocol/events.schema.json` and incl
 
 `kanban.updated` events must include structured payloads with at least `board_id` and `action`. Malformed upstream Kanban notifications are normalized to `adapter.warning`; persistent Kanban writes only happen through `/studio/kanban/*`.
 
-Run Ledger persistence stores normalized Studio event envelopes in Studio-owned `studio.db`. Workspace paths are Studio-side run metadata and are not forwarded to Hermes unless an official Hermes runtime field is verified. Persistence failure may emit `adapter.warning`, but it must not break live SSE streaming. Hermes `state.db` remains read-only.
+Run Ledger persistence stores normalized Studio event envelopes in Studio-owned `studio.db`. In default local mode, runs execute through the installed Hermes CLI and do not require gateway. Workspace paths are Studio-side run metadata and are used as the local CLI working directory when available. Studio run context maps to public Hermes flags: provider/model, skills, toolsets, checkpoints, max turns, worktree isolation, pass-session-id, and isolation flags. If Hermes rejects optional context fields in gateway mode, HermesBackend retries with the minimal Hermes run payload. Persistence failure may emit `adapter.warning`, but it must not break live SSE streaming. Hermes `state.db` remains read-only.
 
 Artifact persistence stores Studio-owned metadata and bounded text outputs in `studio.db`. File artifacts are references only, and HTML/script content is never executed by the adapter or desktop client.
 
 Context Inspector responses aggregate read-only Studio and Hermes-adjacent metadata under `/studio/context/*`. Workspace file discovery is allowlist-based, length-limited, redacted, and does not follow symlinks or path traversal. The context surface must not write Hermes state, profiles, config, memory, or skills.
 
-Approval Center responses expose Studio-owned approval visibility under `/studio/approvals/*` and scoped run/session routes. The approve/deny paths return `501 Not Implemented` until a verified Hermes approval response API is wired. Approval Center must not answer approvals, auto-approve tools, bypass Hermes approval mechanisms, or write Hermes state/config.
+Approval Center responses expose Studio-owned approval visibility under `/studio/approvals/*` and scoped run/session routes. The approve/deny paths update Studio-owned approval state and try to notify Hermes through the local approval response route when the gateway exposes it. Approval Center must not auto-approve tools, bypass Hermes approval mechanisms, or write Hermes state/config.
 
 ## Error Envelope
 
@@ -177,10 +186,10 @@ All protected endpoint errors use:
 
 - Hermes `state.db` is opened read-only for sessions.
 - Hermes logs are opened read-only and redacted before returning to the UI.
-- Hermes profiles and model/provider config are inspected read-only.
+- Hermes profiles and model/provider config are inspected read-only unless an official Hermes CLI/API write path is explicitly used.
 - The adapter must not mutate Hermes core files unless a safe official Hermes CLI/API write path is explicitly used.
 - Studio-owned persistence uses `studio.db`; it is separate from Hermes `state.db` and must not store secrets.
 - Studio-owned Kanban writes go only to `studio.db`; session/run links store IDs only.
 - Studio-owned Artifact writes go only to `studio.db`; file artifacts store references only.
 - Context Inspector reads Studio-owned metadata and allowlisted workspace files only; it does not mutate Hermes or Studio workflow records.
-- Approval Center writes go only to `studio.db`; approval response actions remain disabled until a safe official Hermes API is verified.
+- Approval Center writes go only to `studio.db`; approval response actions may notify Hermes through the verified local gateway route when available.

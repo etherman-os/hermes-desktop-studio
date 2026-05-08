@@ -94,3 +94,40 @@ mcp_servers:
 
     assert server["env_keys"] == ["GITHUB_PERSONAL_ACCESS_TOKEN"]
     assert "ghp_secretvalue" not in json.dumps(server)
+
+
+def test_inventory_can_enrich_toolsets_from_hermes_cli(tmp_path: Path, monkeypatch) -> None:
+    home = tmp_path / ".hermes"
+    home.mkdir()
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_hermes = bin_dir / "hermes"
+    fake_hermes.write_text(
+        """#!/bin/sh
+set -eu
+if [ "${1:-}" = "tools" ]; then
+  printf '%s\n' '
+Built-in toolsets (cli):
+  + enabled  browser  Browser Automation
+  - disabled  video  Video Analysis
+
+MCP servers:
+  github  all tools enabled
+'
+  exit 0
+fi
+exit 2
+""",
+        encoding="utf-8",
+    )
+    fake_hermes.chmod(0o755)
+    monkeypatch.setenv("PATH", str(bin_dir))
+
+    toolsets = HermesInventoryRepository(home, enable_cli_probe=True).list_toolsets()
+
+    browser = next(item for item in toolsets if item["id"] == "browser")
+    video = next(item for item in toolsets if item["id"] == "video")
+    github = next(item for item in toolsets if item["id"] == "github:*")
+    assert browser["enabled"] is True
+    assert video["enabled"] is False
+    assert github["kind"] == "mcp"

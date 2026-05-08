@@ -1,5 +1,8 @@
 import React from "react";
 import { useCheckpointStore } from "../../stores/checkpointStore";
+import { useLayoutStore } from "../../stores/layoutStore";
+import { useRunStore } from "../../stores/runStore";
+import { useSessionStore } from "../../stores/sessionStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 
 function formatTime(iso: string) {
@@ -33,6 +36,9 @@ export function CheckpointTimeline() {
   const loadDiff = useCheckpointStore((s) => s.loadDiff);
   const clearDiff = useCheckpointStore((s) => s.clearDiff);
   const workspace = useWorkspaceStore((s) => s.selectedWorkspace);
+  const sendPrompt = useRunStore((s) => s.sendPrompt);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const setActiveTab = useLayoutStore((s) => s.setActiveTab);
 
   const selected = checkpoints.find((cp) => cp.hash === selectedHash) ?? null;
 
@@ -49,6 +55,32 @@ export function CheckpointTimeline() {
     }
     selectCheckpoint(hash);
     if (workspace) void loadDiff(hash, workspace);
+  }
+
+  async function createRollbackPlan() {
+    if (!workspace || !selected) return;
+    setActiveTab("chat");
+    await sendPrompt(
+      [
+        "Hermes Checkpoint Rollback Studio request",
+        `Workspace: ${workspace}`,
+        `Checkpoint: ${selected.hash}`,
+        `Message: ${selected.message}`,
+        `Author: ${selected.author}`,
+        `Timestamp: ${selected.timestamp}`,
+        diff?.stat ? `Diff stat:\n${diff.stat}` : "",
+        diff?.diff ? `Diff preview:\n${diff.diff.slice(0, 6000)}` : "",
+        "Create a safe rollback or repair plan for this checkpoint. Prefer reversible changes, explain exact files affected, use checkpoints/worktree isolation when available, and do not run destructive git reset/checkout commands without explicit user approval.",
+      ].filter(Boolean).join("\n\n"),
+      activeSessionId ?? "default",
+      {
+        workspacePath: workspace,
+        mode: "review",
+        checkpoints: true,
+        worktree: true,
+        maxTurns: 4,
+      },
+    );
   }
 
   if (!workspace) {
@@ -155,6 +187,14 @@ export function CheckpointTimeline() {
                 <dt>HEAD</dt>
                 <dd>{selected.is_head ? "Yes" : "No"}</dd>
               </dl>
+              <div className="checkpoint-actions">
+                <button className="tool-button" onClick={() => void loadDiff(selected.hash, workspace)}>
+                  {diffLoading ? "Loading Diff" : "Load Diff"}
+                </button>
+                <button className="primary-button" onClick={() => void createRollbackPlan()}>
+                  Rollback Plan
+                </button>
+              </div>
               {diffLoading && <div className="workbench-empty compact">Loading diff...</div>}
               {diff && !diffLoading && (
                 <>

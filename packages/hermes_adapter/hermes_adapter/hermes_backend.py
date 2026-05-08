@@ -1099,17 +1099,83 @@ class HermesBackend(StudioBackend):
         return {"config": {"backend_mode": "hermes", "hermes_url": self._base_url}}
 
     async def patch_config(self, key: str, value: Any) -> dict[str, Any]:
-        raise ValueError("Config mutation not supported in Hermes backend mode")
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError("Config key is required")
+        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,96}", key):
+            raise ValueError("Config key contains unsupported characters")
+        if value is None or isinstance(value, (dict, list)):
+            raise ValueError("Config value must be a scalar")
+        value_text = str(value)
+        if "\x00" in value_text or len(value_text) > 1000:
+            raise ValueError("Config value is invalid")
+
+        await self._run_hermes_cli(["config", "set", key.strip(), value_text], timeout=20.0)
+        self._config_repo = ConfigRepository(self._hermes_home)
+        return await self.get_config()
 
     async def patch_model_config(self, updates: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "status": "not_implemented",
-            "message": (
-                "Model config mutation is not supported in Hermes backend mode because "
-                "Studio will not write Hermes config files directly."
-            ),
-            "updates": updates,
+        allowed_keys = {"provider", "model", "base_url", "temperature", "max_tokens", "context_window"}
+        unknown_keys = sorted(set(updates) - allowed_keys)
+        if unknown_keys:
+            raise ValueError(f"Unsupported model config keys: {', '.join(unknown_keys)}")
+
+        key_map = {
+            "provider": "model.provider",
+            "model": "model.default",
+            "base_url": "model.base_url",
+            "temperature": "model.temperature",
+            "max_tokens": "model.max_tokens",
+            "context_window": "model.context_window",
         }
+        applied: list[str] = []
+        for key in ("provider", "model", "base_url", "temperature", "max_tokens", "context_window"):
+            if key not in updates:
+                continue
+            value = updates[key]
+            if value in (None, ""):
+                continue
+            if key in {"provider", "model", "base_url"} and not isinstance(value, str):
+                raise ValueError(f"{key} must be a string")
+            if key in {"temperature", "max_tokens", "context_window"} and not isinstance(value, (int, float)):
+                raise ValueError(f"{key} must be numeric")
+            await self._run_hermes_cli(["config", "set", key_map[key], str(value)], timeout=20.0)
+            applied.append(key)
+
+        if not applied:
+            raise ValueError("No supported model config updates were provided")
+
+        self._config_repo = ConfigRepository(self._hermes_home)
+        config = await self.get_model_config()
+        config["status"] = "updated"
+        config["updated_fields"] = applied
+        config["write_source"] = "hermes_cli"
+        return config
+
+    async def _run_hermes_cli(self, args: list[str], *, timeout: float = 30.0) -> subprocess.CompletedProcess[str]:
+        """Run an official Hermes CLI command against this Hermes home."""
+        env = {**os.environ, "HERMES_HOME": str(self._hermes_home)}
+
+        def _run() -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                ["hermes", *args],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+                env=env,
+            )
+
+        try:
+            result = await asyncio.to_thread(_run)
+        except FileNotFoundError as exc:
+            raise ValueError("Hermes CLI not found on PATH") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise ValueError("Hermes CLI timed out") from exc
+
+        if result.returncode != 0:
+            message = (result.stderr or result.stdout or f"Hermes CLI exited with {result.returncode}").strip()
+            raise ValueError(_redact(message))
+        return result
 
     async def get_model_config(self) -> dict[str, Any]:
         """Return model/provider config from config.yaml + .env + Hermes API."""

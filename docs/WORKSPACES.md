@@ -15,16 +15,27 @@ Workspace paths are Studio-owned metadata in `studio.db`. They are not written t
 
 ## Hermes Runtime Boundary
 
-Hermes Agent v0.12.0 has not been verified to accept a cwd/workspace field on `/v1/runs`. Studio therefore does not invent one or forward arbitrary workspace fields to Hermes. The adapter stores the workspace path beside the run record for user orientation and future integration.
+The adapter treats workspace path as Studio-owned metadata first. In default local CLI mode, Studio uses the workspace as the process working directory when it exists locally. When starting a run against a reachable Hermes gateway, HermesBackend includes optional Studio run context fields that are useful in a desktop workflow:
 
-When Hermes exposes an official safe workspace/cwd field, the adapter can translate the Studio metadata inside the HermesBackend layer.
+- `workspace_path`
+- `mode`
+- `provider`
+- `model`
+- `skills`
+- `toolsets`
+- `checkpoints`
+- `max_turns`
+- `worktree`
+- `pass_session_id`
+
+In local CLI mode these map to `hermes chat --query` flags where Hermes exposes them. If the installed Hermes gateway rejects those optional fields with a validation error, HermesBackend retries once with the minimal Hermes payload (`session_id` and `input`). This keeps the Studio compatible with older local Hermes installs while still using newer Hermes capabilities when available.
 
 ## New Run Flow
 
 1. Select a workspace path from the top bar or New Run modal.
 2. Enter a prompt.
-3. Choose run mode placeholder: chat, task, review, or debug.
-4. Optionally choose a session or enter a related card id.
+3. Choose a run preset or mode: chat, task, review, debug, design, verify, or orchestration.
+4. Optionally choose model/provider, skills, toolsets, checkpoints, worktree, max turns, a session, or a related card id.
 5. Submit through `POST /studio/runs`.
 
 The Run Ledger remains the operational record. Chat is the prompt/conversation surface.

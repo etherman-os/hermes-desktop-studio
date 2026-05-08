@@ -653,6 +653,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/HermesInventory"
 
+  /studio/hermes/cli:
+    get:
+      summary: Inspect local Hermes CLI capabilities
+      operationId: getHermesCli
+      responses:
+        "200":
+          description: Local Hermes CLI version and supported commands/flags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HermesCliStatus"
+
+  /studio/hermes/checkpoints/status:
+    get:
+      summary: Inspect Hermes v0.13 checkpoint store status
+      operationId: getHermesCheckpointStatus
+      responses:
+        "200":
+          description: Checkpoint store status from hermes checkpoints status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HermesCheckpointStoreStatus"
+
   /studio/hermes/providers:
     get:
       summary: List local Hermes providers
@@ -1252,6 +1276,43 @@ paths:
                 $ref: "#/components/schemas/Artifact"
         "404":
           description: Artifact not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /studio/artifacts/{artifact_id}/browser-evidence:
+    post:
+      summary: Capture browser evidence for a Studio-owned artifact
+      description: Opens an artifact URL, local file, or sanitized HTML snapshot with the local Playwright runner and stores a screenshot-backed evidence report as a new Studio artifact.
+      operationId: runArtifactBrowserEvidence
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Created browser evidence artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactDetail"
+        "400":
+          description: Artifact is not browser-openable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Artifact not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Browser evidence runner unavailable
           content:
             application/json:
               schema:
@@ -2808,6 +2869,49 @@ components:
         - mcp_server_count
         - toolset_count
 
+    HermesCliStatus:
+      type: object
+      properties:
+        available:
+          type: boolean
+        version:
+          type: string
+        transport:
+          type: string
+        error:
+          type: string
+        commands:
+          type: object
+          additionalProperties:
+            type: boolean
+        chat_flags:
+          type: object
+          additionalProperties:
+            type: boolean
+      required:
+        - available
+        - commands
+        - chat_flags
+
+    HermesCheckpointStoreStatus:
+      type: object
+      properties:
+        available:
+          type: boolean
+        error:
+          type: string
+        lines:
+          type: array
+          items:
+            type: string
+        status:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - available
+        - lines
+
     HermesProvider:
       type: object
       properties:
@@ -2911,6 +3015,8 @@ components:
           type: string
         installed:
           type: boolean
+        cli_name:
+          type: string
         path:
           type: string
         size_bytes:
@@ -2968,6 +3074,8 @@ components:
         enabled:
           type: boolean
         source:
+          type: string
+        label:
           type: string
       required:
         - id
@@ -3727,6 +3835,8 @@ components:
         command:
           type: string
         description:
+          type: string
+        category:
           type: string
       required:
         - id

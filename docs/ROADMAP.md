@@ -1,5 +1,31 @@
 # Roadmap
 
+## Current Studio Layer — Hermes Desktop Production Studio (Done)
+
+- [x] Mission Control default surface with runtime health, local CLI/gateway bridge action, recent runs, approvals, delegations, managed processes, and Hermes capability counts
+- [x] Local Hermes inventory for providers, models, installed/bundled skills, MCP servers, and toolsets without remote calls
+- [x] Provider/model config writes through official `hermes config set` CLI commands, including auto-mode fallback when the gateway is down
+- [x] Local CLI backend as the default desktop runtime so local Hermes installs do not require gateway
+- [x] Hermes v0.13 local CLI discovery, including `checkpoints`, chat flag support, and checkpoint store status
+- [x] Local run presets for implement, review, debug, design polish, browser verification, multi-agent orchestration, Kanban swarm planning, video generation, and Studio memory extraction
+- [x] New Run handoff maps Studio options to Hermes CLI flags: provider/model, skills, toolsets, checkpoints, max turns, worktree, and session id
+- [x] Hermes Arsenal skill/toolset cards can prefill a local Hermes run
+- [x] Experimental SSH backend mode for VPS Hermes control through remote CLI
+- [x] Local CLI run output streams into Studio while gateway/API remains optional for richer structured event telemetry
+- [x] Process Cockpit includes Hermes runtime templates for gateway, doctor, tools summary, MCP list, skills check, checkpoints status, and Kanban watch/stats
+- [x] Design Canvas imports HTML, screenshot notes, local URLs/file paths, Figma URLs, JSON specs, and markdown briefs into Studio artifacts
+- [x] Artifact Studio supports sanitized HTML live preview/source editing, click-to-selector targeting, targeted visual edit prompts, A/B variant requests, local Playwright browser evidence capture, video briefs, Design DNA extraction, and artifact history
+- [x] Approval Center supports local approve/deny decisions and Hermes notification when the local gateway exposes an approval response route
+- [x] Docs updated for Mission Control, Design Canvas, Artifact Studio, Approval Center, and Hermes model/provider integration
+
+## Next High-Value Milestones
+
+- [ ] Checkpoint-backed artifact revisions with visual diff and one-click rollback
+- [ ] Local concept-pack marketplace for animated theme worlds and reusable production kits
+- [ ] Figma MCP metadata extraction and image/vision-assisted design reconstruction
+- [ ] Rich MCP connection management using Hermes MCP CLI/API surfaces only
+- [ ] Full Hermes Kanban dispatch/claim UI for multi-profile local agents
+
 ## Phase 0 — Repo Reorganization (Done)
 
 - [x] Move Textual TUI prototype to `legacy/textual-prototype/`
@@ -61,8 +87,8 @@
 ## Phase 4A — Real Hermes Chat Bridge (Done)
 
 - [x] Backend abstraction: `StudioBackend` base class, `MockBackend`, `HermesBackend`
-- [x] Backend config: env vars `HERMES_STUDIO_BACKEND` (mock/hermes/auto), `HERMES_API_BASE_URL`, `HERMES_API_KEY`
-- [x] Backend factory: auto mode tries Hermes, falls back to mock
+- [x] Backend config: env vars `HERMES_STUDIO_BACKEND` (local/gateway/hermes/ssh/mock/auto), `HERMES_API_BASE_URL`, `HERMES_API_KEY`
+- [x] Backend factory: auto mode tries local CLI, then gateway, then mock
 - [x] HermesBackend: health, bootstrap, start_run, stream_run_events (SSE proxy), stop_run
 - [x] Event normalization: Hermes SSE → Studio events (OpenAI delta, tool, approval, run lifecycle)
 - [x] studio_routes.py: delegates to backend abstraction layer
@@ -212,7 +238,7 @@
 
 ## Phase 6C.5 — Real Local Hermes Discovery and Integration Audit (Done)
 
-- [x] Verified installed Hermes CLI and gateway API server surface against `Hermes Agent v0.12.0`
+- [x] Verified installed Hermes CLI and gateway API server surface against `Hermes Agent v0.13.0`
 - [x] Documented official local API server start path: `API_SERVER_ENABLED=true hermes gateway --accept-hooks run`
 - [x] Fixed HermesBackend run payload, capabilities parsing, SSE event parsing, stop status handling, and Hermes error message extraction
 - [x] Added sanitized runtime compatibility fixtures and schema replay tests
@@ -322,6 +348,7 @@
 - [x] Checkpoint repository (git commit timeline)
 - [x] /studio/checkpoints/* endpoints
 - [x] Checkpoint timeline frontend component
+- [x] Safe rollback/repair prompt handoff from selected checkpoint diff
 - [x] Worktree repository (git worktree CRUD)
 - [x] /studio/worktrees/* endpoints
 - [x] Worktree launcher frontend component
@@ -375,7 +402,7 @@
 - [x] Persist Run Ledger history in Studio-owned `studio.db`
 - [x] Artifact Shelf v1 with persistent metadata and safe text/reference viewer
 - [x] Context Inspector v1 with safe read-only local aggregation
-- [x] Approval Center v1 read-only visibility and audit
+- [x] Approval Center visibility, audit, and local approve/deny decision flow
 - [x] Process Management with template-based process cockpit
 - [x] Extensions and Tool Packs with discovery and enable/disable
 - [x] Checkpoints and Worktrees for git-based timeline and branching
@@ -384,6 +411,8 @@
 - [x] Native desktop features (tray, shortcuts, notifications, Preview Canvas)
 - [x] Connection resilience (circuit breaker, retry, buffer limits)
 - [x] Hermes v0.13.0 integration (session key, i18n, memory, skills, profiles)
+- [x] Local Playwright browser evidence capture for HTML/URL/file artifacts
+- [x] Figma URL import path for Hermes Design Canvas handoff
 - [ ] Artifact extraction from real run outputs and sanitized Preview Canvas
 - [ ] Real approval response wiring after verified Hermes API support
 - [ ] Richer concept packs after the workbench spine is stable
@@ -394,7 +423,3 @@
 - [ ] Auto-update mechanism
 - [ ] GitHub Releases pipeline
 - [ ] Documentation for users
-
-## Reference Projects
-
-- **[hermes-desktop](https://github.com/fathah/hermes-desktop)** — Electron + React + TypeScript desktop GUI for Hermes Agent. Useful reference for Hermes desktop UX patterns (setup flow, chat streaming, session browsing, settings organization, packaging). Hermes Desktop Studio remains a local-first, themeable, moddable Tauri studio with a different product direction. See `docs/REFERENCE_HERMES_DESKTOP.md` for the full reference review.

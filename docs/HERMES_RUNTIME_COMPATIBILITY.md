@@ -7,7 +7,7 @@ Phase 6C.5 validated Hermes Desktop Studio against the locally installed Hermes 
 | Item | Observed value |
 | --- | --- |
 | Binary | `~/.local/bin/hermes` |
-| Version | `Hermes Agent v0.12.0 (2026.4.30)` |
+| Version | `Hermes Agent v0.13.0 (2026.5.7)` |
 | Project | `~/.hermes/hermes-agent` |
 | Python | `3.11.15` |
 | OpenAI SDK | `2.31.0` |
@@ -31,7 +31,7 @@ hermes dashboard --help
 hermes acp --help
 ```
 
-Observed top-level commands include `chat`, `model`, `fallback`, `gateway`, `setup`, `sessions`, `dashboard`, and `logs`. There is no direct `hermes api` command in this runtime.
+Observed top-level commands include `chat`, `model`, `fallback`, `gateway`, `setup`, `sessions`, `dashboard`, `checkpoints`, and `logs`. There is no direct `hermes api` command in this runtime.
 
 Observed subcommands:
 
@@ -43,10 +43,29 @@ Observed subcommands:
 | `hermes sessions` | `list`, `export`, `delete`, `prune`, `stats`, `rename`, `browse` |
 | `hermes logs` | `agent`, `errors`, `gateway`, `list`; supports tailing/filter flags |
 | `hermes dashboard` | Web UI dashboard, default host `127.0.0.1`, default port `9119` |
+| `hermes checkpoints` | `status`, `list`, `prune`, `clear`, `clear-legacy` |
+
+The default Studio run launcher maps local UI options to `hermes chat --query` flags:
+
+```bash
+hermes chat \
+  --query "<prompt>" \
+  --quiet \
+  --source desktop-studio \
+  --accept-hooks \
+  --provider <provider> \
+  --model <model> \
+  --skills <csv> \
+  --toolsets <csv> \
+  --checkpoints \
+  --max-turns <n>
+```
+
+Optional Studio toggles may also add `--worktree`, `--pass-session-id`, `--ignore-user-config`, or `--ignore-rules`.
 
 ## API Server
 
-The official local API server is the gateway API platform.
+The default desktop-local Studio path uses Hermes CLI directly and does not require gateway. The optional local API server is exposed through the gateway API platform.
 
 ```bash
 API_SERVER_ENABLED=true hermes gateway --accept-hooks run

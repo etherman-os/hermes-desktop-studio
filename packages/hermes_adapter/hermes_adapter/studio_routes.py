@@ -8,8 +8,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
+import subprocess
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -31,6 +37,12 @@ from hermes_adapter.worktree_repository import WorktreeRepository
 
 router = APIRouter(prefix="/studio")
 logger = logging.getLogger(__name__)
+
+_BROWSER_EVIDENCE_TIMEOUT_SECONDS = 45
+_SCRIPT_TAG_RE = re.compile(r"<script\b[^<]*(?:(?!</script>)<[^<]*)*</script>", re.IGNORECASE)
+_BLOCKED_EMBED_RE = re.compile(r"<(iframe|object|embed)\b[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
+_EVENT_ATTR_RE = re.compile(r"\s+on[a-zA-Z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", re.IGNORECASE)
+_JAVASCRIPT_URL_RE = re.compile(r"\s+(href|src)\s*=\s*(['\"])\s*javascript:[^'\"]*\2", re.IGNORECASE)
 
 # Backend instance — initialized on first request
 _backend: StudioBackend | None = None
@@ -77,6 +89,38 @@ def _backend_name() -> str:
     active = _backend_status.get("active_backend")
     mode = _backend_status.get("backend_mode")
     return str(active or mode or "unknown")
+
+
+def _auto_fell_back_to_mock() -> bool:
+    return _backend_status.get("backend_mode") == "auto" and _backend_name() == "mock"
+
+
+async def _patch_model_config_via_local_hermes(body: dict[str, Any]) -> dict[str, Any]:
+    from hermes_adapter.backend_config import get_hermes_api_key, get_hermes_api_url
+    from hermes_adapter.hermes_backend import HermesBackend
+
+    backend = HermesBackend(get_hermes_api_url(), get_hermes_api_key())
+    try:
+        result = await backend.patch_model_config(body)
+        result["active_backend"] = "hermes_cli"
+        result["gateway_connected"] = False
+        return result
+    finally:
+        await backend.close()
+
+
+async def _patch_config_via_local_hermes(key: str, value: Any) -> dict[str, Any]:
+    from hermes_adapter.backend_config import get_hermes_api_key, get_hermes_api_url
+    from hermes_adapter.hermes_backend import HermesBackend
+
+    backend = HermesBackend(get_hermes_api_url(), get_hermes_api_key())
+    try:
+        result = await backend.patch_config(key, value)
+        result["active_backend"] = "hermes_cli"
+        result["gateway_connected"] = False
+        return result
+    finally:
+        await backend.close()
 
 
 async def _model_name(backend: StudioBackend) -> str | None:
@@ -231,12 +275,102 @@ def _inventory_http_error(error: Exception) -> HTTPException:
     )
 
 
+async def _run_local_hermes(args: list[str], *, timeout: int = 15) -> subprocess.CompletedProcess[str]:
+    def _run() -> subprocess.CompletedProcess[str]:
+        return subprocess.run(["hermes", *args], capture_output=True, text=True, timeout=timeout, check=False)
+
+    return await asyncio.to_thread(_run)
+
+
+def _parse_cli_capabilities(root_help: str, chat_help: str) -> dict[str, Any]:
+    commands = [
+        "chat",
+        "model",
+        "fallback",
+        "gateway",
+        "kanban",
+        "skills",
+        "tools",
+        "mcp",
+        "sessions",
+        "checkpoints",
+        "dashboard",
+        "acp",
+        "profile",
+        "logs",
+        "update",
+    ]
+    flags = [
+        "--image",
+        "--provider",
+        "--model",
+        "--toolsets",
+        "--skills",
+        "--resume",
+        "--continue",
+        "--worktree",
+        "--accept-hooks",
+        "--checkpoints",
+        "--max-turns",
+        "--pass-session-id",
+        "--ignore-user-config",
+        "--ignore-rules",
+        "--source",
+    ]
+    return {
+        "commands": {name: name in root_help for name in commands},
+        "chat_flags": {flag.lstrip("-").replace("-", "_"): flag in chat_help for flag in flags},
+    }
+
+
 @router.get("/hermes/inventory")
 async def get_hermes_inventory(_token: None = Depends(require_token)) -> dict[str, Any]:
     try:
         return HermesInventoryRepository().inventory()
     except Exception as e:
         raise _inventory_http_error(e) from e
+
+
+@router.get("/hermes/cli")
+async def get_hermes_cli(_token: None = Depends(require_token)) -> dict[str, Any]:
+    try:
+        version = await _run_local_hermes(["--version"])
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        return {"available": False, "error": str(exc), "commands": {}, "chat_flags": {}}
+    if version.returncode != 0:
+        return {
+            "available": False,
+            "error": (version.stderr or version.stdout or "Hermes CLI failed").strip(),
+            "commands": {},
+            "chat_flags": {},
+        }
+    root_help = await _run_local_hermes(["--help"])
+    chat_help = await _run_local_hermes(["chat", "--help"])
+    parsed = _parse_cli_capabilities(f"{root_help.stdout}\n{root_help.stderr}", f"{chat_help.stdout}\n{chat_help.stderr}")
+    return {
+        "available": True,
+        "version": version.stdout.strip().splitlines()[0] if version.stdout.strip() else "Hermes CLI available",
+        "transport": "local-cli",
+        **parsed,
+    }
+
+
+@router.get("/hermes/checkpoints/status")
+async def get_hermes_checkpoint_status(_token: None = Depends(require_token)) -> dict[str, Any]:
+    try:
+        result = await _run_local_hermes(["checkpoints", "status"])
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        return {"available": False, "error": str(exc), "lines": []}
+    lines = [line.rstrip() for line in result.stdout.splitlines() if line.strip()]
+    if result.returncode != 0:
+        return {"available": False, "error": (result.stderr or result.stdout).strip(), "lines": lines}
+    parsed: dict[str, Any] = {}
+    for line in lines:
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        parsed[key.strip().lower().replace(" ", "_").replace("-", "_")] = value.strip()
+    return {"available": True, "lines": lines, "status": parsed}
 
 
 @router.get("/hermes/providers")
@@ -604,7 +738,10 @@ async def patch_model_config(body: dict[str, Any], _token: None = Depends(requir
             detail=_error_detail("invalid_request", "At least one model config field is required"),
         )
     try:
-        result = await backend.patch_model_config(body)
+        if _auto_fell_back_to_mock():
+            result = await _patch_model_config_via_local_hermes(body)
+        else:
+            result = await backend.patch_model_config(body)
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -797,6 +934,185 @@ async def link_kanban_card_to_run(
 # ---------------------------------------------------------------------------
 
 
+def _browser_evidence_dir() -> Path:
+    status = get_studio_storage_status()
+    if not status.get("available"):
+        raise RuntimeError("Studio storage is unavailable; browser evidence cannot be stored")
+    evidence_dir = Path(str(status["data_dir"])) / "browser-evidence"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        evidence_dir.chmod(0o700)
+    except OSError:
+        logger.debug("Could not chmod browser evidence directory %s", evidence_dir)
+    return evidence_dir
+
+
+def _browser_evidence_script_path() -> Path:
+    return Path(__file__).resolve().parents[3] / "apps" / "desktop-studio" / "scripts" / "browser-evidence.mjs"
+
+
+def _safe_browser_preview_html(content: str) -> str:
+    cleaned = _SCRIPT_TAG_RE.sub("", content)
+    cleaned = _BLOCKED_EMBED_RE.sub("", cleaned)
+    cleaned = _EVENT_ATTR_RE.sub("", cleaned)
+    cleaned = _JAVASCRIPT_URL_RE.sub("", cleaned)
+    csp = (
+        '<meta http-equiv="Content-Security-Policy" '
+        'content="default-src \'none\'; img-src data: blob: file: http: https:; '
+        "style-src 'unsafe-inline' file: http: https:; font-src data: file: http: https:; "
+        "connect-src 'none'; script-src 'none'; form-action 'none'; base-uri 'none'\">"
+    )
+    if re.search(r"<head\b[^>]*>", cleaned, re.IGNORECASE):
+        return re.sub(r"(<head\b[^>]*>)", rf"\1{csp}", cleaned, count=1, flags=re.IGNORECASE)
+    return f"<!doctype html><html><head>{csp}</head><body>{cleaned}</body></html>"
+
+
+def _browser_target_from_artifact(artifact: dict[str, Any], evidence_dir: Path) -> tuple[str, bool]:
+    artifact_type = str(artifact.get("type") or "")
+    content_text = artifact.get("content_text")
+    if artifact_type == "html" and isinstance(content_text, str) and content_text.strip():
+        preview_path = evidence_dir / f"{artifact['id']}-{uuid4().hex[:8]}.html"
+        preview_path.write_text(_safe_browser_preview_html(content_text), encoding="utf-8")
+        return preview_path.resolve().as_uri(), True
+
+    raw_target = artifact.get("content_url") or artifact.get("file_path")
+    if isinstance(raw_target, str) and raw_target.strip():
+        target = raw_target.strip()
+        parsed = urlparse(target)
+        if parsed.scheme in {"http", "https", "file"}:
+            return target, False
+        target_path = Path(target).expanduser()
+        if not target_path.exists():
+            raise ValueError(f"Artifact target does not exist: {target}")
+        return target_path.resolve().as_uri(), False
+
+    raise ValueError("Artifact has no browser-openable HTML content, URL, or local file path")
+
+
+async def _run_browser_evidence_script(
+    target_url: str,
+    screenshot_path: Path,
+    *,
+    disable_javascript: bool,
+) -> dict[str, Any]:
+    script_path = _browser_evidence_script_path()
+    if not script_path.exists():
+        raise RuntimeError(f"Browser evidence runner is missing: {script_path}")
+
+    command = ["node", str(script_path), target_url, str(screenshot_path)]
+    if disable_javascript:
+        command.append("--disable-js")
+
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        cwd=str(script_path.parents[1]),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=_BROWSER_EVIDENCE_TIMEOUT_SECONDS,
+        )
+    except TimeoutError as exc:
+        process.kill()
+        await process.communicate()
+        raise RuntimeError("Browser evidence runner timed out") from exc
+
+    stdout_text = stdout.decode("utf-8", errors="replace").strip()
+    stderr_text = stderr.decode("utf-8", errors="replace").strip()
+    if process.returncode != 0:
+        detail = stderr_text or stdout_text or f"exit code {process.returncode}"
+        raise RuntimeError(f"Browser evidence runner failed: {detail[-1200:]}")
+
+    try:
+        parsed = json.loads(stdout_text.splitlines()[-1])
+        if not isinstance(parsed, dict):
+            raise RuntimeError("Browser evidence runner returned a non-object JSON payload")
+        return parsed
+    except (IndexError, json.JSONDecodeError) as exc:
+        detail = stdout_text or stderr_text or "empty output"
+        raise RuntimeError(f"Browser evidence runner returned invalid JSON: {detail[-1200:]}") from exc
+
+
+def _short_artifact_title(prefix: str, title: str) -> str:
+    full_title = f"{prefix} · {title}".strip()
+    return full_title[:200]
+
+
+def _browser_evidence_report(
+    *,
+    artifact: dict[str, Any],
+    target_url: str,
+    screenshot_path: Path,
+    evidence: dict[str, Any],
+    disable_javascript: bool,
+) -> str:
+    checks_raw = evidence.get("checks")
+    checks: dict[str, Any] = checks_raw if isinstance(checks_raw, dict) else {}
+    console_messages_raw = evidence.get("console_messages")
+    console_messages: list[Any] = console_messages_raw if isinstance(console_messages_raw, list) else []
+    page_errors_raw = evidence.get("page_errors")
+    page_errors: list[Any] = page_errors_raw if isinstance(page_errors_raw, list) else []
+    response_status = evidence.get("response_status")
+    title = evidence.get("title") or "(untitled)"
+    final_url = evidence.get("final_url") or target_url
+
+    lines = [
+        "# Browser Evidence",
+        "",
+        f"- Source artifact: {artifact.get('title')} ({artifact.get('id')})",
+        f"- Target: `{target_url}`",
+        f"- Final URL: `{final_url}`",
+        f"- Page title: {title}",
+        f"- HTTP status: {response_status if response_status is not None else 'n/a'}",
+        f"- JavaScript: {'disabled for sanitized artifact HTML' if disable_javascript else 'enabled'}",
+        f"- Screenshot: `{screenshot_path}`",
+        f"- Captured at: {datetime.now(UTC).isoformat()}",
+        "",
+        "## Checks",
+        "",
+        f"- Body text length: {checks.get('body_text_length', 0)}",
+        f"- Headings: {checks.get('heading_count', 0)}",
+        f"- Buttons/links missing accessible names: {checks.get('unnamed_action_count', 0)}",
+        f"- Images missing alt text: {checks.get('images_missing_alt_count', 0)}",
+        f"- Horizontal overflow: {'yes' if checks.get('horizontal_overflow') else 'no'}",
+        f"- Visible focusable elements: {checks.get('focusable_count', 0)}",
+        "",
+        "## Console And Runtime",
+        "",
+    ]
+    if not console_messages and not page_errors:
+        lines.append("No console warnings, console errors, or page runtime errors were captured.")
+    for item in console_messages[:12]:
+        if isinstance(item, dict):
+            lines.append(f"- [{item.get('type', 'console')}] {str(item.get('text', ''))[:500]}")
+    for item in page_errors[:12]:
+        if isinstance(item, dict):
+            lines.append(f"- [pageerror] {str(item.get('message', ''))[:500]}")
+    navigation_error = evidence.get("navigation_error")
+    if navigation_error:
+        lines.extend(["", "## Navigation Warning", "", str(navigation_error)[:1000]])
+    return "\n".join(lines)
+
+
+def _browser_evidence_http_error(error: ValueError | RuntimeError) -> HTTPException:
+    message = str(error)
+    if "not found" in message.lower():
+        status_code = 404
+        code = "artifact_error"
+    elif isinstance(error, ValueError):
+        status_code = 400
+        code = "artifact_error"
+    else:
+        status_code = 503
+        code = "browser_evidence_error"
+    return HTTPException(
+        status_code=status_code,
+        detail=_error_detail(code, message, source="studio", retryable=status_code >= 500),
+    )
+
+
 def _artifact_http_error(error: ValueError | RuntimeError) -> HTTPException:
     message = str(error)
     status_code = 404 if "not found" in message.lower() else 400
@@ -874,6 +1190,50 @@ async def archive_artifact(artifact_id: str, _token: None = Depends(require_toke
         return await backend.archive_artifact(artifact_id)
     except (RuntimeError, ValueError) as e:
         raise _artifact_http_error(e) from e
+
+
+@router.post("/artifacts/{artifact_id}/browser-evidence")
+async def run_artifact_browser_evidence(
+    artifact_id: str,
+    _token: None = Depends(require_token),
+) -> dict[str, Any]:
+    backend = await _get_backend()
+    try:
+        artifact = await backend.get_artifact(artifact_id)
+        evidence_dir = _browser_evidence_dir()
+        target_url, disable_javascript = _browser_target_from_artifact(artifact, evidence_dir)
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        screenshot_path = evidence_dir / f"{artifact_id}-{stamp}-{uuid4().hex[:6]}.png"
+        evidence = await _run_browser_evidence_script(
+            target_url,
+            screenshot_path,
+            disable_javascript=disable_javascript,
+        )
+        content_text = _browser_evidence_report(
+            artifact=artifact,
+            target_url=target_url,
+            screenshot_path=screenshot_path,
+            evidence=evidence,
+            disable_javascript=disable_javascript,
+        )
+        size_bytes = screenshot_path.stat().st_size if screenshot_path.exists() else None
+        return await backend.create_artifact(
+            {
+                "title": _short_artifact_title("Browser evidence", str(artifact.get("title") or artifact_id)),
+                "type": "report",
+                "description": f"Local Playwright evidence for artifact {artifact_id}",
+                "content_text": content_text,
+                "file_path": str(screenshot_path) if screenshot_path.exists() else None,
+                "mime_type": "image/png" if screenshot_path.exists() else "text/markdown",
+                "size_bytes": size_bytes,
+                "run_id": artifact.get("run_id"),
+                "session_id": artifact.get("session_id"),
+                "kanban_card_id": artifact.get("kanban_card_id"),
+                "source": "browser_evidence",
+            }
+        )
+    except (RuntimeError, ValueError) as e:
+        raise _browser_evidence_http_error(e) from e
 
 
 @router.post("/artifacts/{artifact_id}/link-run")
@@ -1140,6 +1500,8 @@ async def patch_config(body: dict[str, Any], _token: None = Depends(require_toke
             detail=_error_detail("invalid_request", "key is required"),
         )
     try:
+        if _auto_fell_back_to_mock():
+            return await _patch_config_via_local_hermes(key, value)
         return await backend.patch_config(key, value)
     except ValueError as e:
         raise HTTPException(

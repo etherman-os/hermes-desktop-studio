@@ -7,9 +7,11 @@ import { useProfileStore } from "../../stores/profileStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useModelStore } from "../../stores/modelStore";
 import { useHermesInventoryStore } from "../../stores/hermesInventoryStore";
+import { RUN_PRESETS, presetDraft } from "../../lib/runPresets";
 
 export function NewRunModal() {
   const open = useUiStore((s) => s.newRunOpen);
+  const draft = useUiStore((s) => s.newRunDraft);
   const close = useUiStore((s) => s.closeNewRun);
   const openWorkspacePicker = useUiStore((s) => s.openWorkspacePicker);
   const selectedWorkspace = useWorkspaceStore((s) => s.selectedWorkspace);
@@ -36,14 +38,27 @@ export function NewRunModal() {
   const [selectedProvider, setSelectedProvider] = React.useState("");
   const [selectedSkills, setSelectedSkills] = React.useState<string[]>([]);
   const [selectedToolsets, setSelectedToolsets] = React.useState<string[]>([]);
+  const [checkpoints, setCheckpoints] = React.useState(true);
+  const [maxTurns, setMaxTurns] = React.useState(90);
+  const [worktree, setWorktree] = React.useState(false);
+  const [passSessionId, setPassSessionId] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) return;
     setWorkspacePath(selectedWorkspace ?? "");
     setSessionId(activeSessionId ?? "default");
+    setPrompt(draft?.prompt ?? "");
+    setMode(draft?.mode ?? "chat");
+    setLinkedCard(draft?.linkedCard ?? "");
+    setSelectedSkills(draft?.skills ?? []);
+    setSelectedToolsets(draft?.toolsets ?? []);
+    setCheckpoints(draft?.checkpoints ?? true);
+    setMaxTurns(draft?.maxTurns ?? 90);
+    setWorktree(draft?.worktree ?? false);
+    setPassSessionId(draft?.passSessionId ?? false);
     loadConfig();
     loadInventory();
-  }, [open, selectedWorkspace, activeSessionId, loadConfig, loadInventory]);
+  }, [open, selectedWorkspace, activeSessionId, draft, loadConfig, loadInventory]);
 
   React.useEffect(() => {
     if (!open || !config) return;
@@ -78,6 +93,11 @@ export function NewRunModal() {
       provider: selectedProvider || undefined,
       skills: selectedSkills.length ? selectedSkills : undefined,
       toolsets: selectedToolsets.length ? selectedToolsets : undefined,
+      checkpoints,
+      maxTurns,
+      worktree,
+      passSessionId,
+      linkedCardId: linkedCard.trim() || null,
     });
   }
 
@@ -85,10 +105,16 @@ export function NewRunModal() {
   const modelsForProvider = selectedProvider
     ? availableModels.filter((m) => m.provider === selectedProvider)
     : availableModels;
-  const installedSkills = skills.filter((skill) => skill.installed).slice(0, 14);
-  const runToolsets = toolsets
-    .filter((toolset) => toolset.platform === "cli" || toolset.kind === "mcp")
-    .slice(0, 18);
+  const installedSkills = skills.filter((skill) => skill.installed);
+  const visibleSkills = [
+    ...installedSkills.filter((skill) => selectedSkills.includes(skill.cli_name || skill.name || skill.id)),
+    ...installedSkills.filter((skill) => !selectedSkills.includes(skill.cli_name || skill.name || skill.id)),
+  ].slice(0, 24);
+  const runToolsetsAll = toolsets.filter((toolset) => toolset.platform === "cli" || toolset.kind === "mcp");
+  const runToolsets = [
+    ...runToolsetsAll.filter((toolset) => selectedToolsets.includes(toolset.id)),
+    ...runToolsetsAll.filter((toolset) => !selectedToolsets.includes(toolset.id)),
+  ].slice(0, 28);
 
   function toggleSkill(skillId: string) {
     setSelectedSkills((current) => current.includes(skillId)
@@ -116,6 +142,30 @@ export function NewRunModal() {
         <div className="modal-body new-run-grid">
           <div className="new-run-main">
             <label className="field-label" htmlFor="new-run-prompt">Prompt</label>
+            <div className="run-preset-grid" aria-label="Hermes run presets">
+              {RUN_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className={`run-preset ${mode === preset.mode ? "active" : ""}`}
+                  onClick={() => {
+                    const next = presetDraft(preset);
+                    setPrompt(next.prompt ?? "");
+                    setMode(next.mode ?? "chat");
+                    setSelectedSkills(next.skills ?? []);
+                    setSelectedToolsets(next.toolsets ?? []);
+                    setCheckpoints(next.checkpoints ?? true);
+                    setMaxTurns(next.maxTurns ?? 90);
+                    setWorktree(next.worktree ?? false);
+                    setPassSessionId(next.passSessionId ?? false);
+                  }}
+                  title={preset.description}
+                >
+                  <span>{preset.label}</span>
+                  <small>{preset.description}</small>
+                </button>
+              ))}
+            </div>
             <textarea
               id="new-run-prompt"
               className="studio-textarea"
@@ -146,6 +196,11 @@ export function NewRunModal() {
               <option value="task">Task</option>
               <option value="review">Review</option>
               <option value="debug">Debug</option>
+              <option value="design">Design</option>
+              <option value="verify">Verify</option>
+              <option value="orchestration">Orchestration</option>
+              <option value="video">Video</option>
+              <option value="memory">Memory</option>
             </select>
 
             <label className="field-label" htmlFor="new-run-session">Session</label>
@@ -196,17 +251,20 @@ export function NewRunModal() {
               <>
                 <label className="field-label">Preload skills</label>
                 <div className="selector-chip-grid">
-                  {installedSkills.map((skill) => (
-                    <button
-                      key={skill.id}
-                      type="button"
-                      className={`selector-chip ${selectedSkills.includes(skill.id) ? "active" : ""}`}
-                      onClick={() => toggleSkill(skill.id)}
-                      title={skill.description || skill.title}
-                    >
-                      {skill.name}
-                    </button>
-                  ))}
+                  {visibleSkills.map((skill) => {
+                    const cliName = skill.cli_name || skill.name || skill.id;
+                    return (
+                      <button
+                        key={skill.id}
+                        type="button"
+                        className={`selector-chip ${selectedSkills.includes(cliName) ? "active" : ""}`}
+                        onClick={() => toggleSkill(cliName)}
+                        title={skill.description || skill.title}
+                      >
+                        {skill.name}
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -228,6 +286,33 @@ export function NewRunModal() {
                 </div>
               </>
             )}
+
+            <label className="field-label">Hermes execution</label>
+            <div className="run-option-grid">
+              <label className="run-option">
+                <input type="checkbox" checked={checkpoints} onChange={(event) => setCheckpoints(event.target.checked)} />
+                <span>Checkpoints</span>
+              </label>
+              <label className="run-option">
+                <input type="checkbox" checked={worktree} onChange={(event) => setWorktree(event.target.checked)} />
+                <span>Worktree</span>
+              </label>
+              <label className="run-option">
+                <input type="checkbox" checked={passSessionId} onChange={(event) => setPassSessionId(event.target.checked)} />
+                <span>Session ID</span>
+              </label>
+              <label className="run-option number">
+                <span>Max turns</span>
+                <input
+                  className="studio-input"
+                  type="number"
+                  min={1}
+                  max={300}
+                  value={maxTurns}
+                  onChange={(event) => setMaxTurns(Number(event.target.value) || 90)}
+                />
+              </label>
+            </div>
 
             <label className="field-label" htmlFor="new-run-card">Linked Kanban card</label>
             <input

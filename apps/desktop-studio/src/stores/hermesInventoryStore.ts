@@ -8,10 +8,13 @@ interface HermesInventoryState {
   skills: api.HermesSkill[];
   mcpServers: api.HermesMcpServer[];
   toolsets: api.HermesToolset[];
+  cliStatus: api.HermesCliStatus | null;
+  checkpointStore: api.HermesCheckpointStoreStatus | null;
   loading: boolean;
   loaded: boolean;
   error: string | null;
   loadInventory: () => Promise<void>;
+  loadLocalHermesStatus: () => Promise<void>;
   refreshModels: (params?: { provider?: string; query?: string; limit?: number }) => Promise<void>;
   clearError: () => void;
 }
@@ -23,6 +26,8 @@ export const useHermesInventoryStore = create<HermesInventoryState>((set) => ({
   skills: [],
   mcpServers: [],
   toolsets: [],
+  cliStatus: null,
+  checkpointStore: null,
   loading: false,
   loaded: false,
   error: null,
@@ -41,12 +46,26 @@ export const useHermesInventoryStore = create<HermesInventoryState>((set) => ({
         loading: false,
         loaded: true,
       });
+      void useHermesInventoryStore.getState().loadLocalHermesStatus();
     } catch (err) {
       set({
         loading: false,
         loaded: true,
         error: err instanceof Error ? err.message : "Failed to load Hermes inventory",
       });
+    }
+  },
+
+  loadLocalHermesStatus: async () => {
+    set({ error: null });
+    try {
+      const [cliStatus, checkpointStore] = await Promise.all([
+        api.getHermesCliStatus(),
+        api.getHermesCheckpointStoreStatus(),
+      ]);
+      set({ cliStatus, checkpointStore });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : "Failed to load local Hermes status" });
     }
   },
 

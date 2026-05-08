@@ -12,6 +12,7 @@ vi.mock("../api/studioClient", async () => {
     createArtifact: vi.fn(),
     updateArtifact: vi.fn(),
     archiveArtifact: vi.fn(),
+    runArtifactBrowserEvidence: vi.fn(),
     linkArtifactToRun: vi.fn(),
     linkArtifactToSession: vi.fn(),
     linkArtifactToCard: vi.fn(),
@@ -90,6 +91,17 @@ describe("artifactStore", () => {
     expect(api.archiveArtifact).toHaveBeenCalledWith("artifact_1");
     expect(useArtifactStore.getState().artifacts).toEqual([]);
     expect(useArtifactStore.getState().selectedArtifact).toBeNull();
+  });
+
+  it("captures browser evidence and selects the report", async () => {
+    const report = { ...artifact, id: "artifact_evidence", type: "report" as const, source: "browser_evidence" };
+    vi.mocked(api.runArtifactBrowserEvidence).mockResolvedValue(report);
+
+    await useArtifactStore.getState().runBrowserEvidence("artifact_1");
+
+    expect(api.runArtifactBrowserEvidence).toHaveBeenCalledWith("artifact_1");
+    expect(useArtifactStore.getState().selectedArtifactId).toBe("artifact_evidence");
+    expect(useArtifactStore.getState().actionMessage).toBe("Browser evidence captured");
   });
 
   it("sets an error when artifacts are unavailable", async () => {

@@ -35,6 +35,7 @@ class ProcessTemplate:
     name: str
     command: str
     description: str
+    category: str = "studio"
     cwd: str | None = None
     env: dict[str, str] = field(default_factory=dict)
 
@@ -60,6 +61,65 @@ TEMPLATES: dict[str, ProcessTemplate] = {
         name="Build",
         command="pnpm run build",
         description="Runs the production build",
+    ),
+    "hermes-gateway": ProcessTemplate(
+        name="Hermes Gateway Bridge",
+        command="hermes gateway --accept-hooks run",
+        description="Runs the optional Hermes messaging/API bridge for remote or rich event workflows",
+        category="hermes",
+        env={
+            "API_SERVER_ENABLED": "true",
+            "API_SERVER_HOST": "127.0.0.1",
+            "API_SERVER_PORT": "8642",
+        },
+    ),
+    "hermes-remote-ssh-check": ProcessTemplate(
+        name="Remote Hermes SSH Check",
+        command="ssh $HERMES_STUDIO_REMOTE_SSH_TARGET 'hermes --version && hermes status'",
+        description="Checks a remote VPS Hermes install for SSH-backed Studio mode",
+        category="hermes",
+    ),
+    "hermes-doctor": ProcessTemplate(
+        name="Hermes Doctor",
+        command="hermes doctor",
+        description="Checks the local Hermes installation and dependencies",
+        category="hermes",
+    ),
+    "hermes-tools-summary": ProcessTemplate(
+        name="Hermes Tools Summary",
+        command="hermes tools --summary list",
+        description="Prints enabled Hermes toolsets and MCP tools",
+        category="hermes",
+    ),
+    "hermes-mcp-list": ProcessTemplate(
+        name="Hermes MCP List",
+        command="hermes mcp list",
+        description="Lists configured Hermes MCP servers",
+        category="hermes",
+    ),
+    "hermes-skills-check": ProcessTemplate(
+        name="Hermes Skills Check",
+        command="hermes skills check",
+        description="Checks installed Hermes skills for updates",
+        category="hermes",
+    ),
+    "hermes-checkpoints-status": ProcessTemplate(
+        name="Hermes Checkpoints Status",
+        command="hermes checkpoints status",
+        description="Shows Hermes v0.13 checkpoint store size and project coverage",
+        category="hermes",
+    ),
+    "hermes-kanban-stats": ProcessTemplate(
+        name="Hermes Kanban Stats",
+        command="hermes kanban stats",
+        description="Shows Hermes Kanban task counts for multi-agent workflows",
+        category="hermes",
+    ),
+    "hermes-kanban-watch": ProcessTemplate(
+        name="Hermes Kanban Watch",
+        command="hermes kanban watch",
+        description="Watches Hermes Kanban task events for agent orchestration",
+        category="hermes",
     ),
 }
 
@@ -120,6 +180,7 @@ class ProcessManager:
                 "name": t.name,
                 "command": t.command,
                 "description": t.description,
+                "category": t.category,
             }
             for tid, t in TEMPLATES.items()
         ]

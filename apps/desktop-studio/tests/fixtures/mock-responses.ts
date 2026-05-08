@@ -457,10 +457,12 @@ export const PROCESSES = {
     },
   ],
   templates: [
-    { id: "dev-server", name: "Hermes Dev Server", command: "pnpm run dev:desktop", description: "Starts the Hermes Desktop Studio Vite dev server" },
-    { id: "adapter", name: "Python Adapter", command: "pnpm run dev:adapter", description: "Starts the Python adapter in dev mode" },
-    { id: "test-runner", name: "Test Runner", command: "pnpm run test:e2e", description: "Runs end-to-end tests" },
-    { id: "build", name: "Build", command: "pnpm run build", description: "Runs the production build" },
+    { id: "dev-server", name: "Hermes Dev Server", command: "pnpm run dev:desktop", description: "Starts the Hermes Desktop Studio Vite dev server", category: "studio" },
+    { id: "adapter", name: "Python Adapter", command: "pnpm run dev:adapter", description: "Starts the Python adapter in dev mode", category: "studio" },
+    { id: "test-runner", name: "Test Runner", command: "pnpm run test:e2e", description: "Runs end-to-end tests", category: "studio" },
+    { id: "build", name: "Build", command: "pnpm run build", description: "Runs the production build", category: "studio" },
+    { id: "hermes-gateway", name: "Hermes Gateway Bridge", command: "hermes gateway --accept-hooks run", description: "Runs the optional Hermes messaging/API bridge", category: "hermes" },
+    { id: "hermes-doctor", name: "Hermes Doctor", command: "hermes doctor", description: "Checks local Hermes setup", category: "hermes" },
   ],
 };
 

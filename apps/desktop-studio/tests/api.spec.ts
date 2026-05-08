@@ -34,7 +34,7 @@ test.describe("API route intercepts", () => {
     await page.goto("/");
     await page.locator(".app-frame").waitFor({ timeout: 15000 });
 
-    await page.locator(".rail-icon").nth(3).click();
+    await page.getByRole("button", { name: "Sessions" }).click();
     const sidebar = page.locator(".sidebar-content");
     await expect(sidebar).toContainText("Map src directory structure");
   });
@@ -44,6 +44,7 @@ test.describe("API route intercepts", () => {
     await page.goto("/");
     await page.locator(".app-frame").waitFor({ timeout: 15000 });
 
+    await page.getByRole("button", { name: "Runs & History" }).click();
     await expect(page.locator(".run-ledger")).toBeVisible();
     const recentRuns = page.locator(".recent-runs-list");
     await expect(recentRuns).toContainText("Map src directory structure");

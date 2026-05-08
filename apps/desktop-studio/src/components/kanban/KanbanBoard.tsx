@@ -5,6 +5,7 @@ import { useContextStore } from "../../stores/contextStore";
 import { useKanbanStore } from "../../stores/kanbanStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { useThemeStore } from "../../stores/themeStore";
+import { useUiStore } from "../../stores/uiStore";
 
 type CardPriority = "low" | "medium" | "high" | "urgent";
 type EditorMode = "create" | "edit";
@@ -207,6 +208,7 @@ export function KanbanBoard() {
   const showSidebar = useLayoutStore((s) => s.showSidebar);
   const label = useThemeStore((s) => s.label);
   const icon = useThemeStore((s) => s.icon);
+  const openNewRun = useUiStore((s) => s.openNewRun);
 
   const [editor, setEditor] = React.useState<{ mode: EditorMode; card: KanbanCard | null } | null>(null);
   const requestedInitialLoad = React.useRef(false);
@@ -312,6 +314,30 @@ export function KanbanBoard() {
     }
   }
 
+  function openKanbanSwarmRun() {
+    const boardSnapshot = columns.map((column) => {
+      const cards = column.cards
+        .filter((card) => !card.archived_at)
+        .map((card) => `- ${card.title} [${card.priority}]${card.run_id ? ` run:${card.run_id}` : ""}${card.session_id ? ` session:${card.session_id}` : ""}`)
+        .join("\n");
+      return `## ${column.name}\n${cards || "- empty"}`;
+    }).join("\n\n");
+    openNewRun({
+      mode: "orchestration",
+      prompt: [
+        "Use Hermes Kanban and delegation capabilities to turn this Studio board into an executable multi-agent plan.",
+        "Create task boundaries, dependencies, suggested profiles, verification checkpoints, and dispatch commands. Keep Hermes core untouched.",
+        boardSnapshot ? `Current board:\n${boardSnapshot}` : "",
+      ].filter(Boolean).join("\n\n"),
+      skills: ["kanban-orchestrator", "kanban-worker", "subagent-driven-development"],
+      toolsets: ["delegation", "todo", "terminal", "file", "skills"],
+      checkpoints: true,
+      maxTurns: 120,
+      worktree: true,
+      passSessionId: true,
+    });
+  }
+
   return (
     <div className="board-surface">
       <div className="surface-header">
@@ -323,6 +349,7 @@ export function KanbanBoard() {
           <span className="surface-badge">Studio-owned studio.db</span>
           {lastLoadedAt && <span className="surface-badge">Updated {formatUpdated(lastLoadedAt)}</span>}
           <button className="tool-button" onClick={() => void refreshBoard()}>{loading ? "Refreshing" : "Refresh"}</button>
+          <button className="tool-button" disabled={!board} onClick={openKanbanSwarmRun}>Plan Agent Swarm</button>
           <button
             className="primary-button"
             disabled={!inboxColumn || saving}

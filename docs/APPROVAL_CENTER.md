@@ -1,8 +1,8 @@
 # Approval Center
 
-Approval Center v1 is a Studio-owned visibility and audit layer for tool approval requests observed in run streams.
+Approval Center is a Studio-owned visibility, audit, and local decision layer for tool approval requests observed in run streams.
 
-It does not answer approvals through Hermes, bypass Hermes approval mechanisms, modify Hermes config, or write Hermes `state.db`.
+It does not bypass Hermes approval mechanisms, modify Hermes config, or write Hermes `state.db`. When the Hermes gateway exposes the local approval response route, Studio forwards approve/deny decisions to Hermes; otherwise it records the local decision for audit.
 
 ## Storage
 
@@ -47,12 +47,12 @@ All Approval Center calls are protected `/studio/*` calls:
 - `GET /studio/runs/{run_id}/approvals`
 - `GET /studio/sessions/{session_id}/approvals`
 
-The adapter also exposes:
+The adapter also exposes decision routes:
 
 - `POST /studio/approvals/{approval_id}/approve`
 - `POST /studio/approvals/{approval_id}/deny`
 
-Those response routes intentionally return `501 Not Implemented` until a verified official Hermes approval response API is wired. The desktop UI treats Approval Center as read-only in v1.
+Those routes update the Studio-owned approval record and try to notify Hermes at `/v1/approvals/{approval_id}/respond` when the gateway is reachable. The response includes `hermes_notified` so the UI can distinguish a local audit decision from a decision confirmed by Hermes.
 
 The OpenAPI route parity test fails if these paths drift from `packages/protocol/openapi.yaml`.
 
@@ -67,17 +67,18 @@ the adapter records them in `studio.db`. Persistence failure logs a warning and 
 
 ## Frontend
 
-Approval Center v1 supports:
+Approval Center supports:
 
 - pending approval list
 - approval history
 - filters for pending, approved, denied, and high risk
 - detail panel with tool, command/action, risk, reason, run/session links, request payload preview, status, and decision
+- approve/deny actions for pending approvals
 - pending count badge in the activity rail and status bar
 - Run Ledger action to open approvals for the selected run
 - Context Inspector related approvals for selected run/session context
 
-The UI must not claim approve/deny works until the adapter is connected to a verified Hermes approval response API.
+The UI must show whether Hermes was notified. A local-only decision is useful for Studio audit history but is not a claim that Hermes accepted the action.
 
 ## Security Rules
 
@@ -90,4 +91,4 @@ The UI must not claim approve/deny works until the adapter is connected to a ver
 
 ## Future Work
 
-Future layers can add real approve/deny actions only after Hermes Agent exposes and documents a safe local approval response API. Until then, Approval Center remains an audit and visibility surface.
+Future layers can add richer diff/evidence previews for risky tool approvals and tighter linking from Approval Center back into the exact run event timeline.

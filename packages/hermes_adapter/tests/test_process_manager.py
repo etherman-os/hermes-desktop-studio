@@ -19,9 +19,10 @@ def manager() -> ProcessManager:
 
 def test_list_templates(manager: ProcessManager) -> None:
     templates = manager.list_templates()
-    assert len(templates) == 4
+    assert len(templates) >= 9
     ids = {t["id"] for t in templates}
-    assert ids == {"dev-server", "adapter", "test-runner", "build"}
+    assert {"dev-server", "adapter", "test-runner", "build", "hermes-gateway", "hermes-doctor"} <= ids
+    assert all("category" in t for t in templates)
 
 
 def test_list_processes_empty(manager: ProcessManager) -> None:

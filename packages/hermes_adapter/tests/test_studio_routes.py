@@ -20,7 +20,8 @@ def _set_token() -> None:
 
 
 @pytest.fixture()
-def client() -> TestClient:
+def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    monkeypatch.setenv("HERMES_STUDIO_BACKEND", "mock")
     return TestClient(create_app())
 
 
@@ -342,6 +343,37 @@ class TestModelConfig:
         assert data["provider"] == "openai"
         assert data["model"] == "gpt-4o"
         assert data["temperature"] == 0.3
+
+    def test_patch_model_config_auto_fallback_uses_local_hermes_cli(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        async def fake_patch(body: dict[str, object]) -> dict[str, object]:
+            return {
+                "provider": body["provider"],
+                "model": body["model"],
+                "status": "updated",
+                "write_source": "hermes_cli",
+                "active_backend": "hermes_cli",
+            }
+
+        monkeypatch.setattr(studio_routes, "_backend", MockBackend())
+        monkeypatch.setattr(studio_routes, "_backend_status", {"backend_mode": "auto", "active_backend": "mock"})
+        monkeypatch.setattr(studio_routes, "_patch_model_config_via_local_hermes", fake_patch)
+
+        resp = client.patch(
+            "/studio/model-config",
+            headers=HEADERS,
+            json={"provider": "glm", "model": "glm-5"},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["provider"] == "glm"
+        assert data["model"] == "glm-5"
+        assert data["write_source"] == "hermes_cli"
+        assert data["active_backend"] == "hermes_cli"
 
     def test_patch_model_config_rejects_unknown_keys(self, client: TestClient) -> None:
         resp = client.patch(
