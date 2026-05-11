@@ -8,6 +8,16 @@ interface StartupScreenProps {
 
 type StartupPhase = "starting" | "checking" | "ready" | "error";
 
+// Detect if we're in Tauri context
+function isTauriContext(): boolean {
+  try {
+    // @ts-expect-error - Tauri injects this
+    return typeof window !== "undefined" && window.__TAURI_INTERNALS__ !== undefined;
+  } catch {
+    return false;
+  }
+}
+
 export function StartupScreen({ onReady }: StartupScreenProps) {
   const [phase, setPhase] = React.useState<StartupPhase>("starting");
   const [dots, setDots] = React.useState("");
@@ -28,7 +38,19 @@ export function StartupScreen({ onReady }: StartupScreenProps) {
     let cancelled = false;
 
     async function beginStartup() {
-      // Listen for adapter:status events from Rust side
+      // Web dev mode - skip adapter startup, go directly to ready
+      if (!isTauriContext()) {
+        setPhase("checking");
+        setMessage("Dev mode - skipping adapter...");
+        await new Promise((r) => setTimeout(r, 1000));
+        if (!cancelled) {
+          setPhase("ready");
+          setTimeout(onReady, 300);
+        }
+        return;
+      }
+
+      // Tauri context - use real adapter
       let unlistenFn: (() => void) | null = null;
       try {
         unlistenFn = await listen<{ status: string; message: string }>(
@@ -48,15 +70,13 @@ export function StartupScreen({ onReady }: StartupScreenProps) {
         );
       } catch {
         // listen() failed; skip registration
-        return;
       }
       if (cancelled) {
-        unlistenFn();
+        unlistenFn?.();
         return;
       }
       unlistenRef.current = unlistenFn;
 
-      // Call ensure_adapter_running to trigger Rust-side startup
       setPhase("checking");
       setMessage("Connecting to Hermes Agent...");
 
@@ -80,7 +100,6 @@ export function StartupScreen({ onReady }: StartupScreenProps) {
           setMessage("Connected!");
           setTimeout(onReady, 300);
         } else if (result.status === "starting") {
-          // Adapter is starting asynchronously, wait for events
           setMessage(result.message || "Starting adapter...");
         }
       } catch (err) {
