@@ -79,6 +79,35 @@ export const useAdapterStore = create<AdapterState>((set, get) => ({
     if (state._checking) return false;
     if (state.checking) return false;
 
+    // Web dev mode - skip adapter connection, return connected=true
+    if (typeof window !== "undefined") {
+      try {
+        // @ts-expect-error - Tauri injects this
+        if (!window.__TAURI_INTERNALS__) {
+          set({
+            connected: true,
+            checking: false,
+            _checking: false,
+            authReady: true,
+            authError: null,
+            backendMode: "mock",
+            activeBackend: "mock",
+            hermesConnected: false,
+            hermesUrl: "http://localhost:39191",
+            storageAvailable: true,
+            storageError: null,
+            storageSchemaVersion: 1,
+            fallbackReason: null,
+            lastCheckedAt: new Date().toISOString(),
+            connectionMode: "mock" as ConnectionMode,
+          });
+          return true;
+        }
+      } catch {
+        // Not in Tauri context
+      }
+    }
+
     set({ checking: true, _checking: true });
     try {
       const auth = await Promise.race([

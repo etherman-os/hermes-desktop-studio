@@ -31,6 +31,16 @@ import { ToastContainer } from "../common/Toast";
 import type { Mode, CenterTab } from "../../stores/layoutStore";
 import { useToastStore } from "../../stores/toastStore";
 
+// Detect if we're in Tauri context
+function isTauriContext(): boolean {
+  try {
+    // @ts-expect-error - Tauri injects this
+    return typeof window !== "undefined" && window.__TAURI_INTERNALS__ !== undefined;
+  } catch {
+    return false;
+  }
+}
+
 export function AppFrame() {
   const sidebarCollapsed = useLayoutStore((s) => s.sidebarCollapsed);
   const showRight = useLayoutStore((s) => s.showRightPanel);
@@ -138,43 +148,60 @@ export function AppFrame() {
     document.documentElement.dataset.mode = activeMode;
   }, [activeMode]);
 
+  // Set up Tauri event listeners - only in Tauri context
   React.useEffect(() => {
-    // Set up Tauri event listeners and store cleanup functions
-    const unlistenNewRunPromise = listen("global-shortcut:new-run", () => {
-      openNewRun();
-    });
+    if (!isTauriContext()) return;
 
-    const unlistenDeepLinkPromise = listen<{ mode: Mode; surface: CenterTab }>("deep-link:navigate", (event) => {
-      const { mode, surface } = event.payload;
-      useLayoutStore.getState().navigateTo({ mode, surface });
-      useToastStore.getState().addToast({
-        kind: "info",
-        title: "Navigated",
-        message: `Opened ${surface} in ${mode} mode`,
-        duration: 2500,
-      });
-    });
+    let cleanup = false;
 
-    const unlistenTogglePromise = listen("global-shortcut:toggle-visibility", async () => {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      const win = getCurrentWindow();
-      const visible = await win.isVisible();
-      if (visible) {
-        await win.hide();
-      } else {
-        await win.show();
-        await win.setFocus();
+    async function setupListeners() {
+      if (cleanup) return;
+
+      try {
+        const unlistenNewRunPromise = listen("global-shortcut:new-run", () => {
+          openNewRun();
+        });
+
+        const unlistenDeepLinkPromise = listen<{ mode: Mode; surface: CenterTab }>("deep-link:navigate", (event) => {
+          const { mode, surface } = event.payload;
+          useLayoutStore.getState().navigateTo({ mode, surface });
+          useToastStore.getState().addToast({
+            kind: "info",
+            title: "Navigated",
+            message: `Opened ${surface} in ${mode} mode`,
+            duration: 2500,
+          });
+        });
+
+        const unlistenTogglePromise = listen("global-shortcut:toggle-visibility", async () => {
+          const { getCurrentWindow } = await import("@tauri-apps/api/window");
+          const win = getCurrentWindow();
+          const visible = await win.isVisible();
+          if (visible) {
+            await win.hide();
+          } else {
+            await win.show();
+            await win.setFocus();
+          }
+        });
+
+        if (cleanup) return;
+
+        // Store cleanup functions that work properly with async listeners
+        unlistenRefs.current = [
+          () => { unlistenNewRunPromise.then((fn) => fn()); },
+          () => { unlistenDeepLinkPromise.then((fn) => fn()); },
+          () => { unlistenTogglePromise.then((fn) => fn()); },
+        ];
+      } catch (err) {
+        console.warn("[AppFrame] Tauri event listener setup failed:", err);
       }
-    });
+    }
 
-    // Store cleanup functions that work properly with async listeners
-    unlistenRefs.current = [
-      () => { unlistenNewRunPromise.then((fn) => fn()); },
-      () => { unlistenDeepLinkPromise.then((fn) => fn()); },
-      () => { unlistenTogglePromise.then((fn) => fn()); },
-    ];
+    void setupListeners();
 
     return () => {
+      cleanup = true;
       // Properly await and call each unlisten function
       for (const unlisten of unlistenRefs.current) {
         try {
@@ -214,10 +241,23 @@ export function AppFrame() {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [setBottomPanelHeight, setRightPanelWidth, setSidebarWidth]);
+  }, [setSidebarWidth, setRightPanelWidth, setBottomPanelHeight]);
 
-  function beginResize(mode: "sidebar" | "right" | "bottom") {
-    resizeMode.current = mode;
+  function handleSidebarResizeStart(event: React.PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    resizeMode.current = "sidebar";
+    document.body.classList.add("is-resizing");
+  }
+
+  function handleRightResizeStart(event: React.PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    resizeMode.current = "right";
+    document.body.classList.add("is-resizing");
+  }
+
+  function handleBottomResizeStart(event: React.PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    resizeMode.current = "bottom";
     document.body.classList.add("is-resizing");
   }
 
@@ -248,7 +288,7 @@ export function AppFrame() {
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize sidebar"
-            onPointerDown={() => beginResize("sidebar")}
+            onPointerDown={handleSidebarResizeStart}
           />
         )}
         {showRight && (
@@ -256,8 +296,8 @@ export function AppFrame() {
             className="resize-handle resize-handle-right"
             role="separator"
             aria-orientation="vertical"
-            aria-label="Resize inspector"
-            onPointerDown={() => beginResize("right")}
+            aria-label="Resize right panel"
+            onPointerDown={handleRightResizeStart}
           />
         )}
         {showBottom && (
@@ -266,16 +306,20 @@ export function AppFrame() {
             role="separator"
             aria-orientation="horizontal"
             aria-label="Resize bottom panel"
-            onPointerDown={() => beginResize("bottom")}
+            onPointerDown={handleBottomResizeStart}
           />
         )}
-        <StatusBar />
       </div>
-      <div aria-live="polite" aria-atomic="true" className="sr-only" id="app-announcer" />
-      <CommandPalette />
-      <NewRunModal />
+
       <WorkspacePicker />
+      <NewRunModal />
+      <CommandPalette />
       <ToastContainer />
+      <StatusBar />
+
+      <div id="main-content" className="visually-hidden" tabIndex={-1}>
+        Main content area
+      </div>
     </>
   );
 }
