@@ -89,13 +89,13 @@ def _estimate_next_run(schedule: str, last_run: str | None) -> str | None:
 def _load_yaml_safe(text: str) -> dict[str, Any] | None:
     """Try to parse YAML-like content as simple key-value. Falls back to None."""
     try:
-        import yaml  # type: ignore[import-untyped]
+        import yaml
 
         result = yaml.safe_load(text)
         if isinstance(result, dict):
             return result
-    except Exception:
-        pass
+    except yaml.YAMLError as e:
+        logger.debug("Failed to parse YAML content: %s", e)
     return None
 
 

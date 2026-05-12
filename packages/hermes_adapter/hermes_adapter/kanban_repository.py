@@ -73,7 +73,7 @@ def _clean_position(value: Any, *, default: int) -> int:
         return default
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError("position must be an integer")
-    return max(cast(int, value), 0)
+    return max(value, 0)
 
 
 def _reject_secret_text(field: str, value: str) -> None:
@@ -155,7 +155,7 @@ class KanbanRepository:
                 WHERE {where}
                 ORDER BY updated_at DESC, id DESC
                 LIMIT ?
-                """,
+                """,  # noqa: S608
                 (*params, safe_limit),
             ).fetchall()
             return [self._card_dict(row) for row in rows]

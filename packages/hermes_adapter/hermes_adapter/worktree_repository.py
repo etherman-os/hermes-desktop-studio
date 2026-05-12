@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from hermes_adapter._subprocess import run_git
 from hermes_adapter.studio_storage import StudioStorage
 
 _ID_RE = re.compile(r"^[A-Za-z0-9_.:/-]{1,500}$")
@@ -28,16 +29,9 @@ def _new_id() -> str:
     return f"wt_{uuid4().hex[:12]}"
 
 
-def _run_git(args: list[str], cwd: Path, *, check: bool = False) -> subprocess.CompletedProcess[str]:
-    """Run a git command and return the result."""
-    return subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=check,
-    )
+def _run_git(args: list[str], cwd: Path, *, check: bool = False) -> subprocess.CompletedProcess[str]:  # noqa: S603, S607
+    # Delegates to _subprocess.run_git which resolves git via shutil.which()
+    return run_git(args, cwd, check=check, timeout=30)
 
 
 def _is_git_repo(path: Path) -> bool:

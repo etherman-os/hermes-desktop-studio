@@ -169,7 +169,7 @@ def check_request_size(body: bytes, *, max_bytes: int = MAX_REQUEST_BODY_BYTES) 
 # --------------------------------------------------------------------------
 
 
-def make_body_size_middleware(max_bytes: int = MAX_REQUEST_BODY_BYTES):
+def make_body_size_middleware(max_bytes: int = MAX_REQUEST_BODY_BYTES):  # type: ignore[no-untyped-def]
     """Return a FastAPI middleware that enforces max request body size.
 
     Usage:
@@ -182,7 +182,7 @@ def make_body_size_middleware(max_bytes: int = MAX_REQUEST_BODY_BYTES):
     from starlette.requests import Request
     from starlette.responses import Response
 
-    async def dispatch(request: Request, call_next) -> Response:
+    async def dispatch(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
         if request.method in ("POST", "PUT", "PATCH"):
             content_length = request.headers.get("content-length")
             if content_length is not None:
@@ -205,12 +205,12 @@ def make_body_size_middleware(max_bytes: int = MAX_REQUEST_BODY_BYTES):
                         detail=f"Request body too large (max {max_bytes} bytes)",
                     )
                 # Reconstruct request with cached body for downstream handlers
-                async def receive():
+                async def receive():  # type: ignore[no-untyped-def]
                     return {"type": "http.request", "body": body}
 
                 request._receive = receive
             except Exception:
                 raise
-        return await call_next(request)
+        return await call_next(request)  # type: ignore[no-any-return]
 
-    return BaseHTTPMiddleware(dispatch)
+    return BaseHTTPMiddleware(dispatch)  # type: ignore[arg-type]

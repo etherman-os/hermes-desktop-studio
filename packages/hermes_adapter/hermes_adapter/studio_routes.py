@@ -21,6 +21,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from hermes_adapter._subprocess import run_hermes  # noqa: E402
 from hermes_adapter.approval_repository import ApprovalRepository
 from hermes_adapter.backend_base import StudioBackend
 from hermes_adapter.checkpoint_repository import CheckpointRepository
@@ -89,8 +90,8 @@ def _audit_log_config_change(action: str, detail: dict[str, Any], actor: str) ->
                 resource="studio.config",
                 detail={"action": action, **redacted_detail},
             )
-    except Exception:
-        pass  # Audit logging must never break config mutations
+    except Exception:  # noqa: S110 — Audit logging must never break config mutations
+        pass
 
 
 async def _get_backend() -> StudioBackend:
@@ -424,7 +425,8 @@ def _inventory_http_error(error: Exception) -> HTTPException:
 
 async def _run_local_hermes(args: list[str], *, timeout: int = 15) -> subprocess.CompletedProcess[str]:
     def _run() -> subprocess.CompletedProcess[str]:
-        return subprocess.run(["hermes", *args], capture_output=True, text=True, timeout=timeout, check=False)
+        # S603/S607: hermes_path resolved via shutil.which(); args are hardcoded/internal
+        return run_hermes(args, timeout=float(timeout), check_returncode=None)  # noqa: S603, S607
 
     return await asyncio.to_thread(_run)
 
@@ -1168,7 +1170,7 @@ async def approve_approval(approval_id: str, _token: None = Depends(require_toke
                 "run_id": approval.get("run_id"),
                 "session_id": approval.get("session_id"),
             })
-        except Exception:
+        except Exception:  # noqa: S110 — SSE event recording is non-critical after approval already succeeded
             pass
         return result
     except ValueError as e:
@@ -1190,7 +1192,7 @@ async def deny_approval(approval_id: str, _token: None = Depends(require_token))
                 "run_id": approval.get("run_id"),
                 "session_id": approval.get("session_id"),
             })
-        except Exception:
+        except Exception:  # noqa: S110 — SSE event recording is non-critical after approval already succeeded
             pass
         return result
     except ValueError as e:

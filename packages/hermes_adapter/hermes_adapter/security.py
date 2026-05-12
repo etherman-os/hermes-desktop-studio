@@ -58,8 +58,8 @@ def _load_auth_failures_from_disk() -> dict[str, list[float]]:
                 if isinstance(timestamps, list):
                     result[str(ip)] = [float(t) for t in timestamps if isinstance(t, (int, float))]
             return result
-    except Exception:
-        pass
+    except (OSError, json.JSONDecodeError) as e:
+        logger.debug("Could not load auth failures from %s: %s", path, e)
     return {}
 
 
@@ -94,8 +94,8 @@ def _record_failure(client_ip: str) -> None:
         audit = get_audit_logger()
         if audit:
             audit.log_auth(client_ip, success=False, detail={"reason": "auth_failure", "failure_count": len(_auth_failures.get(client_ip, []))})
-    except Exception:
-        pass  # Audit logging must never break auth flow
+    except Exception:  # noqa: S110 — Audit logging must never break auth flow
+        pass
 
 
 def _auth_error(code: str, message: str) -> dict[str, object]:
@@ -155,7 +155,7 @@ def is_token_expired(max_age: float = DEFAULT_TOKEN_EXPIRY_SECONDS) -> bool:
     mtime: float | None = None
     try:
         mtime = path.stat().st_mtime
-        if _file_token_mtime_at_read is None or _file_token_mtime_at_read != mtime:  # noqa: F823
+        if _file_token_mtime_at_read is None or _file_token_mtime_at_read != mtime:  # type: ignore[used-before-def]  # noqa: F823
             # First read or file was replaced — reset the monotonic reference
             _file_token_mtime_at_read = mtime
             _file_token_checked_at = time.monotonic()

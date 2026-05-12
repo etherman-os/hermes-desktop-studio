@@ -374,18 +374,21 @@ exit 2
             capture_output: bool,
             text: bool,
             timeout: int,
+            check: bool = False,
+            env: dict[str, str] | None = None,
         ) -> subprocess.CompletedProcess[str]:
             captured.append(args)
             return subprocess.CompletedProcess(args, 0, stdout="profile switched", stderr="")
 
-        monkeypatch.setattr("hermes_adapter.hermes_backend.subprocess.run", fake_run)
+        monkeypatch.setattr("hermes_adapter._subprocess.subprocess.run", fake_run)
+        monkeypatch.setattr("hermes_adapter._subprocess.shutil.which", lambda name: f"/fake/path/{name}")
 
         backend = HermesBackend("http://hermes.test")
         result = await backend.activate_profile("research")
 
         await backend.close()
         assert result == {"status": "activated", "profile": "research", "source": "cli"}
-        assert captured == [["hermes", "profile", "use", "research"]]
+        assert captured and captured[0][-3:] == ["profile", "use", "research"]
 
     async def test_stream_run_events(self, fake_hermes):
         backend = HermesBackend(fake_hermes)
@@ -523,6 +526,40 @@ exit 2
         assert "--pass-session-id" in args
         assert "--ignore-rules" in args
         assert "--resume" in args and "session-1" in args
+
+    @pytest.mark.parametrize(
+        "invalid_target",
+        [
+            "host; rm -rf /",
+            "user@host -oProxyCommand=...",
+            "user@host\ncmd",
+            "$(evil)",
+            "host|grep",
+            "user@host and stuff",
+        ],
+    )
+    def test_remote_ssh_target_rejects_invalid_format(self, invalid_target: str) -> None:
+        with pytest.raises(ValueError):
+            HermesCliBackend(remote_ssh_target=invalid_target)
+
+    @pytest.mark.parametrize(
+        "valid_target",
+        [
+            "user@example.com",
+            "example.com",
+            "user@192.168.1.10",
+            "192.168.1.1",
+        ],
+    )
+    def test_remote_ssh_target_accepts_valid_format(self, valid_target: str) -> None:
+        # Should not raise — valid target
+        backend = HermesCliBackend(remote_ssh_target=valid_target)
+        assert backend._remote_ssh_target == valid_target
+
+    @pytest.mark.parametrize("invalid_bin", ["bin; rm -rf /", "bin$(whoami)", "bin`id`"])
+    def test_remote_hermes_bin_rejects_unsafe_chars(self, invalid_bin: str) -> None:
+        with pytest.raises(ValueError, match="unsafe"):
+            HermesCliBackend(remote_ssh_target="user@example.com", remote_hermes_bin=invalid_bin)
 
 
 # ---------------------------------------------------------------------------

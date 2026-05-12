@@ -13,7 +13,7 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 logger = logging.getLogger("hermes_adapter.file_utils")
 

@@ -17,8 +17,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
+from hermes_adapter._subprocess import run_hermes
 from hermes_adapter.session_repository import get_hermes_home
 
 logger = logging.getLogger("hermes_adapter.hermes_inventory_repository")
@@ -487,18 +488,13 @@ class HermesInventoryRepository:
     def _cli_tools_summary(self) -> str:
         if not self._enable_cli_probe:
             return ""
-        env = {**os.environ, "HERMES_HOME": str(self._hermes_home)}
         try:
-            result = subprocess.run(
-                ["hermes", "tools", "--summary", "list"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=False,
-                env=env,
-            )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            result = run_hermes(["tools", "--summary", "list"], timeout=30)  # noqa: S603, S607
+        except FileNotFoundError as exc:
             logger.debug("Hermes tools CLI summary unavailable: %s", exc)
+            return ""
+        except subprocess.TimeoutExpired as exc:
+            logger.debug("Hermes tools CLI summary timed out: %s", exc)
             return ""
         if result.returncode != 0:
             logger.debug("Hermes tools CLI summary failed: %s", result.stderr.strip())
