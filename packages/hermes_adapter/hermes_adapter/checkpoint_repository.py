@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hermes_adapter._subprocess import run_git
+
 _CHECKPOINT_RE = re.compile(r"\[checkpoint\]", re.IGNORECASE)
 _CP_PREFIX_RE = re.compile(r"^cp/", re.IGNORECASE)
 _MAX_DIFF_LINES = 500
@@ -49,14 +51,7 @@ class Checkpoint:
 def _run_git(args: list[str], cwd: Path) -> str:
     """Run a git command and return stdout.  Returns empty string on failure."""
     try:
-        result = subprocess.run(
-            ["git", *args],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            timeout=15,
-            check=False,
-        )
+        result = run_git(args, cwd=cwd, timeout=15)  # noqa: S603, S607  # hardcoded args list + validated cwd
         if result.returncode != 0:
             return ""
         return result.stdout

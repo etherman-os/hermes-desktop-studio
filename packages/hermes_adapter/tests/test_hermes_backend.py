@@ -374,18 +374,20 @@ exit 2
             capture_output: bool,
             text: bool,
             timeout: int,
+            check: bool = False,
+            env: dict[str, str] | None = None,
         ) -> subprocess.CompletedProcess[str]:
             captured.append(args)
             return subprocess.CompletedProcess(args, 0, stdout="profile switched", stderr="")
 
-        monkeypatch.setattr("hermes_adapter.hermes_backend.subprocess.run", fake_run)
+        monkeypatch.setattr("hermes_adapter._subprocess.subprocess.run", fake_run)
 
         backend = HermesBackend("http://hermes.test")
         result = await backend.activate_profile("research")
 
         await backend.close()
         assert result == {"status": "activated", "profile": "research", "source": "cli"}
-        assert captured == [["hermes", "profile", "use", "research"]]
+        assert captured and captured[0][-3:] == ["profile", "use", "research"]
 
     async def test_stream_run_events(self, fake_hermes):
         backend = HermesBackend(fake_hermes)

@@ -21,6 +21,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from hermes_adapter._subprocess import run_hermes  # noqa: E402
 from hermes_adapter.approval_repository import ApprovalRepository
 from hermes_adapter.backend_base import StudioBackend
 from hermes_adapter.checkpoint_repository import CheckpointRepository
@@ -424,7 +425,8 @@ def _inventory_http_error(error: Exception) -> HTTPException:
 
 async def _run_local_hermes(args: list[str], *, timeout: int = 15) -> subprocess.CompletedProcess[str]:
     def _run() -> subprocess.CompletedProcess[str]:
-        return subprocess.run(["hermes", *args], capture_output=True, text=True, timeout=timeout, check=False)
+        # S603/S607: hermes_path resolved via shutil.which(); args are hardcoded/internal
+        return run_hermes(args, timeout=float(timeout), check_returncode=None)  # noqa: S603, S607
 
     return await asyncio.to_thread(_run)
 

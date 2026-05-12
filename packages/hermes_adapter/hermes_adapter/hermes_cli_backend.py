@@ -22,6 +22,7 @@ from typing import Any
 # This validates HERMES_STUDIO_REMOTE_HERMES_BIN before it is embedded in an SSH command.
 _SHELL_METACHAR_RE = re.compile(r"[;&|`$<>{}()\[\]!*?\"'\\ \t\n\r]")
 
+from hermes_adapter._subprocess import run_hermes, run_hermes_over_ssh  # noqa: E402
 from hermes_adapter.backend_config import get_cli_run_timeout_seconds  # noqa: E402
 from hermes_adapter.hermes_backend import HermesBackend, _now_iso, _redact  # noqa: E402
 from hermes_adapter.hermes_inventory_repository import HermesInventoryRepository  # noqa: E402
@@ -82,10 +83,9 @@ class HermesCliBackend(HermesBackend):
         return "ssh" if self._remote_ssh_target else "local-cli"
 
     async def _cli_probe(self) -> tuple[bool, str | None]:
-        command = self._base_cli_command(["--version"])
-
         def _run() -> subprocess.CompletedProcess[str]:
-            return subprocess.run(command, capture_output=True, text=True, timeout=10, check=False, env=self._cli_env())
+            # S603/S607: hermes_path resolved via shutil.which(); args are hardcoded literals
+            return run_hermes(["--version"], timeout=10.0, check_returncode=None)  # noqa: S603, S607
 
         try:
             result = await asyncio.to_thread(_run)
@@ -98,10 +98,12 @@ class HermesCliBackend(HermesBackend):
         return True, result.stdout.strip().splitlines()[0] if result.stdout.strip() else "Hermes CLI available"
 
     async def _cli_capture(self, args: list[str], *, timeout: int = 10) -> subprocess.CompletedProcess[str]:
-        command = self._base_cli_command(args)
-
         def _run() -> subprocess.CompletedProcess[str]:
-            return subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False, env=self._cli_env())
+            if self._remote_ssh_target:
+                # S603/S607: ssh resolved via shutil.which(); remote_target/bin pre-validated at construction
+                return run_hermes_over_ssh(self._remote_ssh_target, self._remote_hermes_bin, args, timeout=float(timeout))  # noqa: S603, S607
+            # S603/S607: hermes_path resolved via shutil.which(); args are hardcoded/internal literals
+            return run_hermes(args, timeout=float(timeout), check_returncode=None)  # noqa: S603, S607
 
         return await asyncio.to_thread(_run)
 

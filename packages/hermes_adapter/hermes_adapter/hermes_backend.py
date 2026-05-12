@@ -15,6 +15,7 @@ from typing import Any, TypeVar
 
 import httpx
 
+from hermes_adapter._subprocess import run_hermes
 from hermes_adapter.backend_base import StudioBackend
 from hermes_adapter.backend_config import get_debug_events
 from hermes_adapter.config_repository import ConfigRepository
@@ -506,12 +507,7 @@ class HermesBackend(StudioBackend):
 
         # Fallback: CLI
         try:
-            result = subprocess.run(
-                ["hermes", "profile", "use", clean_id],
-                capture_output=True,
-                text=True,
-                timeout=15,
-            )
+            result = run_hermes(["profile", "use", clean_id], timeout=15.0)  # noqa: S603, S607  # clean_id validated upstream
             if result.returncode == 0:
                 self._profile_repo = ProfileRepository(self._hermes_home)
                 return {"status": "activated", "profile": clean_id, "source": "cli"}
@@ -932,20 +928,10 @@ class HermesBackend(StudioBackend):
 
     async def _run_hermes_cli(self, args: list[str], *, timeout: float = 30.0) -> subprocess.CompletedProcess[str]:
         """Run an official Hermes CLI command against this Hermes home."""
-        env = {**os.environ, "HERMES_HOME": str(self._hermes_home)}
-
-        def _run() -> subprocess.CompletedProcess[str]:
-            return subprocess.run(
-                ["hermes", *args],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                check=False,
-                env=env,
-            )
-
         try:
-            result = await asyncio.to_thread(_run)
+            result = await asyncio.to_thread(
+                run_hermes, args, hermes_home=self._hermes_home, timeout=timeout
+            )
         except FileNotFoundError as exc:
             raise ValueError("Hermes CLI not found on PATH") from exc
         except subprocess.TimeoutExpired as exc:
