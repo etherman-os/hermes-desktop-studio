@@ -148,7 +148,7 @@ class ManagedProcess:
     error: str | None = None
     _process: asyncio.subprocess.Process | None = field(default=None, repr=False)
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
-    _output_task: asyncio.Task | None = field(default=None, repr=False)
+    _output_task: asyncio.Task[Any] | None = field(default=None, repr=False)
 
     def to_dict(self) -> dict[str, Any]:
         return {

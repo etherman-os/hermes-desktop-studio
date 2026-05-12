@@ -1031,7 +1031,7 @@ class HermesBackend(StudioBackend):
     async def close(self) -> None:
         if self._client is not None:
             await self._client.aclose()
-            self._client = None
+            self._client = None  # type: ignore[assignment]
 
     def __del__(self) -> None:
         """Warn if client was not explicitly closed before GC."""
