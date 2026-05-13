@@ -67,6 +67,8 @@ var/
 .venv
 venv/
 # Virtual environments
+SESSION_STATUS.md
+# Internal status (not for repo)
 # Vite
 .vscode/
 wheels/
