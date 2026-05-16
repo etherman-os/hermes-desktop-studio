@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import shutil
 from pathlib import Path
@@ -17,23 +16,24 @@ class TestGetHtgCliPath:
 
     def test_returns_none_when_not_available(self) -> None:
         """When neither local checkout nor PATH binary exists, return None."""
-        with patch.object(Path, "exists", return_value=False):
-            with patch.object(shutil, "which", return_value=None):
-                from hermes_adapter.htg_status import get_htg_cli_path
-                result = get_htg_cli_path()
+        with patch.object(Path, "exists", return_value=False), \
+             patch.object(shutil, "which", return_value=None):
+            from hermes_adapter.htg_status import get_htg_cli_path
+
+            result = get_htg_cli_path()
         assert result is None
 
     def test_returns_local_path_when_built(self, tmp_path: Path) -> None:
         """When local checkout htg_cli.js exists, return node path."""
         dist_cli = tmp_path / "htg_cli.js"
         dist_cli.write_text("// built")
-        with patch.object(Path, "exists", return_value=True):
-            with patch.object(shutil, "which", return_value=None):
-                # Import fresh — module is already cached so this re-reads get_htg_cli_path
-                # which uses HTG_CLI_LOCAL.exists() (patched True) and returns the constant
-                from hermes_adapter.htg_status import get_htg_cli_path
+        with patch.object(Path, "exists", return_value=True), \
+             patch.object(shutil, "which", return_value=None):
+            # Import fresh — module is already cached so this re-reads get_htg_cli_path
+            # which uses HTG_CLI_LOCAL.exists() (patched True) and returns the constant
+            from hermes_adapter.htg_status import get_htg_cli_path
 
-                result = get_htg_cli_path()
+            result = get_htg_cli_path()
         # get_htg_cli_path returns f"node {HTG_CLI_LOCAL}" where HTG_CLI_LOCAL is the
         # module-level constant. Patch.object(Path, "exists") makes the return value
         # f"node /root/projects/HoldTheGoblin/dist/src/cli.js" when that path exists.
@@ -42,10 +42,11 @@ class TestGetHtgCliPath:
 
     def test_returns_which_path_when_found(self) -> None:
         """When local checkout doesn't exist but holdthegoblin is on PATH."""
-        with patch.object(Path, "exists", return_value=False):
-            with patch.object(shutil, "which", return_value="/usr/bin/holdthegoblin") as mock_which:
-                from hermes_adapter.htg_status import get_htg_cli_path
-                result = get_htg_cli_path()
+        with patch.object(Path, "exists", return_value=False), \
+             patch.object(shutil, "which", return_value="/usr/bin/holdthegoblin") as mock_which:
+            from hermes_adapter.htg_status import get_htg_cli_path
+
+            result = get_htg_cli_path()
         assert result == "/usr/bin/holdthegoblin"
         mock_which.assert_called_once()
 
@@ -71,7 +72,7 @@ class TestCallHtgTool:
 
         async def mock_proc(*args: Any, **kwargs: Any) -> Any:
             async def mock_communicate() -> tuple[bytes, bytes]:
-                raise asyncio.TimeoutError()
+                raise TimeoutError()
 
             mock = AsyncMock()
             mock.communicate = mock_communicate
@@ -79,11 +80,11 @@ class TestCallHtgTool:
             mock.wait = AsyncMock(return_value=None)  # type: ignore[assignment]
             return mock
 
-        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"):
-            with patch("asyncio.create_subprocess_exec", mock_proc):
-                from hermes_adapter.htg_status import _call_htg_tool
+        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"), \
+             patch("asyncio.create_subprocess_exec", mock_proc):
+            from hermes_adapter.htg_status import _call_htg_tool
 
-                result = await _call_htg_tool("doctor", timeout=0.1)
+            result = await _call_htg_tool("doctor", timeout=0.1)
         assert result["ok"] is False
         assert "timed out" in result["error"]
 
@@ -102,11 +103,11 @@ class TestCallHtgTool:
             mock.returncode = 0
             return mock
 
-        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"):
-            with patch("asyncio.create_subprocess_exec", mock_proc):
-                from hermes_adapter.htg_status import _call_htg_tool
+        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"), \
+             patch("asyncio.create_subprocess_exec", mock_proc):
+            from hermes_adapter.htg_status import _call_htg_tool
 
-                result = await _call_htg_tool("doctor")
+            result = await _call_htg_tool("doctor")
         assert result["ok"] is True
         assert result["data"] == {"mode": "all", "root": "/test"}
 
@@ -118,18 +119,18 @@ class TestCallHtgTool:
 
         async def mock_proc(*args: Any, **kwargs: Any) -> Any:
             async def mock_communicate() -> tuple[bytes, bytes]:
-                return b"", "doctor failed: config not found".encode()
+                return b"", b"doctor failed: config not found"
 
             mock = AsyncMock()
             mock.communicate = mock_communicate
             mock.returncode = 1
             return mock
 
-        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"):
-            with patch("asyncio.create_subprocess_exec", mock_proc):
-                from hermes_adapter.htg_status import _call_htg_tool
+        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"), \
+             patch("asyncio.create_subprocess_exec", mock_proc):
+            from hermes_adapter.htg_status import _call_htg_tool
 
-                result = await _call_htg_tool("doctor")
+            result = await _call_htg_tool("doctor")
         assert result["ok"] is False
         assert "not found" in result["error"]
 
@@ -158,10 +159,10 @@ class TestProbeHtgStatus:
         dist_cli.write_text("// built")
 
         outputs = [
-            (json.dumps({"root": "/test", "mode": "all", "kinds": ["node"]}), ""),
-            (json.dumps([{"type": "test", "ts": "2026-05-16T00:00:00Z"}]), ""),
-            (json.dumps([]), ""),
-            (json.dumps({"ok": True}), ""),
+            (json.dumps({"root": "/test", "mode": "all", "kinds": ["node"]}), b""),
+            (json.dumps([{"type": "test", "ts": "2026-05-16T00:00:00Z"}]), b""),
+            (json.dumps([]), b""),
+            (json.dumps({"ok": True}), b""),
         ]
         idx = [-1]
 
@@ -171,18 +172,18 @@ class TestProbeHtgStatus:
             out, err = outputs[idx[0] % len(outputs)]
 
             async def mock_communicate() -> tuple[bytes, bytes]:
-                return out.encode(), err.encode()
+                return out.encode(), err
 
             mock = AsyncMock()
             mock.communicate = mock_communicate
             mock.returncode = 0
             return mock
 
-        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"):
-            with patch("asyncio.create_subprocess_exec", mock_proc):
-                from hermes_adapter.htg_status import probe_htg_status
+        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"), \
+             patch("asyncio.create_subprocess_exec", mock_proc):
+            from hermes_adapter.htg_status import probe_htg_status
 
-                result = await probe_htg_status()
+            result = await probe_htg_status()
         assert result["available"] is True
         assert result["cli_path"] == f"node {dist_cli}"
         assert result["doctor"] == {"root": "/test", "mode": "all", "kinds": ["node"]}
@@ -197,10 +198,10 @@ class TestProbeHtgStatus:
         dist_cli.write_text("// built")
 
         outputs = [
-            (json.dumps({"root": "/test"}), ""),
+            (json.dumps({"root": "/test"}), b""),
             ("", "events command failed"),
-            (json.dumps([]), ""),
-            (json.dumps({"ok": True}), ""),
+            (json.dumps([]), b""),
+            (json.dumps({"ok": True}), b""),
         ]
         idx = [-1]
 
@@ -210,18 +211,18 @@ class TestProbeHtgStatus:
             out, err = outputs[idx[0] % len(outputs)]
 
             async def mock_communicate() -> tuple[bytes, bytes]:
-                return out.encode(), err.encode()
+                return out.encode(), err.encode() if isinstance(err, str) else err
 
             mock = AsyncMock()
             mock.communicate = mock_communicate
-            mock.returncode = 0 if err == "" else 1
+            mock.returncode = 0 if err == "" or err == b"" else 1
             return mock
 
-        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"):
-            with patch("asyncio.create_subprocess_exec", mock_proc):
-                from hermes_adapter.htg_status import probe_htg_status
+        with patch("hermes_adapter.htg_status.get_htg_cli_path", return_value=f"node {dist_cli}"), \
+             patch("asyncio.create_subprocess_exec", mock_proc):
+            from hermes_adapter.htg_status import probe_htg_status
 
-                result = await probe_htg_status()
+            result = await probe_htg_status()
         assert result["available"] is True
         assert result["doctor"] == {"root": "/test"}
         assert "events_error" in result

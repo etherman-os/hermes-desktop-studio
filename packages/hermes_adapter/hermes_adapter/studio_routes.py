@@ -29,6 +29,7 @@ from hermes_adapter.context_repository import ContextRepository
 from hermes_adapter.cron_repository import CronRepository
 from hermes_adapter.delegation_repository import DelegationRepository
 from hermes_adapter.hermes_inventory_repository import HermesInventoryRepository
+from hermes_adapter.htg_status import probe_htg_status
 from hermes_adapter.process_manager import get_process_manager
 from hermes_adapter.run_ledger_repository import RunLedgerRepository
 from hermes_adapter.security import require_token
@@ -36,7 +37,6 @@ from hermes_adapter.studio_events import make_studio_event
 from hermes_adapter.studio_storage import get_studio_storage_status
 from hermes_adapter.tool_pack_repository import ToolPackRepository
 from hermes_adapter.worktree_repository import WorktreeRepository
-from hermes_adapter.htg_status import probe_htg_status
 
 router = APIRouter(prefix="/studio")
 logger = logging.getLogger(__name__)
