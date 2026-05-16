@@ -32,6 +32,8 @@ export function RuntimeStatus({ compact = false }: RuntimeStatusProps) {
   const checkHermesRelease = useHermesInventoryStore((s) => s.checkHermesRelease);
   const [model, setModel] = React.useState<api.ModelConfig | null>(null);
   const [modelError, setModelError] = React.useState<string | null>(null);
+  const [htgStatus, setHtgStatus] = React.useState<api.HtgStatusResponse | null>(null);
+  const [htgLoading, setHtgLoading] = React.useState(false);
 
   const loadModel = React.useCallback(async () => {
     if (!connected || !authReady) return;
@@ -48,6 +50,24 @@ export function RuntimeStatus({ compact = false }: RuntimeStatusProps) {
   React.useEffect(() => {
     void loadModel();
   }, [loadModel]);
+
+  const loadHtgStatus = React.useCallback(async () => {
+    if (!connected || !authReady) return;
+    setHtgLoading(true);
+    try {
+      const data = await api.getHtgStatus();
+      setHtgStatus(data);
+    } catch {
+      setHtgStatus(null);
+    } finally {
+      setHtgLoading(false);
+    }
+  }, [connected, authReady]);
+
+  React.useEffect(() => {
+    if (compact || !connected || !authReady) return;
+    void loadHtgStatus();
+  }, [authReady, compact, connected, loadHtgStatus]);
 
   React.useEffect(() => {
     if (compact || !connected || !authReady) return;
@@ -108,6 +128,24 @@ export function RuntimeStatus({ compact = false }: RuntimeStatusProps) {
             </dd>
           </>
         )}
+        {!compact && (
+          <>
+            <dt>HTG</dt>
+            <dd>
+              {htgStatus ? (
+                htgStatus.htg.available ? (
+                  <span className="status-ok">Available{htgStatus.htg.cli_path ? ` · ${htgStatus.htg.cli_path}` : ""}</span>
+                ) : (
+                  <span className="status-error">Unavailable{htgStatus.htg.reason ? ` · ${htgStatus.htg.reason}` : ""}</span>
+                )
+              ) : htgLoading ? (
+                <span className="status-loading">Loading HTG status…</span>
+              ) : (
+                <span className="status-muted">HTG not probed</span>
+              )}
+            </dd>
+          </>
+        )}
         {!compact && doctorStatus && (
           <>
             <dt>Doctor</dt>
@@ -134,19 +172,37 @@ export function RuntimeStatus({ compact = false }: RuntimeStatusProps) {
         )}
       </dl>
 
-      {!compact && (
-        <div className="runtime-instructions">
-          <div className="runtime-instructions-title">Hermes Doctor</div>
-          <div className="runtime-doctor-summary">
-            <button className="tool-button" type="button" onClick={() => void loadLocalHermesStatus({ includeDoctor: true })}>
-              Run doctor
-            </button>
-            {doctorStatus ? (
-              <span>{doctorStatus.available ? "Doctor completed" : doctorStatus.error ?? "Doctor unavailable"}</span>
-            ) : (
-              <span>Run Hermes doctor to inspect provider, tool, browser, and setup health.</span>
-            )}
+      {!compact && htgStatus && htgStatus.htg.available && (
+          <div className="runtime-instructions">
+            <div className="runtime-instructions-title">HoldTheGoblin</div>
+            <div className="runtime-doctor-summary">
+              {htgStatus.htg.doctor ? (
+                <span>
+                  {htgStatus.htg.config_valid === true && "Config valid · "}
+                  {htgStatus.htg.config_valid === false && "Config invalid · "}
+                  Project: {JSON.stringify(htgStatus.htg.doctor).includes("project") ? "detected" : "not detected"}
+                </span>
+              ) : htgStatus.htg.doctor_error ? (
+                <span className="status-error">{htgStatus.htg.doctor_error}</span>
+              ) : (
+                <span className="status-muted">Doctor not run</span>
+              )}
+            </div>
           </div>
+        )}
+        {!compact && (
+          <div className="runtime-instructions">
+            <div className="runtime-instructions-title">Hermes Doctor</div>
+            <div className="runtime-doctor-summary">
+              <button className="tool-button" type="button" onClick={() => void loadLocalHermesStatus({ includeDoctor: true })}>
+                Run doctor
+              </button>
+              {doctorStatus ? (
+                <span>{doctorStatus.available ? "Doctor completed" : doctorStatus.error ?? "Doctor unavailable"}</span>
+              ) : (
+                <span>Run Hermes doctor to inspect provider, tool, browser, and setup health.</span>
+              )}
+            </div>
           <div className="runtime-doctor-summary">
             <button className="tool-button" type="button" disabled={releaseLoading} onClick={() => void checkHermesRelease()}>
               {releaseLoading ? "Checking" : "Check update"}

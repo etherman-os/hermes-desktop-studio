@@ -754,6 +754,30 @@ export async function getHermesBrowserCache() {
   return request<HermesBrowserCacheStatus>("/studio/hermes/browser-cache");
 }
 
+export interface HtgStatusResponse {
+  htg: {
+    available: boolean;
+    reason?: string | null;
+    cli_path?: string | null;
+    root?: string | null;
+    doctor?: Record<string, unknown> | null;
+    doctor_error?: string | null;
+    events?: unknown[] | null;
+    events_error?: string | null;
+    checkpoints?: unknown[] | null;
+    checkpoints_error?: string | null;
+    config_valid?: boolean | null;
+    config_error?: string | null;
+  };
+  summary: {
+    available: boolean;
+  };
+}
+
+export async function getHtgStatus() {
+  return request<HtgStatusResponse>("/studio/htg/status");
+}
+
 export async function testHermesMcpServer(serverId: string) {
   return request<HermesMcpProbeResult>(`/studio/hermes/mcp-servers/${encodeURIComponent(serverId)}/test`, {
     method: "POST",
